@@ -1,1 +1,0 @@
-# Quartic-Pulse
