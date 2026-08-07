@@ -1,0 +1,1315 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; media-src 'self' blob: data:; connect-src ws://127.0.0.1:* ws://localhost:*"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Quartic Pulse</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <main class="stage" id="stage">
+        <canvas id="fractalCanvas" aria-label="Audio-reactive fractal visualization"></canvas>
+        <div class="show-transition-overlay" id="showTransitionOverlay" aria-hidden="true"></div>
+
+        <header class="stage-header glass">
+          <div>
+            <div class="eyebrow">TEMPEST MAINFRAME</div>
+            <h1>QUARTIC <span>PULSE</span></h1>
+          </div>
+          <div class="live-state">
+            <span class="live-dot" id="liveDot"></span>
+            <span id="liveLabel">IDLE</span>
+          </div>
+        </header>
+
+        <section class="now-playing-overlay" id="nowPlayingOverlay" aria-hidden="true">
+          <small>NOW PLAYING</small>
+          <strong id="nowPlayingTitle">Quartic Pulse</strong>
+          <span id="nowPlayingArtist">Tempest Mainframe</span>
+        </section>
+
+        <section class="audio-hud glass">
+          <div class="audio-hud-track">
+            <div class="track-art" aria-hidden="true">
+              <span></span><span></span><span></span><span></span>
+            </div>
+            <div class="track-details">
+              <strong id="trackName">No audio loaded</strong>
+              <span id="trackMeta">Drop a song anywhere or choose a file</span>
+              <div class="timeline" id="timeline" role="slider" aria-label="Track position" tabindex="0">
+                <div class="timeline-fill" id="timelineFill"></div>
+              </div>
+            </div>
+          </div>
+          <div class="hud-transport transport-buttons" role="group" aria-label="Music playback controls">
+            <button class="icon-button seek-button" id="skipBackButton" type="button" aria-label="Skip back ten seconds" title="Skip back 10 seconds" disabled>&minus;10</button>
+            <button class="icon-button primary" id="playButton" type="button" aria-label="Play" title="Play or pause" disabled><span id="playIcon">&#9654;</span></button>
+            <button class="icon-button" id="restartButton" type="button" aria-label="Restart track" title="Restart track" disabled>&#8635;</button>
+            <button class="icon-button seek-button" id="skipForwardButton" type="button" aria-label="Skip forward ten seconds" title="Skip forward 10 seconds" disabled>+10</button>
+          </div>
+          <div class="audio-hud-status">
+            <small>DECK TIME</small>
+            <div class="time-readout" id="timeReadout">00:00 / 00:00</div>
+          </div>
+        </section>
+
+        <section class="render-status" id="renderStatus">
+          <div class="render-status-card">
+            <span class="render-spinner"></span>
+            <div class="eyebrow" id="stageRenderMode">EXPORTING VIDEO</div>
+            <strong id="stageRenderText">Rendering 0%</strong>
+            <div class="stage-render-track"><i id="stageRenderFill"></i></div>
+            <div class="stage-render-meta" id="stageRenderMeta">Preparing estimate…</div>
+            <small id="stageRenderNote">Quartic Pulse is preparing the video export.</small>
+            <div class="stage-export-actions">
+              <button id="pauseExportButton" type="button">PAUSE</button>
+              <button id="endExportButton" type="button">END &amp; FINISH</button>
+              <button id="cancelExportButton" class="danger" type="button">CANCEL EXPORT</button>
+            </div>
+          </div>
+        </section>
+
+        <div class="drop-overlay" id="dropOverlay">
+          <div>
+            <span class="drop-icon">＋</span>
+            <strong>DROP AUDIO TO LOAD</strong>
+            <small>MP3 · WAV · FLAC · M4A · OGG</small>
+          </div>
+        </div>
+      </main>
+
+      <aside class="control-panel">
+        <div class="panel-resizer" id="panelResizer" role="separator" aria-label="Resize settings panel" aria-orientation="vertical" tabindex="0"></div>
+        <div class="panel-content">
+        <nav class="settings-tabs" aria-label="Visualizer settings">
+          <button class="settings-tab active" type="button" data-tab="music" aria-selected="true">MUSIC</button>
+          <button class="settings-tab" type="button" data-tab="appearance" aria-selected="false" title="Appearance and visual settings">VISUALS</button>
+          <button class="settings-tab" type="button" data-tab="live" aria-selected="false">LIVE</button>
+          <button class="settings-tab" type="button" data-tab="stream" aria-selected="false">STREAM</button>
+          <button class="settings-tab" type="button" data-tab="export" aria-selected="false">EXPORT</button>
+          <button class="settings-tab" type="button" data-tab="system" aria-selected="false">SYSTEM</button>
+          <button class="settings-tab" type="button" data-tab="about" aria-selected="false">ABOUT</button>
+        </nav>
+
+        <nav class="live-subtabs" aria-label="Live performance settings" hidden>
+          <button class="live-subtab active" type="button" data-live-tab="show" aria-selected="true">SHOW</button>
+          <button class="live-subtab" type="button" data-live-tab="controls" aria-selected="false">CONTROLS</button>
+          <button class="live-subtab" type="button" data-live-tab="camera" aria-selected="false">CAMERA</button>
+          <button class="live-subtab" type="button" data-live-tab="tools" aria-selected="false">TOOLS</button>
+        </nav>
+
+        <nav class="music-subtabs" aria-label="Music settings">
+          <button class="music-subtab active" type="button" data-music-tab="music" aria-selected="true">DECK</button>
+          <button class="music-subtab" type="button" data-music-tab="playlist" aria-selected="false">PLAYLIST</button>
+          <button class="music-subtab" type="button" data-music-tab="frequency-color" aria-selected="false">FREQUENCY COLOR</button>
+        </nav>
+
+        <nav class="appearance-subtabs" aria-label="Appearance settings" hidden>
+          <button class="appearance-subtab active" type="button" data-appearance-tab="appearance" aria-selected="true"><strong>VISUAL</strong><small>Style &amp; color</small></button>
+          <button class="appearance-subtab advanced-ui-only" type="button" data-appearance-tab="reactivity" aria-selected="false"><strong>REACTIVITY</strong><small>Audio response</small></button>
+          <button class="appearance-subtab advanced-ui-only" type="button" data-appearance-tab="dimensional" aria-selected="false"><strong>DIMENSION</strong><small>Depth &amp; tilt</small></button>
+          <button class="appearance-subtab advanced-ui-only" type="button" data-appearance-tab="folding" aria-selected="false"><strong>FOLD / WARP</strong><small>Equation shape</small></button>
+          <button class="appearance-subtab advanced-ui-only" type="button" data-appearance-tab="mapping" aria-selected="false"><strong>MAPPING</strong><small>Music routing</small></button>
+        </nav>
+
+        <div class="tab-panel active" data-tab-panel="music">
+          <section class="transport-section music-section">
+            <div class="section-heading"><span>MUSIC DECK</span><small>WEB AUDIO</small></div>
+            <button class="load-button" id="loadButton" type="button">
+              <span class="button-icon">＋</span>
+              <span><strong>LOAD AUDIO</strong><small>MP3, WAV, FLAC, M4A, OGG</small></span>
+            </button>
+            <input id="audioInput" type="file" accept="audio/*,.flac" hidden />
+
+            <div class="music-divider source-divider"></div>
+            <div class="section-heading source-heading"><span>WINDOWS AUDIO SOURCE</span><small id="audioSourceStatus">DECK</small></div>
+            <label class="select-control audio-source-select">SOURCE
+              <select id="audioSourceSelect" aria-describedby="audioSourceHelp">
+                <optgroup label="PLAYBACK">
+                  <option value="deck">Music Deck (loaded songs)</option>
+                  <option value="system">Windows system audio (default output)</option>
+                </optgroup>
+                <optgroup id="audioOutputOptions" label="WINDOWS OUTPUT DEVICES"></optgroup>
+                <optgroup id="audioInputOptions" label="INPUTS &amp; VIRTUAL DEVICES"></optgroup>
+              </select>
+            </label>
+            <div class="audio-source-actions">
+              <button class="music-action-button" id="useAudioSourceButton" type="button">USE SOURCE</button>
+              <button class="music-action-button" id="refreshAudioSourcesButton" type="button">REFRESH DEVICES</button>
+            </div>
+            <small class="audio-source-help" id="audioSourceHelp">WASAPI captures each Windows playback endpoint directly, including SteelSeries Sonar Gaming, Chat, Media, Stream, and Aux. Inputs and microphones remain available below them.</small>
+
+            <div class="slider-group compact">
+              <label><span>MONITOR VOLUME</span><output id="volumeValue">82%</output></label>
+              <input id="volume" type="range" min="0" max="1" value="0.82" step="0.01" />
+            </div>
+
+            <div class="music-control-grid">
+              <label class="select-control">PLAYBACK SPEED
+                <select id="playbackRate">
+                  <option value="0.75">0.75×</option>
+                  <option value="1" selected>1.00×</option>
+                  <option value="1.25">1.25×</option>
+                  <option value="1.5">1.50×</option>
+                  <option value="2">2.00×</option>
+                </select>
+              </label>
+              <button class="music-action-button" id="muteButton" type="button" aria-pressed="false">MUTE MONITOR</button>
+            </div>
+
+            <label class="toggle-row">
+              <span><strong>Loop playback</strong><small>Repeat the loaded song during live playback</small></span>
+              <input id="loopPlayback" type="checkbox" /><i></i>
+            </label>
+          </section>
+        </div>
+
+        <div class="tab-panel" data-tab-panel="frequency-color">
+          <section class="panel-section frequency-color-section">
+            <div class="section-heading frequency-heading"><span>FREQUENCY COLOR</span><small id="dominantFrequencyValue">SILENCE</small></div>
+            <div class="frequency-color-preview" aria-hidden="true"><i id="frequencyColorMarker"></i></div>
+            <div class="frequency-color-labels" aria-hidden="true"><span>BASS</span><span>MIDS</span><span>HIGHS</span></div>
+
+            <label class="toggle-row">
+              <span><strong>Color by frequency</strong><small>Dominant frequencies move through the active palette</small></span>
+              <input id="frequencyColor" type="checkbox" checked /><i></i>
+            </label>
+            <div class="slider-group">
+              <label><span>COLOR RESPONSE (%)</span><output id="frequencyColorAmountValue">28%</output></label>
+              <input id="frequencyColorAmount" type="range" min="0" max="2" value="0.55" step="0.05" />
+            </div>
+            <div class="slider-group">
+              <label><span>ANALYZER SMOOTHING</span><output id="analysisSmoothingValue">80%</output></label>
+              <input id="analysisSmoothing" type="range" min="0" max="1" value="0.80" step="0.01" />
+            </div>
+          </section>
+        </div>
+
+        <div class="tab-panel" data-tab-panel="playlist">
+          <section class="panel-section playlist-section">
+            <div class="section-heading"><span>PLAYLIST</span><small id="playlistCount">0 TRACKS</small></div>
+
+            <div class="playlist-import-grid">
+              <button class="playlist-source-button" id="playlistFilesButton" type="button"><strong>＋ FILES</strong><small>Add multiple songs</small></button>
+              <button class="playlist-source-button" id="playlistFolderButton" type="button"><strong>▣ FOLDER</strong><small>Scan one music folder</small></button>
+            </div>
+            <input id="playlistFilesInput" type="file" accept="audio/*,.flac" multiple hidden />
+            <input id="playlistFolderInput" type="file" accept="audio/*,.flac" multiple webkitdirectory directory hidden />
+
+            <div class="music-divider playlist-queue-divider"></div>
+            <div class="section-heading playlist-queue-heading"><span>UP NEXT</span><small id="playlistCurrentLabel">NOTHING SELECTED</small></div>
+            <div class="playlist-empty" id="playlistEmpty">Add songs or choose a local music folder to build a playlist.</div>
+            <div class="playlist-list" id="playlistList" role="listbox" aria-label="Playlist"></div>
+
+            <div class="playlist-controls">
+              <button id="playlistPreviousButton" type="button" disabled>← PREVIOUS</button>
+              <button id="playlistNextButton" type="button" disabled>NEXT →</button>
+              <button id="playlistMoveUpButton" type="button" disabled>↑ MOVE</button>
+              <button id="playlistMoveDownButton" type="button" disabled>↓ MOVE</button>
+              <button id="playlistRemoveButton" type="button" disabled>REMOVE</button>
+              <button id="playlistClearButton" type="button" disabled>CLEAR ALL</button>
+            </div>
+          </section>
+        </div>
+
+        <div class="tab-panel" data-tab-panel="appearance">
+
+        <section class="panel-section">
+          <div class="section-heading">
+            <span>APPEARANCE</span><small id="formulaLabel">z⁴ + μz² + c</small>
+          </div>
+
+          <div class="visual-style-heading"><strong>CHOOSE A VISUAL</strong><small>Preview the shape before selecting it</small></div>
+          <div class="visual-style-picker" id="visualStylePicker" role="radiogroup" aria-label="Visual style">
+            <button class="visual-style-card active" type="button" data-visual-style="0" role="radio" aria-checked="true">
+              <span class="visual-style-preview preview-fractal" aria-hidden="true">
+                <svg viewBox="0 0 120 64"><circle cx="58" cy="32" r="22"/><circle cx="34" cy="32" r="14"/><circle cx="82" cy="27" r="10"/><circle cx="94" cy="20" r="5"/><circle cx="88" cy="43" r="6"/></svg>
+              </span>
+              <span class="visual-style-copy"><strong>FRACTAL</strong><small>Mandelbrot and equation-driven forms</small></span>
+            </button>
+            <button class="visual-style-card" type="button" data-visual-style="1" role="radio" aria-checked="false">
+              <span class="visual-style-preview preview-bars" aria-hidden="true">
+                <svg viewBox="0 0 120 64"><rect x="11" y="38" width="9" height="17"/><rect x="27" y="23" width="9" height="32"/><rect x="43" y="10" width="9" height="45"/><rect x="59" y="28" width="9" height="27"/><rect x="75" y="16" width="9" height="39"/><rect x="91" y="34" width="9" height="21"/></svg>
+              </span>
+              <span class="visual-style-copy"><strong>SPECTRUM BARS</strong><small>Classic frequency columns</small></span>
+            </button>
+            <button class="visual-style-card" type="button" data-visual-style="2" role="radio" aria-checked="false">
+              <span class="visual-style-preview preview-radial" aria-hidden="true">
+                <svg viewBox="0 0 120 64"><circle cx="60" cy="32" r="17"/><path d="M60 5v8M60 51v8M33 32h10M77 32h10M41 13l7 7M72 44l7 7M79 13l-7 7M48 44l-7 7"/></svg>
+              </span>
+              <span class="visual-style-copy"><strong>RADIAL SPECTRUM</strong><small>Audio wrapped around a ring</small></span>
+            </button>
+            <button class="visual-style-card" type="button" data-visual-style="3" role="radio" aria-checked="false">
+              <span class="visual-style-preview preview-pulse" aria-hidden="true">
+                <svg viewBox="0 0 120 64"><circle cx="60" cy="32" r="9"/><circle cx="60" cy="32" r="18"/><circle cx="60" cy="32" r="27"/></svg>
+              </span>
+              <span class="visual-style-copy"><strong>PULSE RINGS</strong><small>Beat-triggered expanding waves</small></span>
+            </button>
+            <button class="visual-style-card" type="button" data-visual-style="4" role="radio" aria-checked="false">
+              <span class="visual-style-preview preview-wave" aria-hidden="true">
+                <svg viewBox="0 0 120 64"><path d="M5 34h15l7-17 11 34 12-41 12 43 10-29 10 20 8-10h25"/></svg>
+              </span>
+              <span class="visual-style-copy"><strong>WAVEFORM FIELD</strong><small>Flowing oscilloscope lines</small></span>
+            </button>
+            <button class="visual-style-card" type="button" data-visual-style="5" role="radio" aria-checked="false">
+              <span class="visual-style-preview preview-bulb" aria-hidden="true">
+                <svg viewBox="0 0 120 64"><defs><radialGradient id="bulbPreviewGlow" cx="38%" cy="30%"><stop offset="0" stop-color="white" stop-opacity=".9"/><stop offset=".35" stop-color="currentColor" stop-opacity=".82"/><stop offset="1" stop-color="currentColor" stop-opacity=".08"/></radialGradient></defs><path d="M60 7c7 0 10 7 13 11 6-2 13-1 16 5 3 5 0 11-3 15 3 5 3 12-2 16-5 4-12 2-17 0-5 4-13 5-19 1-5-3-6-10-4-16-5-3-9-9-6-15 3-6 10-7 16-6 1-5 2-11 6-11Z" fill="url(#bulbPreviewGlow)"/><path d="M43 25c7-7 13-6 17-1 4-8 12-8 17-2M44 40c7-5 13-3 17 2 4-6 12-7 18-1M60 10c-4 9-2 15 2 20-6 4-7 12-2 23" fill="none" stroke="currentColor" stroke-width="1.4" opacity=".75"/></svg>
+              </span>
+              <span class="visual-style-copy"><strong>3D MANDELBULB</strong><small>True power-4 ray-marched fractal</small></span>
+            </button>
+          </div>
+          <select id="visualStyle" aria-label="Visual style" hidden>
+            <option value="0" selected>Fractal</option>
+            <option value="1">Conventional · Spectrum Bars</option>
+            <option value="2">Conventional · Radial Spectrum</option>
+            <option value="3">Conventional · Pulse Rings</option>
+            <option value="4">Conventional · Waveform Field</option>
+            <option value="5">3D Fractal · Power-4 Mandelbulb</option>
+          </select>
+
+          <div class="basic-experience-card basic-ui-only" aria-label="Visual intensity presets">
+            <div class="section-heading"><span>START HERE</span><small>CALM BY DEFAULT</small></div>
+            <p>Choose a visual above, then pick how strongly music should reshape it. Every option can still be fine-tuned in Advanced mode.</p>
+            <div class="experience-preset-grid" id="experiencePresetGrid">
+              <button type="button" data-experience-preset="lowFlash"><strong>LOW FLASH</strong><small>Gentle motion and slow math response</small></button>
+              <button class="active" type="button" data-experience-preset="balanced"><strong>BALANCED</strong><small>Recommended everyday starting point</small></button>
+              <button type="button" data-experience-preset="expressive"><strong>EXPRESSIVE</strong><small>Stronger motion for energetic music</small></button>
+            </div>
+            <button class="basic-advanced-button" id="showAdvancedControlsButton" type="button">OPEN ADVANCED CONTROLS</button>
+          </div>
+
+          <div class="visual-options" data-visual-options="0">
+            <label class="select-control" id="fractalEquationControl">FRACTAL EQUATION
+              <select id="fractalType">
+                <optgroup label="Mandelbrot &amp; Julia family">
+                  <option value="0" selected>Quartic Mandelbrot</option>
+                  <option value="1">Classic Mandelbrot</option>
+                  <option value="2">Cubic Mandelbrot</option>
+                  <option value="6">Quintic Multibrot</option>
+                  <option value="4">Tricorn</option>
+                  <option value="5">Julia Set</option>
+                </optgroup>
+                <optgroup label="Burning &amp; absolute-value family">
+                  <option value="3">Burning Ship</option>
+                  <option value="8">Celtic</option>
+                  <option value="9">Buffalo</option>
+                  <option value="10">Perpendicular Burning Ship</option>
+                  <option value="11">Perpendicular Mandelbrot</option>
+                </optgroup>
+                <optgroup label="Stateful &amp; rational maps">
+                  <option value="7">Phoenix</option>
+                  <option value="12">Magnet I</option>
+                  <option value="13">Magnet II</option>
+                  <option value="14">Lambda</option>
+                  <option value="15">Man-o-War</option>
+                  <option value="16">Spider</option>
+                </optgroup>
+                <optgroup label="Root finding &amp; experimental">
+                  <option value="17">Nova</option>
+                  <option value="18">Newton</option>
+                  <option value="19">Pickover Biomorph</option>
+                </optgroup>
+              </select>
+            </label>
+            <div class="equation-library-tools">
+              <label>FIND AN EQUATION
+                <input id="fractalSearch" type="search" placeholder="Search Mandelbrot, Julia, Nova..." autocomplete="off" />
+              </label>
+              <button id="favoriteFractalButton" type="button" aria-pressed="false" title="Add the selected equation to favorites">&#9734; FAVORITE</button>
+            </div>
+            <div class="equation-favorites" id="fractalFavorites" hidden>
+              <span>FAVORITES</span><div id="fractalFavoriteButtons"></div>
+            </div>
+            <p class="basic-equation-note basic-ui-only">Selecting an equation also loads a calm camera, detail, and motion starting point designed for that fractal.</p>
+
+            <details class="visual-advanced equation-editor advanced-ui-control">
+              <summary><span>EDIT CORE EQUATION</span><small>Safe recurrence parameters</small></summary>
+              <div class="visual-advanced-body">
+                <div class="equation-help">Adjusts the selected equation's recurrence constant without requiring shader code.</div>
+                <div class="slider-group">
+                  <label><span>CORE C INFLUENCE (%)</span><output id="coreCStrengthValue">50%</output></label>
+                  <input id="coreCStrength" type="range" min="0" max="1" value="0.5" step="0.01" />
+                </div>
+                <div class="slider-group">
+                  <label><span>REAL BIAS (%)</span><output id="coreBiasRealValue">0%</output></label>
+                  <input id="coreBiasReal" type="range" min="-0.5" max="0.5" value="0" step="0.01" />
+                </div>
+                <div class="slider-group">
+                  <label><span>IMAGINARY BIAS (%)</span><output id="coreBiasImagValue">0%</output></label>
+                  <input id="coreBiasImag" type="range" min="-0.5" max="0.5" value="0" step="0.01" />
+                </div>
+              </div>
+            </details>
+          </div>
+
+          <div class="visual-options visual-effect-options" data-visual-options="1" hidden>
+            <div class="section-heading visual-options-heading"><span>SPECTRUM BARS</span><small>SERVER SCAPES</small></div>
+            <input id="barStyle" type="hidden" value="0" />
+            <div class="visual-info-card spectrum-lore-card">
+              <strong>TEMPEST MAINFRAME SERVER SCAPES</strong>
+              <small>Music drives rack load, status lights, beacons, reflections, and packet traffic.</small>
+            </div>
+            <div class="visual-preset-grid" id="spectrumPresetGrid" data-effect-group="spectrum" aria-label="Spectrum Bar presets">
+              <button class="visual-preset active" type="button" data-effect-preset="balanced"><strong>MAINFRAME CITY</strong><small>Live server-rack skyline</small></button>
+              <button class="visual-preset" type="button" data-effect-preset="neon"><strong>DATA CORE</strong><small>Segmented neon stacks</small></button>
+              <button class="visual-preset" type="button" data-effect-preset="mirror"><strong>MIRROR VAULT</strong><small>Datacenter reflection aisle</small></button>
+              <button class="visual-preset" type="button" data-effect-preset="dance"><strong>PACKET STORM</strong><small>Chroma data trails</small></button>
+            </div>
+            <div class="slider-group">
+              <label><span>BAR WIDTH (%)</span><output id="barWidthValue">100%</output></label>
+              <input id="barWidth" type="range" min="0.5" max="1.5" value="1" step="0.01" />
+            </div>
+            <div class="slider-group">
+              <label><span>NEON GLOW (%)</span><output id="barGlowValue">100%</output></label>
+              <input id="barGlow" type="range" min="0" max="2" value="1" step="0.01" />
+            </div>
+            <div class="slider-group">
+              <label><span>REFLECTION (%)</span><output id="barReflectionValue">35%</output></label>
+              <input id="barReflection" type="range" min="0" max="1" value="0.35" step="0.01" />
+            </div>
+            <details class="visual-advanced advanced-ui-control">
+              <summary><span>ADVANCED</span><small>Warp, peak echoes, and grid</small></summary>
+              <div class="visual-advanced-body">
+                <div class="slider-group">
+                  <label><span>MOTION WARP (%)</span><output id="barMotionValue">35%</output></label>
+                  <input id="barMotion" type="range" min="0" max="2" value="0.35" step="0.01" />
+                </div>
+                <div class="slider-group">
+                  <label><span>PEAK ECHO (%)</span><output id="barEchoValue">60%</output></label>
+                  <input id="barEcho" type="range" min="0" max="2" value="0.6" step="0.01" />
+                </div>
+                <div class="slider-group">
+                  <label><span>GRID INTENSITY (%)</span><output id="barGridValue">100%</output></label>
+                  <input id="barGrid" type="range" min="0" max="2" value="1" step="0.01" />
+                </div>
+              </div>
+            </details>
+          </div>
+
+          <div class="visual-options visual-effect-options" data-visual-options="2" hidden>
+            <div class="section-heading visual-options-heading"><span>RADIAL SPECTRUM</span><small>BASIC</small></div>
+            <div class="visual-preset-grid" id="radialPresetGrid" data-effect-group="radial" aria-label="Radial Spectrum presets">
+              <button class="visual-preset active" type="button" data-effect-preset="balanced"><strong>BALANCED</strong><small>Defined circular spectrum</small></button>
+              <button class="visual-preset" type="button" data-effect-preset="halo"><strong>HALO</strong><small>Soft luminous field</small></button>
+              <button class="visual-preset" type="button" data-effect-preset="starburst"><strong>STARBURST</strong><small>Sharp energetic spokes</small></button>
+              <button class="visual-preset" type="button" data-effect-preset="orbit"><strong>ORBIT ECHO</strong><small>Twisted traveling waves</small></button>
+            </div>
+            <div class="slider-group">
+              <label><span>RING SIZE (%)</span><output id="radialSizeValue">100%</output></label>
+              <input id="radialSize" type="range" min="0.5" max="1.6" value="1" step="0.01" />
+            </div>
+            <div class="slider-group">
+              <label><span>HALO GLOW (%)</span><output id="radialGlowValue">100%</output></label>
+              <input id="radialGlow" type="range" min="0" max="2" value="1" step="0.01" />
+            </div>
+            <div class="slider-group">
+              <label><span>WAVE ECHOES (%)</span><output id="radialWavesValue">100%</output></label>
+              <input id="radialWaves" type="range" min="0" max="2" value="1" step="0.01" />
+            </div>
+            <details class="visual-advanced advanced-ui-control">
+              <summary><span>ADVANCED</span><small>Twist, spokes, and atmosphere</small></summary>
+              <div class="visual-advanced-body">
+                <div class="slider-group">
+                  <label><span>ANGULAR TWIST (%)</span><output id="radialTwistValue">30%</output></label>
+                  <input id="radialTwist" type="range" min="0" max="2" value="0.3" step="0.01" />
+                </div>
+                <div class="slider-group">
+                  <label><span>SPOKE INTENSITY (%)</span><output id="radialSpokesValue">100%</output></label>
+                  <input id="radialSpokes" type="range" min="0" max="2" value="1" step="0.01" />
+                </div>
+                <div class="slider-group">
+                  <label><span>ATMOSPHERE (%)</span><output id="radialAtmosphereValue">100%</output></label>
+                  <input id="radialAtmosphere" type="range" min="0" max="2" value="1" step="0.01" />
+                </div>
+              </div>
+            </details>
+          </div>
+
+          <div class="visual-options pulse-options" data-visual-options="3" hidden>
+            <div class="section-heading visual-options-heading"><span>PULSE RINGS</span><small>BASIC</small></div>
+            <div class="pulse-preset-grid" id="pulsePresetGrid" aria-label="Pulse Ring presets">
+              <button class="pulse-preset active" type="button" data-pulse-preset="balanced"><strong>BALANCED</strong><small>Focused default</small></button>
+              <button class="pulse-preset" type="button" data-pulse-preset="condensed"><strong>CONDENSED</strong><small>Fine and tight</small></button>
+              <button class="pulse-preset" type="button" data-pulse-preset="wide"><strong>WIDE ECHOES</strong><small>Large wave field</small></button>
+              <button class="pulse-preset" type="button" data-pulse-preset="rapid"><strong>RAPID</strong><small>Fast energetic bursts</small></button>
+            </div>
+            <div class="slider-group">
+              <label><span>PULSE DENSITY (%)</span><output id="pulseDensityValue">75%</output></label>
+              <input id="pulseDensity" type="range" min="0" max="1" value="0.75" step="0.01" />
+            </div>
+            <div class="slider-group">
+              <label><span>RING SIZE (%)</span><output id="pulseSizeValue">33%</output></label>
+              <input id="pulseSize" type="range" min="0.5" max="2" value="1" step="0.01" />
+            </div>
+            <div class="slider-group">
+              <label><span>CREATION COOLDOWN (%)</span><output id="pulseCooldownValue">27%</output></label>
+              <input id="pulseCooldown" type="range" min="0.25" max="3" value="1" step="0.05" />
+            </div>
+            <details class="pulse-advanced advanced-ui-control" id="pulseAdvanced">
+              <summary><span>ADVANCED</span><small>Shape, trails, and contour detail</small></summary>
+              <div class="pulse-advanced-body">
+                <div class="slider-group">
+              <label><span>PULSE JAGGEDNESS (%)</span><output id="pulseJaggedValue">50%</output></label>
+                  <input id="pulseJagged" type="range" min="0" max="2" value="1" step="0.05" />
+                </div>
+                <div class="slider-group">
+              <label><span>PULSE TRAILS (%)</span><output id="pulseTrailValue">50%</output></label>
+                  <input id="pulseTrail" type="range" min="0" max="2" value="1" step="0.05" />
+                </div>
+                <div class="slider-group">
+              <label><span>PULSE DETAIL (%)</span><output id="pulseDetailValue">63%</output></label>
+                  <input id="pulseDetail" type="range" min="0" max="2" value="1.25" step="0.05" />
+                </div>
+              </div>
+            </details>
+          </div>
+
+          <div class="visual-options visual-info-card" data-visual-options="4" hidden>
+            <strong>WAVEFORM FIELD</strong><small>Oscilloscope lines · amplitude and echo visualization</small>
+          </div>
+
+          <div class="visual-options visual-effect-options bulb-options" data-visual-options="5" hidden>
+            <div class="section-heading visual-options-heading"><span>3D MANDELBULB</span><small>GPU RAY MARCHED</small></div>
+            <div class="visual-info-card bulb-info-card">
+              <strong>TRUE POWER-4 FRACTAL VOLUME</strong>
+              <small>GPU intensive with adaptive quality · drag the canvas to orbit · use the mouse wheel to move the camera · music reshapes the distance-estimated surface.</small>
+            </div>
+            <div class="visual-preset-grid" id="bulbPresetGrid" data-effect-group="bulb" aria-label="3D Mandelbulb presets">
+              <button class="visual-preset active" type="button" data-effect-preset="quartic"><strong>QUARTIC CORE</strong><small>Balanced power-4 form</small></button>
+              <button class="visual-preset" type="button" data-effect-preset="deep"><strong>DEEP ORBIT</strong><small>Dense cinematic surface</small></button>
+              <button class="visual-preset" type="button" data-effect-preset="storm"><strong>STORM FOLD</strong><small>Music-driven symmetry</small></button>
+              <button class="visual-preset" type="button" data-effect-preset="neon"><strong>NEON SHELL</strong><small>Fast luminous contour</small></button>
+            </div>
+            <div class="slider-group">
+              <label><span>MANDELBULB POWER</span><output id="bulbPowerValue">4.0</output></label>
+              <input id="bulbPower" type="range" min="2" max="10" value="4" step="0.1" />
+            </div>
+            <div class="slider-group">
+              <label><span>LIVE DETAIL (%)</span><output id="bulbDetailValue">55%</output></label>
+              <input id="bulbDetail" type="range" min="0" max="1" value="0.55" step="0.01" />
+            </div>
+            <div class="slider-group">
+              <label><span>MUSIC DEFORMATION (%)</span><output id="bulbAudioValue">65%</output></label>
+              <input id="bulbAudio" type="range" min="0" max="1" value="0.65" step="0.01" />
+            </div>
+            <details class="visual-advanced advanced-ui-control">
+              <summary><span>ADVANCED 3D</span><small>Orbit, folding, light, and camera</small></summary>
+              <div class="visual-advanced-body">
+                <div class="slider-group">
+                  <label><span>AUTO ORBIT (%)</span><output id="bulbOrbitValue">28%</output></label>
+                  <input id="bulbOrbit" type="range" min="-1" max="1" value="0.28" step="0.01" />
+                </div>
+                <div class="slider-group">
+                  <label><span>VOLUMETRIC FOLD (%)</span><output id="bulbFoldValue">0%</output></label>
+                  <input id="bulbFold" type="range" min="0" max="1" value="0" step="0.01" />
+                </div>
+                <div class="slider-group">
+                  <label><span>SURFACE GLOW (%)</span><output id="bulbGlowValue">60%</output></label>
+                  <input id="bulbGlow" type="range" min="0" max="2" value="1.2" step="0.01" />
+                </div>
+                <div class="slider-group">
+                  <label><span>CAMERA DISTANCE (%)</span><output id="bulbCameraValue">50%</output></label>
+                  <input id="bulbCamera" type="range" min="2.25" max="5.25" value="3.75" step="0.01" />
+                </div>
+              </div>
+            </details>
+          </div>
+
+          <label class="control-label" for="palette">COLOR SYSTEM</label>
+          <div class="palette-grid" id="paletteGrid">
+            <button class="palette active" type="button" data-palette="0" aria-label="Ion palette"><i></i><span>ION</span></button>
+            <button class="palette" type="button" data-palette="1" aria-label="Ember palette"><i></i><span>EMBER</span></button>
+            <button class="palette" type="button" data-palette="2" aria-label="Aurora palette"><i></i><span>AURORA</span></button>
+            <button class="palette" type="button" data-palette="3" aria-label="Mono palette"><i></i><span>MONO</span></button>
+            <button class="palette custom-palette" type="button" data-palette="4" aria-label="Custom palette"><i></i><span>CUSTOM</span></button>
+          </div>
+
+          <div class="custom-palette-editor" id="customPaletteEditor" hidden>
+            <div class="color-editor-heading"><span>COLOR</span><span>HEX</span><span>RGB</span></div>
+            <div class="color-stop" data-color-index="0">
+              <strong class="color-stop-name">SHADOW COLOR</strong>
+              <input type="color" id="customColor0" value="#140f2d" aria-label="Shadow color picker" />
+              <input class="hex-input" id="customHex0" value="#140F2D" maxlength="7" aria-label="Shadow color hexadecimal value" />
+              <div class="rgb-inputs"><input id="customR0" type="number" min="0" max="255" value="20" aria-label="Shadow color red" /><input id="customG0" type="number" min="0" max="255" value="15" aria-label="Shadow color green" /><input id="customB0" type="number" min="0" max="255" value="45" aria-label="Shadow color blue" /></div>
+            </div>
+            <div class="color-stop" data-color-index="1">
+              <strong class="color-stop-name">FIELD COLOR</strong>
+              <input type="color" id="customColor1" value="#7b2cff" aria-label="Field color picker" />
+              <input class="hex-input" id="customHex1" value="#7B2CFF" maxlength="7" aria-label="Field color hexadecimal value" />
+              <div class="rgb-inputs"><input id="customR1" type="number" min="0" max="255" value="123" aria-label="Field color red" /><input id="customG1" type="number" min="0" max="255" value="44" aria-label="Field color green" /><input id="customB1" type="number" min="0" max="255" value="255" aria-label="Field color blue" /></div>
+            </div>
+            <div class="color-stop" data-color-index="2">
+              <strong class="color-stop-name">ACCENT COLOR</strong>
+              <input type="color" id="customColor2" value="#f14bcb" aria-label="Accent color picker" />
+              <input class="hex-input" id="customHex2" value="#F14BCB" maxlength="7" aria-label="Accent color hexadecimal value" />
+              <div class="rgb-inputs"><input id="customR2" type="number" min="0" max="255" value="241" aria-label="Accent color red" /><input id="customG2" type="number" min="0" max="255" value="75" aria-label="Accent color green" /><input id="customB2" type="number" min="0" max="255" value="203" aria-label="Accent color blue" /></div>
+            </div>
+            <div class="color-stop" data-color-index="3">
+              <strong class="color-stop-name">DETAIL COLOR</strong>
+              <input type="color" id="customColor3" value="#5cf5dc" aria-label="Detail color picker" />
+              <input class="hex-input" id="customHex3" value="#5CF5DC" maxlength="7" aria-label="Detail color hexadecimal value" />
+              <div class="rgb-inputs"><input id="customR3" type="number" min="0" max="255" value="92" aria-label="Detail color red" /><input id="customG3" type="number" min="0" max="255" value="245" aria-label="Detail color green" /><input id="customB3" type="number" min="0" max="255" value="220" aria-label="Detail color blue" /></div>
+            </div>
+            <button class="custom-color-reset" id="resetCustomPaletteButton" type="button">↺ RESET CUSTOM COLORS</button>
+          </div>
+
+          <div class="quick-controls-card">
+            <div class="section-heading quick-controls-heading"><span>QUICK CONTROLS</span><small>LIVE</small></div>
+            <label class="toggle-row quick-auto-toggle">
+              <span><strong>Auto reactivity</strong><small id="autoReactivityText">Target 74% · 1.00× gain</small></span>
+              <input id="autoReactivity" type="checkbox" checked /><i></i>
+            </label>
+            <div class="quick-control-grid">
+              <div class="visual-options" data-visual-options="0">
+                <div class="slider-group">
+                  <label><span>ZOOM</span><output id="zoomValue">1.00×</output></label>
+                  <input id="zoom" type="range" min="0" max="112" value="10" step="0.1" />
+                </div>
+              </div>
+              <div class="slider-group">
+                <label><span>FLOW (%)</span><output id="flowValue">28%</output></label>
+                <input id="flow" type="range" min="0" max="1" value="0.28" step="0.01" />
+              </div>
+              <div class="slider-group compact">
+                <label><span>REACTIVITY (%)</span><output id="reactivityValue">30%</output></label>
+                <input id="reactivity" type="range" min="0" max="3" value="0.90" step="0.05" />
+              </div>
+              <div class="slider-group">
+                <label><span>MOTION (%)</span><output id="motionValue">34%</output></label>
+                <input id="motion" type="range" min="0" max="2.5" value="0.85" step="0.05" />
+              </div>
+            </div>
+          </div>
+
+          <details class="visual-advanced profile-manager advanced-ui-control" id="profileManager">
+            <summary><span>SAVED PROFILES</span><small>Save, share, and restore</small></summary>
+            <div class="visual-advanced-body profile-manager-body">
+              <p class="profile-help">Save only the active color system or the complete visual configuration. Profiles are stored on this PC until exported.</p>
+              <label class="profile-field">SEARCH PROFILES
+                <input id="profileSearch" type="search" placeholder="Search saved profiles" autocomplete="off" />
+              </label>
+              <label class="profile-field">SAVED PROFILE
+                <select id="savedProfileSelect">
+                  <option value="">No saved profiles</option>
+                </select>
+              </label>
+              <div class="profile-load-actions">
+                <button id="applyProfileButton" type="button" disabled>APPLY</button>
+                <button id="favoriteProfileButton" type="button" disabled>&#9734; FAVORITE</button>
+                <button id="deleteProfileButton" type="button" disabled>DELETE</button>
+              </div>
+              <div class="profile-divider"></div>
+              <label class="profile-field">PROFILE NAME
+                <input id="profileName" type="text" maxlength="60" placeholder="My visual profile" />
+              </label>
+              <label class="profile-field">SAVE TYPE
+                <select id="profileKind">
+                  <option value="settings" selected>Full Visual Settings</option>
+                  <option value="colors">Color Palette</option>
+                </select>
+              </label>
+              <button class="profile-primary-button" id="saveProfileButton" type="button">SAVE CURRENT PROFILE</button>
+              <div class="profile-file-actions">
+                <button id="exportProfileButton" type="button" disabled>EXPORT SELECTED</button>
+                <button id="importProfileButton" type="button">IMPORT PROFILE</button>
+              </div>
+              <input id="importProfileInput" type="file" accept="application/json,.json" hidden />
+              <small class="profile-status" id="profileStatus">Profiles are saved locally as JSON-compatible data.</small>
+            </div>
+          </details>
+        </section>
+        </div>
+
+        <div class="tab-panel" data-tab-panel="dimensional">
+          <section class="panel-section">
+            <div class="section-heading"><span>DIMENSIONAL ROTATION</span><small class="gpu-warning">GPU INTENSIVE</small></div>
+            <div class="subtab-status-note">Enable Dimensional Rotation from System &gt; Advanced Features. Presets and fine tuning remain inactive while it is off.</div>
+            <div class="dimensional-controls control-disabled" id="fractalDepthControls">
+              <div class="visual-preset-grid" id="fractalPresetGrid" data-effect-group="fractal" aria-label="Fractal dimensional presets">
+                <button class="visual-preset active" type="button" data-effect-preset="dimensional"><strong>DIMENSIONAL</strong><small>Balanced depth motion</small></button>
+                <button class="visual-preset" type="button" data-effect-preset="classic"><strong>CLASSIC</strong><small>Original flat plane</small></button>
+                <button class="visual-preset" type="button" data-effect-preset="deep"><strong>DEEP ORBIT</strong><small>Strong perspective turn</small></button>
+                <button class="visual-preset" type="button" data-effect-preset="dream"><strong>DREAM FOLD</strong><small>Reverse flowing slice</small></button>
+              </div>
+              <details class="visual-advanced">
+                <summary><span>ADVANCED SETTINGS</span><small>Depth, motion, perspective, and music</small></summary>
+                <div class="visual-advanced-body">
+                  <div class="slider-group">
+                    <label><span>DIMENSIONAL TILT (%)</span><output id="fractalTiltValue">45%</output></label>
+                    <input id="fractalTilt" type="range" min="0" max="1" value="0.45" step="0.01" />
+                  </div>
+                  <div class="slider-group">
+                    <label><span>DEPTH ROTATION (%)</span><output id="fractalDepthSpeedValue">16%</output></label>
+                    <input id="fractalDepthSpeed" type="range" min="-1" max="1" value="0.32" step="0.01" />
+                  </div>
+                  <div class="slider-group">
+                    <label><span>PERSPECTIVE (%)</span><output id="fractalPerspectiveValue">30%</output></label>
+                    <input id="fractalPerspective" type="range" min="0" max="1.5" value="0.45" step="0.01" />
+                  </div>
+                  <div class="slider-group">
+                    <label><span>SLICE WARP (%)</span><output id="fractalSliceValue">25%</output></label>
+                    <input id="fractalSlice" type="range" min="0" max="1" value="0.25" step="0.01" />
+                  </div>
+                  <div class="slider-group">
+                    <label><span>DEPTH LIGHTING (%)</span><output id="fractalLightingValue">37%</output></label>
+                    <input id="fractalLighting" type="range" min="0" max="1.5" value="0.55" step="0.01" />
+                  </div>
+                  <div class="slider-group">
+                    <label><span>MUSIC DEPTH (%)</span><output id="fractalAudioDepthValue">40%</output></label>
+                    <input id="fractalAudioDepth" type="range" min="0" max="1" value="0.4" step="0.01" />
+                  </div>
+                </div>
+              </details>
+            </div>
+          </section>
+        </div>
+
+        <div class="tab-panel" data-tab-panel="folding">
+          <section class="panel-section">
+            <div class="section-heading"><span>EQUATION FOLD &amp; WARP</span><small class="gpu-warning">GPU INTENSIVE</small></div>
+            <div class="subtab-status-note">Enable Equation Folding from System &gt; Advanced Features. Presets and fine tuning remain inactive while it is off.</div>
+            <div class="dimensional-controls equation-fold-controls control-disabled" id="equationFoldControls">
+              <div class="visual-preset-grid" id="equationFoldPresetGrid" data-effect-group="fold" aria-label="Equation Fold and Warp presets">
+                <button class="visual-preset active" type="button" data-effect-preset="soft"><strong>SOFT FOLD</strong><small>Balanced equation bend</small></button>
+                <button class="visual-preset" type="button" data-effect-preset="kaleidoscope"><strong>KALEIDOSCOPE</strong><small>Mirrored evolving branches</small></button>
+                <button class="visual-preset" type="button" data-effect-preset="liquid"><strong>LIQUID EQUATION</strong><small>Fluid music-driven warp</small></button>
+                <button class="visual-preset" type="button" data-effect-preset="mirror"><strong>STATIC MIRROR</strong><small>Fixed hard fold</small></button>
+              </div>
+              <details class="visual-advanced">
+                <summary><span>ADVANCED SETTINGS</span><small>Fold, warp, origin, and music</small></summary>
+                <div class="visual-advanced-body">
+                  <div class="slider-group">
+                    <label><span>FOLD AMOUNT (%)</span><output id="equationFoldValue">18%</output></label>
+                    <input id="equationFold" type="range" min="0" max="1" value="0.18" step="0.01" />
+                  </div>
+                  <div class="slider-group">
+                    <label><span>NONLINEAR WARP (%)</span><output id="equationWarpValue">8%</output></label>
+                    <input id="equationWarp" type="range" min="0" max="1.5" value="0.12" step="0.01" />
+                  </div>
+                  <div class="slider-group">
+                    <label><span>FOLD MOTION (%)</span><output id="equationFoldMotionValue">8%</output></label>
+                    <input id="equationFoldMotion" type="range" min="-1" max="1" value="0.16" step="0.01" />
+                  </div>
+                  <div class="slider-group">
+                    <label><span>FOLD OFFSET (%)</span><output id="equationFoldOffsetValue">10%</output></label>
+                    <input id="equationFoldOffset" type="range" min="0" max="1" value="0.10" step="0.01" />
+                  </div>
+                  <div class="slider-group">
+                    <label><span>WARP SCALE (%)</span><output id="equationWarpScaleValue">23%</output></label>
+                    <input id="equationWarpScale" type="range" min="0" max="2" value="0.45" step="0.01" />
+                  </div>
+                  <div class="slider-group">
+                    <label><span>MUSIC FOLD (%)</span><output id="equationFoldAudioValue">25%</output></label>
+                    <input id="equationFoldAudio" type="range" min="0" max="1" value="0.25" step="0.01" />
+                  </div>
+                </div>
+              </details>
+            </div>
+          </section>
+        </div>
+
+        <div class="tab-panel" data-tab-panel="reactivity">
+
+        <section class="panel-section">
+          <div class="section-heading"><span>AUDIO REACTION</span><small>FFT 2048</small></div>
+          <div class="meter-row">
+            <span>BASS</span><div class="meter"><i id="bassMeter"></i></div><output id="bassValue">0%</output>
+          </div>
+          <div class="meter-row">
+            <span>MIDS</span><div class="meter"><i id="midMeter"></i></div><output id="midValue">0%</output>
+          </div>
+          <div class="meter-row">
+            <span>HIGH</span><div class="meter"><i id="highMeter"></i></div><output id="highValue">0%</output>
+          </div>
+          <div class="visual-intensity-card" id="visualIntensityCard" data-level="calm">
+            <div class="visual-intensity-heading"><span>VISUAL SAFETY ESTIMATE</span><strong id="visualIntensityLabel">CALM</strong></div>
+            <div class="visual-intensity-track"><i id="visualIntensityFill"></i></div>
+            <p id="visualIntensityText">Current motion and audio response are unlikely to create rapid flashes.</p>
+          </div>
+          <details class="visual-advanced reactivity-advanced advanced-ui-control">
+            <summary><span>ADVANCED SETTINGS</span><small>Bands, motion, and equation response</small></summary>
+            <div class="visual-advanced-body">
+            <label class="select-control frequency-mode-control">
+              FREQUENCY BANDS
+              <select id="frequencyBandMode">
+                <option value="basic">Basic · Recommended</option>
+                <option value="advanced">Advanced · Custom ranges</option>
+              </select>
+            </label>
+            <div class="frequency-band-summary" id="frequencyBandSummary">LOW 25–180 Hz · MIDS 180–2,400 Hz · HIGHS 2,400–12,000 Hz</div>
+            <div class="advanced-frequency-bands" id="advancedFrequencyBands" hidden>
+              <div class="advanced-heading"><strong>CUSTOM BAND BOUNDARIES</strong><small>Ranges remain continuous automatically</small></div>
+            <div class="slider-group">
+              <label><span>ANALYSIS FLOOR</span><output id="frequencyFloorValue">25 Hz</output></label>
+              <input id="frequencyFloor" type="range" min="20" max="500" value="25" step="5" />
+            </div>
+            <div class="slider-group">
+              <label><span>LOW / MID SPLIT</span><output id="lowMidSplitValue">180 Hz</output></label>
+              <input id="lowMidSplit" type="range" min="80" max="1200" value="180" step="10" />
+            </div>
+            <div class="slider-group">
+              <label><span>MID / HIGH SPLIT</span><output id="midHighSplitValue">2,400 Hz</output></label>
+              <input id="midHighSplit" type="range" min="400" max="8000" value="2400" step="50" />
+            </div>
+            <div class="slider-group">
+              <label><span>ANALYSIS CEILING</span><output id="frequencyCeilingValue">12,000 Hz</output></label>
+              <input id="frequencyCeiling" type="range" min="4000" max="20000" value="12000" step="100" />
+            </div>
+            </div>
+            <div class="advanced-heading beat-detector-heading"><strong>ADAPTIVE BEAT DETECTOR</strong><small>Independent from visual smoothing</small></div>
+            <div class="slider-group">
+              <label><span>BEAT SENSITIVITY (%)</span><output id="beatSensitivityValue">65%</output></label>
+              <input id="beatSensitivity" type="range" min="0" max="1" value="0.65" step="0.01" />
+            </div>
+            <div class="slider-group">
+              <label><span>BEAT COOLDOWN</span><output id="beatCooldownValue">150 ms</output></label>
+              <input id="beatCooldown" type="range" min="80" max="300" value="150" step="5" />
+            </div>
+            <p class="beat-detector-note">Uses a fast low/low-mid onset path, so Analyzer Smoothing can stay high without hiding drum hits. Raise sensitivity for quieter or less bass-heavy music; raise cooldown if one hit triggers twice.</p>
+            <div class="slider-group">
+              <label><span>ROTATION (%)</span><output id="spinValue">9%</output></label>
+              <input id="spin" type="range" min="-1" max="1" value="0.18" step="0.01" />
+            </div>
+            <div class="slider-group">
+              <label><span>EQUATION SMOOTHING (%)</span><output id="equationSmoothingValue">90%</output></label>
+              <input id="equationSmoothing" type="range" min="0" max="1" value="0.90" step="0.01" />
+            </div>
+            <div class="slider-group">
+              <label><span>EQUATION MODULATION (%)</span><output id="equationValue">6%</output></label>
+              <input id="equationMod" type="range" min="0" max="1.5" value="0.09" step="0.01" />
+            </div>
+            </div>
+          </details>
+        </section>
+        </div>
+
+        <div class="tab-panel" data-tab-panel="mapping">
+          <section class="panel-section modulation-section">
+            <div class="section-heading"><span>AUDIO MODULATION MATRIX</span><small id="modulationCount">0 ROUTES</small></div>
+            <p class="modulation-lead">Route bass, mids, highs, beats, or overall level directly into visual and equation parameters without changing their base settings.</p>
+
+            <label class="toggle-row modulation-master-toggle">
+              <span><strong>Enable modulation matrix</strong><small>Temporarily bypass every route without deleting it</small></span>
+              <input id="modulationEnabled" type="checkbox" checked /><i></i>
+            </label>
+
+            <div class="modulation-source-meters" aria-label="Live modulation sources">
+              <div><span>BASS</span><i><b id="modSourceBass"></b></i></div>
+              <div><span>MIDS</span><i><b id="modSourceMids"></b></i></div>
+              <div><span>HIGHS</span><i><b id="modSourceHighs"></b></i></div>
+              <div><span>BEAT</span><i><b id="modSourceBeat"></b></i></div>
+              <div><span>LEVEL</span><i><b id="modSourceRms"></b></i></div>
+            </div>
+
+            <div class="section-heading modulation-preset-heading"><span>STARTING POINTS</span><small>REPLACES ROUTES</small></div>
+            <div class="modulation-presets" id="modulationPresets">
+              <button type="button" data-modulation-preset="math"><strong>MATH DRIVE</strong><small>Equation, warp, color, zoom</small></button>
+              <button type="button" data-modulation-preset="dimension"><strong>DEEP MOTION</strong><small>Depth, slice, camera, rotation</small></button>
+              <button type="button" data-modulation-preset="conventional"><strong>CONVENTIONAL</strong><small>Motion, color, flow, pulse shape</small></button>
+              <button type="button" data-modulation-preset="clear"><strong>CLEAR</strong><small>Remove every route</small></button>
+            </div>
+
+            <div class="modulation-route-list" id="modulationRouteList"></div>
+            <div class="modulation-empty" id="modulationEmpty">No routes yet. Add one manually or choose a starting point.</div>
+            <button class="modulation-add-button" id="addModulationRoute" type="button">＋ ADD MODULATION ROUTE</button>
+            <p class="modulation-note">Equation Fold, Warp, Tilt, and Slice routes become visible only when their related Appearance feature is enabled. Up to eight routes can run at once.</p>
+          </section>
+        </div>
+
+        <div class="tab-panel" data-tab-panel="show">
+          <section class="panel-section show-section">
+            <div class="section-heading"><span>SHOW SEQUENCER</span><small id="showStatus">STOPPED</small></div>
+            <p class="show-lead">Arrange saved profiles into a performance and advance them by elapsed time or musical beats.</p>
+
+            <div class="beat-grid-card">
+              <div class="section-heading"><span>BEAT GRID</span><small id="beatGridStatus">LISTENING</small></div>
+              <div class="beat-grid-display">
+                <strong id="beatBpmDisplay">120.0</strong><span>BPM</span>
+                <div class="beat-grid-lights" id="beatGridLights"><i></i><i></i><i></i><i></i></div>
+              </div>
+              <label class="toggle-row">
+                <span><strong>Automatic BPM</strong><small id="beatConfidence">Waiting for clear beats</small></span>
+                <input id="autoBpm" type="checkbox" checked /><i></i>
+              </label>
+              <div class="slider-group">
+                <label><span>MANUAL BPM</span><output id="beatBpmValue">120 BPM</output></label>
+                <input id="beatBpm" type="range" min="60" max="200" value="120" step="0.1" />
+              </div>
+              <div class="slider-group">
+                <label><span>BEAT OFFSET</span><output id="beatOffsetValue">0 ms</output></label>
+                <input id="beatOffset" type="range" min="-500" max="500" value="0" step="5" />
+              </div>
+              <div class="beat-grid-actions">
+                <button id="tapTempoButton" type="button">TAP TEMPO</button>
+                <button id="resetBeatGridButton" type="button">RESET GRID</button>
+              </div>
+            </div>
+
+            <div class="show-add-card">
+              <label>PROFILE<select id="showProfileSelect"><option value="">No saved profiles</option></select></label>
+              <div class="show-add-grid">
+                <label>ADVANCE<select id="showAdvanceMode"><option value="beats" selected>After beats</option><option value="time">After seconds</option></select></label>
+                <label>VALUE<input id="showAdvanceValue" type="number" min="1" max="3600" value="16" /></label>
+              </div>
+              <label>TRANSITION<select id="showTransition"><option value="cut">Cut</option><option value="black" selected>Fade through black</option></select></label>
+              <button id="addShowEntryButton" type="button" disabled>＋ ADD TO SHOW</button>
+            </div>
+
+            <div class="show-sequence-list" id="showSequenceList"></div>
+            <div class="show-empty" id="showSequenceEmpty">Save a visual profile, then add it to the show.</div>
+
+            <div class="show-transport">
+              <button id="showPreviousButton" type="button" disabled>←</button>
+              <button class="primary" id="showPlayButton" type="button" disabled>START SHOW</button>
+              <button id="showNextButton" type="button" disabled>→</button>
+              <button id="showStopButton" type="button" disabled>STOP</button>
+            </div>
+            <div class="show-progress"><i id="showProgressFill"></i></div>
+            <small class="show-current" id="showCurrentLabel">Nothing queued</small>
+            <label class="toggle-row"><span><strong>Loop show</strong><small>Return to the first entry after the last</small></span><input id="showLoop" type="checkbox" checked /><i></i></label>
+            <label class="toggle-row"><span><strong>Shuffle entries</strong><small>Choose a different queued profile at each advance</small></span><input id="showShuffle" type="checkbox" /><i></i></label>
+          </section>
+        </div>
+
+        <div class="tab-panel" data-tab-panel="controls">
+          <section class="panel-section live-controls-section">
+            <div class="section-heading"><span>LIVE CONTROLS</span><small id="liveControlStatus">READY</small></div>
+            <p class="live-controls-lead">Map MIDI notes or knobs, keyboard keys, and OSC addresses to the same visual and show actions.</p>
+
+            <div class="live-control-card">
+              <div class="section-heading"><span>MIDI LEARN</span><small id="midiStatus">NOT CONNECTED</small></div>
+              <label>MIDI INPUT<select id="midiInputSelect"><option value="">All MIDI inputs</option></select></label>
+              <label>ACTION<select id="midiActionSelect"></select></label>
+              <div class="live-control-actions"><button id="midiConnectButton" type="button">ENABLE MIDI</button><button id="midiLearnButton" type="button">LEARN NEXT CONTROL</button></div>
+              <small>After Learn, move one knob or press one pad. Note and CC messages are supported.</small>
+            </div>
+
+            <div class="live-control-card">
+              <div class="section-heading"><span>KEYBOARD</span><small>APP FOCUSED</small></div>
+              <label>ACTION<select id="keyboardActionSelect"></select></label>
+              <button class="capture-control-button" id="keyboardCaptureButton" type="button">CAPTURE NEXT KEY</button>
+              <small>Keyboard bindings work while Quartic Pulse is the active application. Space remains the default music play/pause key.</small>
+            </div>
+
+            <div class="live-control-card">
+              <div class="section-heading"><span>OSC INPUT</span><small id="oscStatus">STOPPED</small></div>
+              <div class="osc-server-grid"><label>UDP PORT<input id="oscPort" type="number" min="1" max="65535" value="9000" /></label><label>OSC ADDRESS<input id="oscAddress" type="text" value="/quartic/next" spellcheck="false" /></label></div>
+              <label>ACTION<select id="oscActionSelect"></select></label>
+              <label class="toggle-row"><span><strong>Allow LAN controllers</strong><small>Off accepts only apps on this PC</small></span><input id="oscAllowLan" type="checkbox" /><i></i></label>
+              <div class="live-control-actions"><button id="oscServerButton" type="button">START OSC</button><button id="oscAddBindingButton" type="button">ADD ADDRESS</button></div>
+              <small id="oscLastMessage">No OSC messages received.</small>
+            </div>
+
+            <div class="section-heading live-binding-heading"><span>SAVED MAPPINGS</span><small id="liveBindingCount">0 ROUTES</small></div>
+            <div class="live-binding-list" id="liveBindingList"></div>
+            <div class="live-binding-empty" id="liveBindingEmpty">No controls mapped yet.</div>
+            <button class="clear-bindings-button" id="clearLiveBindingsButton" type="button">CLEAR ALL MAPPINGS</button>
+          </section>
+        </div>
+
+        <div class="tab-panel" data-tab-panel="camera">
+          <section class="panel-section camera-section">
+            <div class="section-heading"><span>CAMERA PATHS</span><small id="cameraStatus">IDLE</small></div>
+            <p class="camera-lead">Save exact fractal views, move smoothly between them, or use a built-in motion path during a performance.</p>
+            <div class="camera-position-card"><span>X <b id="cameraXValue">0.0000</b></span><span>Y <b id="cameraYValue">0.0000</b></span><span>ZOOM <b id="cameraZoomValue">1.00×</b></span></div>
+            <div class="camera-bookmark-card">
+              <label>BOOKMARK NAME<input id="cameraBookmarkName" type="text" maxlength="48" placeholder="Wide opening" /></label>
+              <button id="saveCameraBookmarkButton" type="button">SAVE CURRENT VIEW</button>
+            </div>
+            <div class="camera-bookmark-list" id="cameraBookmarkList"></div>
+            <div class="camera-bookmark-empty" id="cameraBookmarkEmpty">No camera bookmarks saved yet.</div>
+            <div class="camera-path-card">
+              <div class="camera-path-grid"><label>FROM<select id="cameraPathFrom"></select></label><label>TO<select id="cameraPathTo"></select></label></div>
+              <div class="camera-path-grid"><label>DURATION<input id="cameraPathDuration" type="number" min="1" max="300" step="0.5" value="12" /></label><label>EASING<select id="cameraPathEasing"><option value="smooth" selected>Smooth</option><option value="linear">Linear</option><option value="cinematic">Cinematic</option></select></label></div>
+              <label class="toggle-row"><span><strong>Loop path</strong><small>Travel back and forth continuously</small></span><input id="cameraPathLoop" type="checkbox" /><i></i></label>
+              <div class="camera-path-actions"><button id="playCameraPathButton" type="button">PLAY PATH</button><button id="stopCameraPathButton" type="button">STOP</button></div>
+            </div>
+            <div class="section-heading camera-preset-heading"><span>MOTION PRESETS</span><small>NO BOOKMARKS NEEDED</small></div>
+            <div class="camera-presets"><button type="button" data-camera-preset="orbit">SLOW ORBIT</button><button type="button" data-camera-preset="drift">DEEP DRIFT</button><button type="button" data-camera-preset="zoom">ZOOM BREATH</button><button type="button" data-camera-preset="off">OFF</button></div>
+          </section>
+        </div>
+
+        <div class="tab-panel" data-tab-panel="tools">
+          <section class="panel-section creative-tools-section">
+            <div class="section-heading"><span>CREATIVE TOOLS</span><small>PERFORMANCE READY</small></div>
+            <div class="randomizer-card">
+              <div class="section-heading"><span>SAFE RANDOMIZER</span><small id="randomizerStatus">READY</small></div>
+              <p>Create a usable variation while protecting anything you lock. Undo always restores the previous settings.</p>
+              <div class="randomizer-locks"><label><input id="lockVisual" type="checkbox" /> Visual</label><label><input id="lockEquation" type="checkbox" /> Equation</label><label><input id="lockColors" type="checkbox" /> Colors</label><label><input id="lockMotion" type="checkbox" /> Motion</label><label><input id="lockReactivity" type="checkbox" /> Reactivity</label><label><input id="lockCamera" type="checkbox" /> Camera</label></div>
+              <div class="randomizer-actions"><button type="button" data-randomize="gentle">GENTLE</button><button type="button" data-randomize="bold">BOLD</button><button type="button" data-randomize="chaos">CHAOS</button></div>
+              <button class="randomizer-undo" id="randomizerUndoButton" type="button" disabled>UNDO LAST RANDOMIZE</button>
+            </div>
+
+            <div class="capture-card">
+              <div class="section-heading"><span>QUICK CAPTURE</span><small id="quickCaptureStatus">READY</small></div>
+              <div class="capture-actions"><button id="captureScreenshotButton" type="button">SAVE PNG</button><select id="quickClipDuration"><option value="5">5 SEC CLIP</option><option value="10" selected>10 SEC CLIP</option><option value="15">15 SEC CLIP</option></select><button id="captureClipButton" type="button">RECORD CLIP</button></div>
+              <div class="capture-progress"><i id="quickCaptureProgress"></i></div>
+              <small>Quick clips use the live canvas and available deck audio. Full-quality music videos still use the Export tab.</small>
+            </div>
+
+            <div class="track-presentation-card">
+              <div class="section-heading"><span>TRACK PRESENTATION</span><small>LIVE + OBS</small></div>
+              <label class="toggle-row"><span><strong>Show now-playing card</strong><small>Included in OBS output and quick captures</small></span><input id="nowPlayingEnabled" type="checkbox" /><i></i></label>
+              <label>TITLE<input id="nowPlayingTitleInput" type="text" maxlength="80" placeholder="Uses the loaded filename" /></label>
+              <label>ARTIST / LABEL<input id="nowPlayingArtistInput" type="text" maxlength="80" value="Tempest Mainframe" /></label>
+              <label>POSITION<select id="nowPlayingPosition"><option value="bottom-left" selected>Bottom left</option><option value="bottom-right">Bottom right</option><option value="top-left">Top left</option><option value="top-right">Top right</option></select></label>
+            </div>
+
+          </section>
+        </div>
+
+        <div class="tab-panel" data-tab-panel="system">
+          <section class="panel-section system-section">
+            <div class="section-heading"><span>SYSTEM SETTINGS</span><small>HARDWARE + LIMITS</small></div>
+
+            <div class="interface-mode-card">
+              <div class="interface-mode-copy">
+                <strong>CONTROL LEVEL</strong>
+                <small id="interfaceModeDescription">Visuals, presets, colors, and quick controls</small>
+              </div>
+              <div class="interface-mode-switch" role="group" aria-label="Interface control level">
+                <button class="active" type="button" data-interface-mode="basic" aria-pressed="true">BASIC</button>
+                <button type="button" data-interface-mode="advanced" aria-pressed="false">ADVANCED</button>
+              </div>
+            </div>
+
+            <div class="system-feature-card">
+              <div class="section-heading"><span>ADVANCED FEATURES</span><small>GLOBAL SWITCHES</small></div>
+              <p>Central controls for costly visual and live-performance features.</p>
+              <label class="toggle-row dimensional-toggle">
+                <span><strong>Dimensional rotation</strong><small>Virtual depth, perspective, and slice lighting</small></span>
+                <input id="fractalDimensional" type="checkbox" /><i></i>
+              </label>
+              <label class="toggle-row dimensional-toggle">
+                <span><strong>Equation folding</strong><small>Recurrence folding and nonlinear equation warp</small></span>
+                <input id="equationFolding" type="checkbox" /><i></i>
+              </label>
+              <label class="toggle-row">
+                <span><strong>Adaptive live quality</strong><small id="adaptiveQualityText">100% render scale</small></span>
+                <input id="adaptiveQuality" type="checkbox" checked /><i></i>
+              </label>
+              <label class="toggle-row">
+                <span><strong>Beat pulse</strong><small>Scale on low-frequency transients</small></span>
+                <input id="beatPulse" type="checkbox" checked /><i></i>
+              </label>
+              <label class="toggle-row">
+                <span><strong>Auto drift</strong><small>Orbit through the active fractal plane</small></span>
+                <input id="autoDrift" type="checkbox" checked /><i></i>
+              </label>
+            </div>
+
+            <div class="performance-assistant-card">
+              <div class="section-heading"><span>PERFORMANCE ASSISTANT</span><small id="performanceAssistantStatus">MONITORING</small></div>
+              <div class="hardware-summary" id="hardwareSummary"><strong>SCANNING HARDWARE</strong><small>Reading local CPU, memory, and graphics capabilities…</small></div>
+              <label>PERFORMANCE MODE<select id="performanceMode"><option value="auto" selected>Automatic recommendation</option><option value="efficient">Efficient</option><option value="balanced">Balanced</option><option value="performance">Performance</option></select></label>
+              <div class="performance-live-grid"><span><b id="performanceFpsValue">60</b> FPS</span><span><b id="performanceFrameValue">16.7</b> MS</span><span><b id="performanceScaleValue">100</b>% SCALE</span></div>
+              <label class="toggle-row"><span><strong>Protect live frame rate</strong><small>Uses the adaptive render scale above</small></span><input id="performanceProtection" type="checkbox" checked /><i></i></label>
+              <p id="performanceGpuLabel">Renderer information will appear after analysis.</p>
+              <button id="analyzePerformanceButton" type="button">ANALYZE FOR 8 SECONDS</button>
+              <div class="performance-analysis-progress"><i id="performanceAnalysisProgress"></i></div>
+              <div class="performance-recommendations" id="performanceRecommendations">Run an analysis while your usual music and visual are active.</div>
+              <button id="applyPerformanceButton" type="button" disabled>APPLY RECOMMENDATIONS</button>
+              <div class="performance-presets"><button type="button" data-performance-preset="average">AVERAGE PC</button><button type="button" data-performance-preset="balanced">BALANCED</button><button type="button" data-performance-preset="showcase">SHOWCASE</button></div>
+              <details class="unleashed-settings"><summary>ADVANCED PERFORMANCE</summary><div>
+                <label class="toggle-row unleashed-toggle"><span><strong>Unleashed mode</strong><small>Raises shader limits and unlocks live export</small></span><input id="unleashedMode" type="checkbox" /><i></i></label>
+                <p>For high-end desktops with thermal and GPU headroom. Absolute safety limits remain active.</p>
+                <button id="rescanHardwareButton" type="button">RESCAN HARDWARE</button>
+              </div></details>
+            </div>
+          </section>
+        </div>
+
+        <div class="tab-panel" data-tab-panel="stream">
+          <section class="panel-section obs-section">
+            <div class="section-heading"><span>OBS STUDIO</span><small id="obsOutputStatus">OUTPUT CLOSED</small></div>
+            <p class="obs-lead">Open a clean visual-only window for OBS while keeping Quartic Pulse controls available here.</p>
+
+            <div class="obs-live-card" id="obsLiveCard">
+              <i></i>
+              <div><strong id="obsLiveTitle">READY FOR OBS</strong><small id="obsLiveDetail">Choose a size, then open the output window.</small></div>
+            </div>
+
+            <div class="obs-settings-grid">
+              <label>OUTPUT SIZE
+                <select id="obsResolution">
+                  <option value="1280x720">720p · 1280×720</option>
+                  <option value="1920x1080" selected>1080p · 1920×1080</option>
+                  <option value="2560x1440">1440p · 2560×1440</option>
+                  <option value="3840x2160">4K · 3840×2160</option>
+                </select>
+              </label>
+              <label>SYNC RATE
+                <select id="obsFps">
+                  <option value="30">30 FPS</option>
+                  <option value="60" selected>60 FPS</option>
+                </select>
+              </label>
+            </div>
+
+            <label class="toggle-row obs-top-toggle">
+              <span><strong>Always on top</strong><small>Keep the output visible while arranging the stream</small></span>
+              <input id="obsAlwaysOnTop" type="checkbox" /><i></i>
+            </label>
+
+            <label class="toggle-row obs-chroma-toggle">
+              <span><strong>Chroma-safe green screen</strong><small>Reserve pure green for the background and shift subject greens away from the key</small></span>
+              <input id="obsChromaKey" type="checkbox" /><i></i>
+            </label>
+            <div class="slider-group obs-chroma-threshold" id="obsChromaControls">
+              <label><span>KEY THRESHOLD (%)</span><output id="obsChromaThresholdValue">16%</output></label>
+              <input id="obsChromaThreshold" type="range" min="0" max="0.5" value="0.08" step="0.005" />
+            </div>
+
+            <button class="obs-output-button" id="obsOutputButton" type="button">OPEN OBS OUTPUT</button>
+            <p class="obs-drag-note">Move the frameless OBS window by dragging its top edge. The drag strip is transparent and is not visible in the capture.</p>
+
+            <div class="obs-websocket-card">
+              <div class="section-heading"><span>OBS AUTOMATION</span><small id="obsWebSocketStatus">DISCONNECTED</small></div>
+              <p>Connect to OBS WebSocket on this PC to control scenes, source visibility, and scene-linked Quartic Pulse profiles.</p>
+              <div class="obs-connection-grid">
+                <label>PORT<input id="obsWebSocketPort" type="number" min="1" max="65535" value="4455" /></label>
+                <label>PASSWORD<input id="obsWebSocketPassword" type="password" autocomplete="off" placeholder="OBS password" /></label>
+              </div>
+              <button class="obs-connect-button" id="obsConnectButton" type="button">CONNECT TO OBS</button>
+              <div class="obs-automation-controls" id="obsAutomationControls" inert>
+                <label>OBS SCENE<select id="obsSceneSelect"><option value="">Connect to load scenes</option></select></label>
+                <div class="obs-scene-actions"><button id="obsRefreshButton" type="button">REFRESH</button><button id="obsSwitchSceneButton" type="button">SWITCH LIVE</button></div>
+                <label>SCENE SOURCE<select id="obsSourceSelect"><option value="">Choose a scene</option></select></label>
+                <div class="obs-scene-actions"><button id="obsToggleSourceButton" type="button">SHOW / HIDE</button><button id="obsAddSourceButton" type="button">ADD OUTPUT</button></div>
+                <div class="obs-profile-link">
+                  <label>QUARTIC PROFILE<select id="obsProfileSelect"><option value="">No profile link</option></select></label>
+                  <button id="obsLinkProfileButton" type="button">LINK TO SCENE</button>
+                </div>
+                <label class="toggle-row"><span><strong>Follow OBS scenes</strong><small>Apply linked profiles when the live OBS scene changes</small></span><input id="obsFollowScenes" type="checkbox" checked /><i></i></label>
+              </div>
+              <small class="obs-security-note">The password stays in memory only. Quartic Pulse connects only to OBS on this computer.</small>
+            </div>
+
+            <div class="advanced-output-card">
+              <div class="section-heading"><span>ADVANCED OUTPUT</span><small id="advancedOutputStatus">CHECKING</small></div>
+              <div class="advanced-output-route"><i class="ready"></i><div><strong>OBS Window Capture</strong><small>Built in · visual-only output at up to 4K</small></div></div>
+              <div class="advanced-output-route"><i id="spoutCapabilityLight"></i><div><strong>Spout2 Direct GPU Sharing</strong><small id="spoutCapabilityText">Checking for the optional native sender…</small></div></div>
+              <p>Direct texture sharing cannot run inside the sandboxed JavaScript renderer. It needs a compiled, signed DirectX sender and the OBS Spout2 plugin. Quartic Pulse will detect that optional native component when it is installed.</p>
+              <button id="checkAdvancedOutputButton" type="button">CHECK CAPABILITIES</button>
+            </div>
+
+            <div class="obs-setup-card">
+              <div class="section-heading"><span>ADD IT TO OBS</span><small>WINDOW CAPTURE</small></div>
+              <ol>
+                <li><b>Open OBS Output</b> above.</li>
+                <li>In OBS Sources, press <b>+</b> and choose <b>Window Capture</b>.</li>
+                <li>Select <b>Quartic Pulse — OBS Output</b>.</li>
+                <li>Turn off <b>Capture Cursor</b>, then fit it to the canvas.</li>
+                <li>For green screen, add OBS <b>Chroma Key</b> to the source. Quartic Pulse automatically keeps key-green out of the fractal.</li>
+              </ol>
+            </div>
+
+            <p class="obs-audio-note"><strong>STREAM AUDIO:</strong> Keep Desktop Audio, Application Audio Capture, or your mixer configured in OBS. This output is visual-only so it does not duplicate or delay your sound.</p>
+          </section>
+        </div>
+
+        <div class="tab-panel" data-tab-panel="export">
+
+        <section class="export-section">
+          <div class="section-heading"><span>VIDEO EXPORT</span><small>MP4 / WEBM / MOV / MKV</small></div>
+          <div class="slider-group export-iterations">
+            <label><span>BASE ITERATIONS</span><output id="iterationsValue">220</output></label>
+            <input id="iterations" type="range" min="80" max="500" value="220" step="10" />
+          </div>
+          <div class="export-settings">
+            <label>EXPORT ENGINE
+              <select id="exportMode">
+                <option value="offline" selected>Offline · exact frames</option>
+                <option value="live" disabled>Live · Unleashed only</option>
+              </select>
+            </label>
+            <label>RESOLUTION
+              <select id="resolution">
+                <option value="854x480">480p</option>
+                <option value="1280x720">720p</option>
+                <option value="1920x1080" selected>1080p</option>
+                <option value="2560x1440">1440p</option>
+                <option value="3840x2160">4K</option>
+              </select>
+            </label>
+            <label>FPS
+              <select id="fps">
+                <option value="30">30</option>
+                <option value="60" selected>60</option>
+                <option value="90">90</option>
+                <option value="120">120</option>
+              </select>
+            </label>
+            <label>FORMAT
+              <select id="videoFormat">
+                <option value="mp4" selected>MP4 · H.264/AAC</option>
+                <option value="webm">WebM · VP9/Opus</option>
+                <option value="mov">MOV · H.264/AAC</option>
+                <option value="mkv">MKV · H.264/AAC</option>
+              </select>
+            </label>
+            <label class="export-detail">EXPORT DETAIL
+              <select id="exportDetail">
+                <option value="1">Live · 1×</option>
+                <option value="1.6" selected>Enhanced · 1.6×</option>
+                <option value="2.3">Ultra · 2.3×</option>
+                <option value="3.5" id="unleashedExportDetail" disabled>Unleashed · 3.5×</option>
+              </select>
+            </label>
+          </div>
+          <p class="export-performance-note" id="exportPerformanceNote">Offline · 1080p at 60 FPS · every frame completed</p>
+          <div class="export-encoder-status" id="exportEncoderStatus">
+            <i></i><span><strong>ENCODER CHECK PENDING</strong><small>Quartic Pulse will test NVIDIA, Intel, AMD, then CPU encoding</small></span>
+          </div>
+          <label class="toggle-row export-preview-toggle">
+            <span><strong>Show preview while exporting</strong><small>Off saves UI composition and update work</small></span>
+            <input id="showExportPreview" type="checkbox" /><i></i>
+          </label>
+          <label class="toggle-row export-complete-sound-toggle">
+            <span><strong>Play completion stinger</strong><small>Sounds only after the finished video is fully saved</small></span>
+            <input id="exportCompleteSound" type="checkbox" checked /><i></i>
+          </label>
+          <button class="export-button" id="exportButton" type="button" disabled>
+            <span id="exportIcon">●</span><strong id="exportLabel">EXPORT VIDEO</strong>
+          </button>
+          <div class="export-progress" id="exportProgress" hidden>
+            <div><i id="exportProgressFill"></i></div><span id="exportProgressText">Rendering 0%</span>
+          </div>
+          <button class="reveal-button" id="revealButton" type="button" hidden>Show exported file</button>
+          <div class="export-history-card">
+            <div class="section-heading"><span>RECENT EXPORTS</span><button id="clearExportHistoryButton" type="button">CLEAR</button></div>
+            <div class="export-history-list" id="exportHistoryList"><p>No completed exports yet.</p></div>
+          </div>
+          <div class="export-recovery-card" id="exportRecoveryCard" hidden>
+            <div class="section-heading"><span>RECOVERABLE EXPORTS</span><small>INTERRUPTED</small></div>
+            <div class="export-recovery-list" id="exportRecoveryList"></div>
+          </div>
+        </section>
+        </div>
+
+        <div class="tab-panel" data-tab-panel="about">
+          <section class="panel-section about-section">
+            <div class="brand-logo-frame">
+              <img src="../../assets/storm-horizon-media-logo.png" alt="Storm Horizon Media" />
+            </div>
+
+            <div class="about-title">
+              <div class="eyebrow">TEMPEST MAINFRAME PRESENTS</div>
+              <h2>QUARTIC PULSE</h2>
+              <span>Version 0.28.3</span>
+            </div>
+
+            <p class="about-lead">A Windows 11 music visualizer and music-to-video renderer powered by a family of audio-modulated fractal equations.</p>
+
+            <div class="about-equation">zₙ₊₁ = zₙ⁴ + μ(t)zₙ² + c</div>
+
+            <div class="about-card about-purpose-card">
+              <strong>MUSIC DRIVES THE MATH</strong>
+              <p>Quartic Pulse does more than animate a shader. Live audio can reshape the equation, dimensional motion, folding, color, and movement that generate each frame.</p>
+              <small>Designed for live listening, streaming, and offline music-to-video creation</small>
+            </div>
+
+            <div class="about-feature-grid" aria-label="Quartic Pulse capabilities">
+              <article><span>VISUAL ENGINE</span><strong>2D + True 3D Fractals</strong><p>Audio-modulated equations, a ray-marched power-4 Mandelbulb, Server Scapes, radial visuals, pulse rings, and waveform fields.</p></article>
+              <article><span>AUDIO ROUTING</span><strong>Files + Windows Audio</strong><p>Load songs and playlists or capture playback, input, and virtual audio endpoints.</p></article>
+              <article><span>LIVE PRODUCTION</span><strong>OBS Ready</strong><p>Window capture, chroma-key output, presentation controls, saved scenes, and profiles.</p></article>
+              <article><span>VIDEO CREATION</span><strong>Offline Export</strong><p>Render common resolutions and frame rates without limiting quality to live playback speed.</p></article>
+            </div>
+
+            <div class="about-card about-release-card">
+              <strong>VERSION 0.28 HIGHLIGHTS</strong>
+              <ul>
+                <li>20 named 2D fractal equations plus the true GPU ray-marched power-4 3D Mandelbulb</li>
+                <li>Calmer equation modulation with dedicated music-envelope smoothing</li>
+                <li>Preset-led Basic mode with larger controls and a full Advanced workspace</li>
+                <li>Low-flash visual preset and first-run photosensitivity guidance</li>
+                <li>Equation-aware camera, detail, palette, and motion starting points</li>
+              </ul>
+            </div>
+
+            <div class="about-support-card">
+              <div><span>PLATFORM</span><strong>Windows 11 x64</strong></div>
+              <div><span>LIVE GRAPHICS</span><strong>WebGL2 GPU</strong></div>
+              <div><span>PERFORMANCE</span><strong>Adaptive by default</strong></div>
+              <p>Quartic Pulse is tuned to scale across typical Windows 11 PCs. High-end systems can opt into Unleashed mode when additional GPU and thermal headroom are available.</p>
+            </div>
+
+            <div class="about-card">
+              <strong>TEMPEST MAINFRAME</strong>
+              <p>Creator and maintainer of Quartic Pulse—experimental visual software built at the intersection of mathematics, music, and digital media.</p>
+              <small>Human-directed, AI-assisted development · Storm Horizon Media identity and branding</small>
+            </div>
+
+            <div class="about-grid">
+              <div><span>RENDERER</span><strong>WebGL2</strong></div>
+              <div><span>AUDIO</span><strong>Web Audio</strong></div>
+              <div><span>DESKTOP</span><strong>Electron</strong></div>
+              <div><span>EXPORT</span><strong>FFmpeg</strong></div>
+            </div>
+
+            <div class="license-card">
+              <div class="license-badge">GPLv3+</div>
+              <div>
+                <strong>Free software—share it forward</strong>
+                <p>Copyright © 2026 Tempest Mainframe. Licensed under GPL-3.0-or-later. You may use, study, modify, and redistribute Quartic Pulse under the same license. It comes with absolutely no warranty. See the included LICENSE file.</p>
+              </div>
+            </div>
+
+            <p class="brand-notice">The Storm Horizon Media name, logo, and associated branding are not granted under the GPL and remain the property of their respective owner. Modified versions may use replacement branding. Electron, NAudio, and optional FFmpeg components retain their own licenses.</p>
+          </section>
+        </div>
+        <div class="appearance-actions" aria-label="Appearance actions">
+          <button id="resetActiveVisualButton" type="button">↺ RESET VISUAL</button>
+          <button class="primary" id="quickSaveProfileButton" type="button">＋ SAVE PRESET</button>
+        </div>
+        </div>
+      </aside>
+    </div>
+
+    <div class="visual-safety-dialog" id="visualSafetyDialog" role="dialog" aria-modal="true" aria-labelledby="visualSafetyTitle" hidden>
+      <div class="visual-safety-card">
+        <div class="visual-safety-icon" aria-hidden="true">!</div>
+        <div>
+          <div class="eyebrow">BEFORE YOU BEGIN</div>
+          <h2 id="visualSafetyTitle">Visual safety</h2>
+          <p>Quartic Pulse can create flashing colors, rapid contrast changes, and strong motion in response to music. Stop viewing if you feel discomfort.</p>
+          <p class="visual-safety-note">Low Flash reduces equation deformation, beat pulses, color movement, and camera motion. You can change this any time from Appearance.</p>
+          <div class="visual-safety-actions">
+            <button class="primary" id="visualSafetyLowFlashButton" type="button">USE LOW FLASH</button>
+            <button id="visualSafetyContinueButton" type="button">CONTINUE WITH BALANCED</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="toast" id="toast" role="status"></div>
+    <div class="export-preflight-dialog" id="exportPreflightDialog" role="dialog" aria-modal="true" aria-labelledby="exportPreflightTitle" hidden>
+      <div class="export-preflight-card">
+        <div class="eyebrow">EXPORT PREFLIGHT</div>
+        <h2 id="exportPreflightTitle">Ready to render?</h2>
+        <p id="exportPreflightSummary">Quartic Pulse is checking this export.</p>
+        <div class="export-preflight-grid">
+          <div><span>VIDEO</span><strong id="preflightVideo">—</strong></div>
+          <div><span>ENGINE</span><strong id="preflightEncoder">—</strong></div>
+          <div><span>EST. OUTPUT</span><strong id="preflightOutput">—</strong></div>
+          <div><span>PEAK SPACE</span><strong id="preflightSpace">—</strong></div>
+          <div><span>FREE SPACE</span><strong id="preflightFree">—</strong></div>
+          <div><span>DURATION</span><strong id="preflightDuration">—</strong></div>
+        </div>
+        <p class="export-preflight-warning" id="preflightWarning" hidden></p>
+        <div class="export-preflight-actions">
+          <button id="preflightCancelButton" type="button">BACK</button>
+          <button id="preflightTestButton" type="button">5-SECOND TEST</button>
+          <button id="preflightStartButton" class="primary" type="button">START EXPORT</button>
+        </div>
+      </div>
+    </div>
+    <audio id="audio" preload="metadata" crossorigin="anonymous"></audio>
+    <audio id="exportCompleteStinger" preload="auto" src="../../assets/audio/export-complete-stinger.wav"></audio>
+    <script src="app.js"></script>
+  </body>
+</html>

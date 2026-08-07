@@ -1,0 +1,65 @@
+{
+  "name": "quartic-pulse",
+  "version": "0.28.3",
+  "description": "A Windows 11 audio-reactive fractal visualizer and music-to-video exporter.",
+  "main": "src/main/main.js",
+  "author": "Tempest Mainframe",
+  "license": "GPL-3.0-or-later",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "icon": "electron tools/render-icon.js",
+    "bundle:ffmpeg": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/prepare-ffmpeg.ps1",
+    "pack": "npm run bundle:ffmpeg && electron-builder --dir",
+    "dist": "npm run bundle:ffmpeg && electron-builder --win nsis portable"
+  },
+  "devDependencies": {
+    "electron": "^37.2.6",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.tempestmainframe.quarticpulse",
+    "productName": "Quartic Pulse",
+    "asar": true,
+    "asarUnpack": [
+      "assets/windows-audio/**/*",
+      "assets/spout/**/*"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "src/**/*",
+      "assets/**/*",
+      "!assets/bin/**/*",
+      "package.json",
+      "LICENSE",
+      "BRAND_ASSETS.md"
+    ],
+    "extraResources": [
+      {
+        "from": "assets/bin",
+        "to": "bin",
+        "filter": ["**/*"]
+      }
+    ],
+    "win": {
+      "icon": "assets/icon.png",
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": true,
+      "allowToChangeInstallationDirectory": true,
+      "installerHeader": "assets/installer/installer-header.bmp",
+      "installerSidebar": "assets/installer/installer-sidebar.bmp",
+      "uninstallerSidebar": "assets/installer/installer-sidebar.bmp",
+      "include": "assets/installer/installer.nsh",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  }
+}

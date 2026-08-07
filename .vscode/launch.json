@@ -1,0 +1,15 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run Quartic Pulse",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/electron.cmd",
+      "args": [".", "--dev"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "outputCapture": "std"
+    }
+  ]
+}
