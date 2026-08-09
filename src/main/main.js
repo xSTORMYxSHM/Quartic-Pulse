@@ -6,6 +6,12 @@ const { execFile, spawn } = require('child_process');
 const crypto = require('crypto');
 const dgram = require('dgram');
 const { pipeline } = require('stream/promises');
+const {
+  videoFormats,
+  normalizeRequestedFormat,
+  saveDialogFilters,
+  resolveOutputSelection
+} = require('./export-format-policy');
 
 const exportSessions = new Map();
 const outputCaptureProcesses = new Map();
@@ -920,7 +926,7 @@ function createWindow() {
             const aboutContentReady = activeSystemTab !== 'about' || Boolean(
               document.querySelector('.about-feature-grid')
               && document.querySelector('.about-release-card')
-              && document.querySelector('.about-title > span')?.textContent.includes('0.30.0')
+              && document.querySelector('.about-title > span')?.textContent.includes('0.30.1')
             );
             const musicPersonalityButtons = [...document.querySelectorAll('[data-music-personality]')];
             const musicPersonalityReady = musicPersonalityButtons.length === 7
@@ -1556,13 +1562,6 @@ async function copyFileWithProgress(sourcePath, destinationPath, onProgress = ()
   onProgress(1);
 }
 
-const videoFormats = {
-  mp4: { name: 'MP4 video', extension: 'mp4' },
-  webm: { name: 'WebM video', extension: 'webm' },
-  mov: { name: 'QuickTime MOV video', extension: 'mov' },
-  mkv: { name: 'Matroska MKV video', extension: 'mkv' }
-};
-
 function ffmpegTimestampSeconds(value) {
   const match = String(value || '').match(/(\d+):(\d+):(\d+(?:\.\d+)?)/);
   return match ? Number(match[1]) * 3600 + Number(match[2]) * 60 + Number(match[3]) : 0;
@@ -2002,18 +2001,15 @@ app.whenReady().then(() => {
 
   ipcMain.handle('export:begin', async (_event, options) => {
     const suggested = (options?.suggestedName || 'quartic-pulse').replace(/[<>:"/\\|?*]/g, '-');
-    const requestedFormat = videoFormats[options?.format] ? options.format : 'mp4';
-    const orderedFormats = [requestedFormat, ...Object.keys(videoFormats).filter((format) => format !== requestedFormat)];
+    const requestedFormat = normalizeRequestedFormat(options?.format);
     const result = await dialog.showSaveDialog({
       title: 'Export music visualizer',
       defaultPath: `${suggested}.${requestedFormat}`,
-      filters: orderedFormats.map((format) => ({ name: videoFormats[format].name, extensions: [format] }))
+      filters: saveDialogFilters(requestedFormat)
     });
     if (result.canceled || !result.filePath) return null;
 
-    const chosenExtension = path.extname(result.filePath).slice(1).toLowerCase();
-    const format = videoFormats[chosenExtension] ? chosenExtension : requestedFormat;
-    const outputPath = videoFormats[chosenExtension] ? result.filePath : `${result.filePath}.${format}`;
+    const { format, outputPath } = resolveOutputSelection(result.filePath, requestedFormat);
 
     const id = crypto.randomUUID();
     const tempPath = path.join(os.tmpdir(), `quartic-pulse-${id}.webm`);
@@ -2030,7 +2026,7 @@ app.whenReady().then(() => {
       finalEncoder
     };
     exportSessions.set(id, session);
-    return { id, outputPath };
+    return { id, outputPath, format };
   });
 
   ipcMain.handle('export:append', async (_event, id, bytes) => {
@@ -2111,16 +2107,14 @@ app.whenReady().then(() => {
     const audioStat = await fs.promises.stat(audioPath).catch(() => null);
     if (!audioStat?.isFile()) throw new Error('The selected local audio file could not be opened for offline export.');
     const suggested = String(options?.suggestedName || 'quartic-pulse').replace(/[<>:"/\\|?*]/g, '-').slice(0, 100);
-    const requestedFormat = videoFormats[options?.format] ? options.format : 'mp4';
+    const requestedFormat = normalizeRequestedFormat(options?.format);
     const result = await dialog.showSaveDialog({
       title: 'Export offline music visualizer',
       defaultPath: `${suggested}.${requestedFormat}`,
-      filters: Object.entries(videoFormats).map(([format, details]) => ({ name: details.name, extensions: [format] }))
+      filters: saveDialogFilters(requestedFormat)
     });
     if (result.canceled || !result.filePath) return null;
-    const chosenExtension = path.extname(result.filePath).slice(1).toLowerCase();
-    const format = videoFormats[chosenExtension] ? chosenExtension : requestedFormat;
-    const outputPath = videoFormats[chosenExtension] ? result.filePath : `${result.filePath}.${format}`;
+    const { format, outputPath } = resolveOutputSelection(result.filePath, requestedFormat);
     const id = crypto.randomUUID();
     const tempPath = path.join(os.tmpdir(), `quartic-pulse-offline-${id}.ivf`);
     await ensureExportDiskSpace(outputPath, options?.requiredBytes);
@@ -2132,7 +2126,7 @@ app.whenReady().then(() => {
     stream.write(createIvfHeader(session));
     exportSessions.set(id, session);
     await writeRecoveryManifest(session, { status: 'rendering' });
-    return { id, outputPath };
+    return { id, outputPath, format };
   });
 
   ipcMain.handle('export:offline-frame', async (_event, id, bytes) => {

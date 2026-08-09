@@ -6,7 +6,7 @@
   function create(options = {}) {
     const application = options.application || 'quartic-pulse-performance';
     const schemaVersion = Number(options.schemaVersion) || 1;
-    const appVersion = options.appVersion || '0.30.0-dev.1';
+    const appVersion = options.appVersion || '0.30.1-dev.1';
     const hashText = options.hashText || ((value) => String(value.length));
     const sanitizeEntry = options.sanitizeEntry || ((entry) => ({ ...entry }));
     const isValidProfile = options.isValidProfile || (() => true);

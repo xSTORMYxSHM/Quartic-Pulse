@@ -2,6 +2,8 @@
 
 See [CHANGELOG.md](CHANGELOG.md) for release-by-release additions, changes, fixes, and packaging notes.
 
+Planned export profiles and future development direction are tracked in [ROADMAP.md](ROADMAP.md).
+
 Crash-report privacy and secure relay deployment are documented in [REPORTING.md](REPORTING.md).
 
 Quartic Pulse is a Windows 11 music visualizer and music-to-video exporter built around an audio-reactive family of escape-time fractals. Its signature mode is the power-4 Mandelbrot set:

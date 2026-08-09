@@ -1937,7 +1937,7 @@
   const songMapDataEngine = songMapDataEngineFactory.create();
   const songDirectorEngine = songDirectorEngineFactory.create({ hashText: songMapDataEngine.hashText });
   const performancePackageEngine = performancePackageEngineFactory.create({
-    appVersion: '0.30.0-dev.1',
+    appVersion: '0.30.1-dev.1',
     hashText: songMapDataEngine.hashText,
     sanitizeEntry: serializeShowEntry,
     isValidProfile: validProfile,

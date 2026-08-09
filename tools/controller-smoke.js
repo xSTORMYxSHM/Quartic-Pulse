@@ -3,6 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
+const exportFormatPolicy = require('../src/main/export-format-policy');
 
 class FakeClassList {
   constructor() { this.values = new Set(); }
@@ -100,6 +101,11 @@ for (const file of ['audio-controller.js', 'audio-analysis-engine.js', 'performa
 function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
+
+assert(exportFormatPolicy.orderedFormatIds('webm')[0] === 'webm', 'WebM was not the default save-dialog format.');
+assert(exportFormatPolicy.saveDialogFilters('mov')[0].extensions[0] === 'mov', 'MOV was not the default save-dialog filter.');
+assert(exportFormatPolicy.resolveOutputSelection('C:/Exports/visual', 'webm').outputPath.endsWith('.webm'), 'WebM extension was not preserved.');
+assert(exportFormatPolicy.resolveOutputSelection('C:/Exports/visual.mkv', 'webm').format === 'mkv', 'An explicitly selected save-dialog format was not respected.');
 
 const audio = { duration: 120, currentTime: 0 };
 let exporting = false;

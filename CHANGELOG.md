@@ -19,6 +19,11 @@ All notable Quartic Pulse changes are documented here. Quartic Pulse follows sem
 - Basic mode now presents Deck, Playlist, Analysis, Show, Stream, Performance, Reports, and About as its essential tools. Frequency Color, Show Composer, external controls, camera paths, and creative utilities remain available in Advanced mode.
 - Switching from Advanced to Basic now redirects any advanced-only panel to the nearest essential panel in the same workspace instead of leaving a hidden or empty inspector.
 
+### Fixed
+
+- Fixed Offline export reverting WebM, MOV, or MKV requests to MP4 because the Windows save dialog always opened with MP4 as its first file-type filter.
+- Centralized export-format ordering and extension resolution so Live and Offline exports preserve the requested default while still respecting a format explicitly chosen in the save dialog.
+
 ## 0.29.1 - 2026-08-08
 
 ### Fixed
