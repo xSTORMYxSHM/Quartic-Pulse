@@ -42,6 +42,8 @@
   if (!performanceShowDataEngineFactory) throw new Error('Quartic performance show data engine failed to load.');
   const performanceShowComposerControllerFactory = window.QuarticPerformanceShowComposerController;
   if (!performanceShowComposerControllerFactory) throw new Error('Quartic performance show composer controller failed to load.');
+  const profileManagerControllerFactory = window.QuarticProfileManagerController;
+  if (!profileManagerControllerFactory) throw new Error('Quartic profile manager controller failed to load.');
   const exportControllerFactory = window.QuarticExportController;
   if (!exportControllerFactory) throw new Error('Quartic export controller failed to load.');
   const exportSessionEngineFactory = window.QuarticExportSessionEngine;
@@ -1907,9 +1909,28 @@
     onRecordCamera: recordComposerCamera,
     onOpenChange: () => requestAnimationFrame(setCanvasSize)
   });
+  const profileManagerController = profileManagerControllerFactory.create({
+    query: $,
+    documentRef: document,
+    getProfiles: () => savedProfiles,
+    findProfile: (profiles, id) => performanceShowDataEngine.findProfile(profiles, id),
+    onSave: saveCurrentProfile,
+    onQuickSave: quickSaveCurrentVisualProfile,
+    onReset: resetActiveVisual,
+    onApply: applySavedProfile,
+    onFavorite: favoriteSavedProfile,
+    onDelete: deleteSavedProfile,
+    onExport: exportSelectedProfile,
+    onImport: importProfileFile,
+    onRendered: () => {
+      renderShowProfileOptions();
+      renderObsProfileOptions();
+    },
+    onError: (message) => showToast(message, true)
+  });
   const exportSessionEngine = exportSessionEngineFactory.create();
   const exportEncoderEngine = exportEncoderEngineFactory.create();
-  window.__quarticControllers = Object.freeze({ audio: audioController, performance: performanceController, showComposer: showComposerController, export: exportController });
+  window.__quarticControllers = Object.freeze({ audio: audioController, performance: performanceController, showComposer: showComposerController, profileManager: profileManagerController, export: exportController });
   window.__quarticEngines = Object.freeze({
     audioAnalysis: audioAnalysisEngine,
     performanceSequencer: performanceSequencerEngine,
@@ -5449,51 +5470,15 @@
   }
 
   function setProfileStatus(message) {
-    $('#profileStatus').textContent = message;
+    profileManagerController.setStatus(message);
   }
 
   function selectedSavedProfile() {
-    const id = $('#savedProfileSelect').value;
-    return performanceShowDataEngine.findProfile(savedProfiles, id);
+    return profileManagerController.selectedProfile();
   }
 
   function renderSavedProfiles(preferredId = '') {
-    const select = $('#savedProfileSelect');
-    const previousId = preferredId || select.value;
-    const query = $('#profileSearch')?.value.trim().toLowerCase() || '';
-    const visibleProfiles = savedProfiles
-      .filter((profile) => !query || profile.name.toLowerCase().includes(query) || profile.kind.includes(query))
-      .sort((a, b) => Number(Boolean(b.favorite)) - Number(Boolean(a.favorite)) || String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')));
-    select.replaceChildren();
-    if (!visibleProfiles.length) {
-      const option = document.createElement('option');
-      option.value = '';
-      option.textContent = query ? 'No matching profiles' : 'No saved profiles';
-      select.appendChild(option);
-    } else {
-      for (const profile of visibleProfiles) {
-        const option = document.createElement('option');
-        option.value = profile.id;
-        option.textContent = `${profile.favorite ? '★ ' : ''}${profile.kind === 'colors' ? 'COLOR' : 'FULL'} · ${profile.name}`;
-        select.appendChild(option);
-      }
-      select.value = visibleProfiles.some((profile) => profile.id === previousId) ? previousId : visibleProfiles[0].id;
-    }
-    const hasSelection = Boolean(selectedSavedProfile());
-    $('#applyProfileButton').disabled = !hasSelection;
-    $('#favoriteProfileButton').disabled = !hasSelection;
-    $('#deleteProfileButton').disabled = !hasSelection;
-    $('#exportProfileButton').disabled = !hasSelection;
-    if (hasSelection) {
-      const profile = selectedSavedProfile();
-      $('#favoriteProfileButton').textContent = `${profile.favorite ? '★' : '☆'} FAVORITE`;
-      setProfileStatus(`${profile.kind === 'colors' ? 'Color Palette' : 'Full Visual Settings'} · saved ${new Date(profile.updatedAt || profile.createdAt).toLocaleString()}`);
-    } else {
-      $('#favoriteProfileButton').textContent = '☆ FAVORITE';
-      setProfileStatus(query ? 'No saved profile matches this search.' : 'Profiles are saved locally as JSON-compatible data.');
-    }
-    renderShowProfileOptions();
-    renderObsProfileOptions();
+    return profileManagerController.render(preferredId);
   }
 
   function applyControlValues(values, allowedIds) {
@@ -5598,8 +5583,7 @@
     saveCurrentProfile();
   }
 
-  async function exportSelectedProfile() {
-    const profile = selectedSavedProfile();
+  async function exportSelectedProfile(profile = selectedSavedProfile()) {
     if (!profile) return;
     const documentData = {
       application: profileApplication,
@@ -5643,47 +5627,25 @@
     showToast(`${name} imported`);
   }
 
+  function favoriteSavedProfile(profile) {
+    if (!profile) return;
+    profile.favorite = !profile.favorite;
+    profile.updatedAt = new Date().toISOString();
+    persistSavedProfiles();
+    renderSavedProfiles(profile.id);
+  }
+
+  function deleteSavedProfile(profile) {
+    if (!profile || !window.confirm(`Delete the saved profile "${profile.name}"?`)) return;
+    savedProfiles = savedProfiles.filter((item) => item.id !== profile.id);
+    persistSavedProfiles();
+    renderSavedProfiles();
+    showToast(`${profile.name} deleted`);
+  }
+
   function initializeProfileManager() {
     loadSavedProfiles();
-    renderSavedProfiles();
-    $('#profileSearch').addEventListener('input', () => renderSavedProfiles());
-    $('#savedProfileSelect').addEventListener('change', () => renderSavedProfiles($('#savedProfileSelect').value));
-    $('#saveProfileButton').addEventListener('click', () => {
-      try { saveCurrentProfile(); }
-      catch (error) { showToast(`Profile could not be saved: ${error.message}`, true); }
-    });
-    $('#quickSaveProfileButton').addEventListener('click', () => {
-      try { quickSaveCurrentVisualProfile(); }
-      catch (error) { showToast(`Preset could not be saved: ${error.message}`, true); }
-    });
-    $('#resetActiveVisualButton').addEventListener('click', resetActiveVisual);
-    $('#applyProfileButton').addEventListener('click', () => {
-      try { applySavedProfile(selectedSavedProfile()); }
-      catch (error) { showToast(error.message, true); }
-    });
-    $('#favoriteProfileButton').addEventListener('click', () => {
-      const profile = selectedSavedProfile();
-      if (!profile) return;
-      profile.favorite = !profile.favorite;
-      profile.updatedAt = new Date().toISOString();
-      persistSavedProfiles();
-      renderSavedProfiles(profile.id);
-    });
-    $('#deleteProfileButton').addEventListener('click', () => {
-      const profile = selectedSavedProfile();
-      if (!profile || !window.confirm(`Delete the saved profile "${profile.name}"?`)) return;
-      savedProfiles = savedProfiles.filter((item) => item.id !== profile.id);
-      persistSavedProfiles();
-      renderSavedProfiles();
-      showToast(`${profile.name} deleted`);
-    });
-    $('#exportProfileButton').addEventListener('click', () => exportSelectedProfile().catch((error) => showToast(error.message, true)));
-    $('#importProfileButton').addEventListener('click', () => $('#importProfileInput').click());
-    $('#importProfileInput').addEventListener('change', async (event) => {
-      try { await importProfileFile(event.target.files[0]); }
-      catch (error) { showToast(`Import failed: ${error.message}`, true); }
-      finally { event.target.value = ''; }
-    });
+    profileManagerController.initialize();
   }
 
   const performancePackageApplication = 'quartic-pulse-performance';

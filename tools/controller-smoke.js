@@ -48,6 +48,7 @@ class FakeElement {
   setPointerCapture(id) { this.pointerCapture = id; }
   hasPointerCapture(id) { return this.pointerCapture === id; }
   releasePointerCapture(id) { if (this.pointerCapture === id) this.pointerCapture = null; }
+  click() { this.dispatch('click'); }
   appendChild(child) { this.children.push(child); return child; }
   replaceChildren(...children) { this.children = children; }
   querySelectorAll() { return []; }
@@ -66,6 +67,9 @@ const ids = [
   'composerCueTransition', 'composerCueCamera', 'composerRuler', 'composerAutomationLanes', 'composerCueCount',
   'composerDuration', 'composerPanelCueCount', 'composerPanelDuration', 'composerPanelStatus', 'composerSnapStatus',
   'composerPlayhead', 'showComposerWorkspace',
+  'profileSearch', 'savedProfileSelect', 'profileStatus', 'applyProfileButton', 'favoriteProfileButton',
+  'deleteProfileButton', 'exportProfileButton', 'saveProfileButton', 'quickSaveProfileButton',
+  'resetActiveVisualButton', 'importProfileButton', 'importProfileInput',
   'performanceDockProgress', 'exportProgress', 'exportProgressFill', 'exportProgressText', 'stageRenderFill',
   'stageRenderText', 'stageRenderMeta', 'stageRenderMode', 'stageRenderNote', 'pauseExportButton',
   'endExportButton', 'cancelExportButton'
@@ -88,7 +92,7 @@ global.document = {
   }
 };
 
-for (const file of ['audio-controller.js', 'audio-analysis-engine.js', 'performance-controller.js', 'performance-sequencer-engine.js', 'performance-show-data-engine.js', 'performance-show-composer-controller.js', 'export-controller.js', 'export-session-engine.js', 'export-encoder-engine.js']) {
+for (const file of ['audio-controller.js', 'audio-analysis-engine.js', 'performance-controller.js', 'performance-sequencer-engine.js', 'performance-show-data-engine.js', 'performance-show-composer-controller.js', 'profile-manager-controller.js', 'export-controller.js', 'export-session-engine.js', 'export-encoder-engine.js']) {
   const source = fs.readFileSync(path.join(__dirname, '..', 'src', 'renderer', 'modules', file), 'utf8');
   vm.runInThisContext(source, { filename: file });
 }
@@ -232,6 +236,31 @@ assert(showComposerController.selectedIndex() === 1 && showComposerController.se
 assert(elements.get('#composerCueTrack').children.length === 2 && elements.get('#composerAutomationLanes').children.length === 5, 'Show Composer timeline did not render its cues and automation lanes.');
 assert(committedComposerDraft?.label === 'Edited Drop' && committedComposerDraft?.value === 6.5 && committedComposerDraft?.automation?.director === .75, 'Show Composer editor draft was not emitted correctly.');
 assert(showComposerController.diagnostics.ready && showComposerController.diagnostics.bound && showComposerController.diagnostics.initialized, 'Show Composer controller diagnostics failed.');
+
+const managerProfiles = [
+  { id: 'normal', name: 'Normal Profile', kind: 'settings', favorite: false, updatedAt: '2026-01-01T00:00:00.000Z', data: {} },
+  { id: 'favorite', name: 'Favorite Colors', kind: 'colors', favorite: true, updatedAt: '2025-01-01T00:00:00.000Z', data: {} }
+];
+let appliedProfileId = '';
+let profileRenderCount = 0;
+const profileManagerController = window.QuarticProfileManagerController.create({
+  getProfiles: () => managerProfiles,
+  findProfile: (profiles, id) => profiles.find((profile) => profile.id === id) || null,
+  onApply: (profile) => { appliedProfileId = profile.id; },
+  onRendered: () => { profileRenderCount += 1; }
+});
+profileManagerController.initialize();
+assert(elements.get('#savedProfileSelect').children[0].value === 'favorite', 'Profile favorites were not sorted first.');
+assert(profileManagerController.selectedProfile()?.id === 'favorite', 'Profile manager did not select the first visible profile.');
+elements.get('#applyProfileButton').dispatch('click');
+assert(appliedProfileId === 'favorite', 'Profile apply callback did not receive the selected profile.');
+elements.get('#profileSearch').value = 'normal';
+elements.get('#profileSearch').dispatch('input');
+assert(profileManagerController.selectedProfile()?.id === 'normal' && profileRenderCount === 2, 'Profile search did not filter and select the matching profile.');
+elements.get('#profileSearch').value = 'missing';
+elements.get('#profileSearch').dispatch('input');
+assert(elements.get('#applyProfileButton').disabled && elements.get('#profileStatus').textContent.includes('No saved profile'), 'Empty profile search state did not disable actions.');
+assert(profileManagerController.diagnostics.ready && profileManagerController.diagnostics.bound && profileManagerController.diagnostics.initialized, 'Profile manager diagnostics failed.');
 
 const straightSequencer = window.QuarticPerformanceSequencerEngine.create();
 assert(straightSequencer.entryDurationSeconds({ advance: 'beats', value: 16 }, 120) === 8, 'Beat cue duration was incorrect.');
