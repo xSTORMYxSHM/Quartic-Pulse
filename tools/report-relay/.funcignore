@@ -1,0 +1,6 @@
+local.settings.json
+tests
+.git*
+.vscode
+node_modules
+npm-debug.log

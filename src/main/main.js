@@ -15,6 +15,92 @@ let obsOutputWindow = null;
 let oscSocket = null;
 let oscOwnerId = null;
 let cachedExportEncoder = null;
+let lastReportSubmitTime = 0;
+const reportProjectUrl = 'https://github.com/xSTORMYxSHM/Quartic-Pulse';
+const reportIncidentLimit = 20;
+
+function reportDirectory() {
+  try { return path.join(app.getPath('userData'), 'reports'); }
+  catch (_) { return path.join(os.tmpdir(), 'quartic-pulse-reports'); }
+}
+
+function sanitizeReportText(value, maximum = 12000) {
+  let text = String(value ?? '').replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, '');
+  const replacements = [
+    [os.homedir(), '[USER_HOME]'],
+    [os.tmpdir(), '[TEMP]']
+  ];
+  try { replacements.push([app.getPath('userData'), '[APP_DATA]']); } catch (_) { /* App may not be ready. */ }
+  for (const [source, replacement] of replacements) {
+    if (source) text = text.split(source).join(replacement).split(source.replace(/\\/g, '/')).join(replacement);
+  }
+  text = text
+    .replace(/https:\/\/(?:canary\.|ptb\.)?discord(?:app)?\.com\/api\/webhooks\/\d+\/[A-Za-z0-9._-]+/gi, '[REDACTED_DISCORD_WEBHOOK]')
+    .replace(/([?&](?:token|key|secret|password)=)[^&\s]+/gi, '$1[REDACTED]');
+  return text.slice(0, maximum);
+}
+
+function serializeIncident(source, error, details = {}) {
+  const message = error instanceof Error ? error.message : (error?.message || error || 'Unknown error');
+  const stack = error instanceof Error ? error.stack : error?.stack;
+  return {
+    id: crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    timestamp: new Date().toISOString(),
+    source: sanitizeReportText(source, 80),
+    message: sanitizeReportText(message, 1200),
+    stack: sanitizeReportText(stack || '', 8000),
+    details: sanitizeReportText(JSON.stringify(details || {}), 4000)
+  };
+}
+
+function readReportIncidents() {
+  try {
+    const stored = JSON.parse(fs.readFileSync(path.join(reportDirectory(), 'recent-incidents.json'), 'utf8'));
+    return Array.isArray(stored) ? stored.slice(0, reportIncidentLimit) : [];
+  } catch (_) { return []; }
+}
+
+function recordReportIncident(source, error, details = {}) {
+  const incident = serializeIncident(source, error, details);
+  try {
+    const directory = reportDirectory();
+    fs.mkdirSync(directory, { recursive: true });
+    const incidents = [incident, ...readReportIncidents()].slice(0, reportIncidentLimit);
+    const temporaryPath = path.join(directory, `recent-incidents-${process.pid}.tmp`);
+    fs.writeFileSync(temporaryPath, JSON.stringify(incidents, null, 2), 'utf8');
+    fs.renameSync(temporaryPath, path.join(directory, 'recent-incidents.json'));
+  } catch (writeError) { console.error('Could not persist diagnostic incident:', writeError); }
+  return incident;
+}
+
+function clearReportIncidents() {
+  try { fs.unlinkSync(path.join(reportDirectory(), 'recent-incidents.json')); }
+  catch (error) { if (error.code !== 'ENOENT') throw error; }
+  return true;
+}
+
+function safeRendererDiagnostics(snapshot = {}) {
+  const allowed = ['visualStyle', 'fractalType', 'audioMode', 'exporting', 'exportMode', 'resolution', 'fps', 'performanceMode', 'unleashed', 'adaptiveQuality', 'interfaceMode', 'webglRenderer'];
+  return Object.fromEntries(allowed.filter((key) => Object.hasOwn(snapshot, key)).map((key) => [key, sanitizeReportText(snapshot[key], 240)]));
+}
+
+function reportingConfiguration() {
+  try {
+    const config = JSON.parse(fs.readFileSync(path.join(app.getAppPath(), 'assets', 'reporting-config.json'), 'utf8'));
+    const relayUrl = new URL(String(config.relayUrl || ''));
+    const host = relayUrl.hostname.toLowerCase();
+    if (relayUrl.protocol !== 'https:' || host === 'discord.com' || host.endsWith('.discord.com') || host === 'discordapp.com' || host.endsWith('.discordapp.com')) return { enabled: false };
+    return { enabled: true, relayUrl: relayUrl.href, project: sanitizeReportText(config.project || 'quartic-pulse', 80) };
+  } catch (_) { return { enabled: false }; }
+}
+
+function reportPrintHtml(reportText) {
+  const escaped = sanitizeReportText(reportText, 60000).replace(/[&<>]/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[character]);
+  return `<!doctype html><html><head><meta charset="utf-8"><title>Quartic Pulse Report</title><style>body{margin:32px;color:#111;font:12px/1.5 Consolas,monospace}h1{font:700 20px/1.2 Segoe UI,sans-serif}pre{white-space:pre-wrap;word-break:break-word}</style></head><body><h1>Quartic Pulse Diagnostic Report</h1><pre>${escaped}</pre></body></html>`;
+}
+
+process.on('unhandledRejection', (reason) => recordReportIncident('main-unhandled-rejection', reason));
+process.on('uncaughtExceptionMonitor', (error, origin) => recordReportIncident('main-uncaught-exception', error, { origin }));
 
 function readOscString(buffer, start = 0) {
   const end = buffer.indexOf(0, start);
@@ -212,15 +298,16 @@ function listWindowsOutputDevices() {
 function createWindow() {
   const smokeTest = process.argv.includes('--smoke-test');
   const smokeStyleArgument = process.argv.find((argument) => argument.startsWith('--smoke-style='));
-  const requestedSmokeStyle = Math.max(0, Math.min(5, Number.parseInt(smokeStyleArgument?.split('=')[1] || '0', 10) || 0));
+  const requestedSmokeStyle = Math.max(0, Math.min(6, Number.parseInt(smokeStyleArgument?.split('=')[1] || '0', 10) || 0));
   const smokeTabArgument = process.argv.find((argument) => argument.startsWith('--smoke-tab='));
   const requestedTabValue = smokeTabArgument?.split('=')[1] || 'music';
-  const requestedSmokeTab = ['music', 'playlist', 'frequency-color', 'appearance', 'reactivity', 'dimensional', 'folding', 'mapping', 'show', 'controls', 'camera', 'tools', 'stream', 'export', 'system', 'about'].includes(requestedTabValue) ? requestedTabValue : 'music';
+  const requestedSmokeTab = ['music', 'playlist', 'analysis', 'frequency-color', 'appearance', 'reactivity', 'dimensional', 'folding', 'mapping', 'show', 'composer', 'controls', 'camera', 'tools', 'stream', 'export', 'system', 'reports', 'about'].includes(requestedTabValue) ? requestedTabValue : 'music';
   const smokeSpectrumPresetArgument = process.argv.find((argument) => argument.startsWith('--smoke-spectrum-preset='));
   const requestedSpectrumPresetValue = smokeSpectrumPresetArgument?.split('=')[1] || 'balanced';
   const requestedSpectrumPreset = ['balanced', 'neon', 'mirror', 'dance'].includes(requestedSpectrumPresetValue) ? requestedSpectrumPresetValue : 'balanced';
   const smokeSyntheticAudio = process.argv.includes('--smoke-synthetic-audio');
   const smokeAdaptiveBeat = process.argv.includes('--smoke-adaptive-beat');
+  const smokeSongMap = process.argv.includes('--smoke-song-map');
   const smokeObsOutput = process.argv.includes('--smoke-obs-output');
   const smokeDimensional = process.argv.includes('--smoke-dimensional');
   const smokeFolding = process.argv.includes('--smoke-folding');
@@ -250,6 +337,13 @@ function createWindow() {
   window.on('closed', () => {
     mainWindow = null;
     if (obsOutputWindow && !obsOutputWindow.isDestroyed()) obsOutputWindow.close();
+  });
+  window.on('unresponsive', () => recordReportIncident('renderer-unresponsive', 'The main Quartic Pulse window stopped responding.'));
+  window.webContents.on('render-process-gone', (_event, details) => {
+    recordReportIncident('renderer-process-gone', details.reason || 'Renderer process ended.', {
+      reason: details.reason,
+      exitCode: details.exitCode
+    });
   });
 
   // Chromium cannot request Windows loopback directly. Electron supplies the
@@ -289,8 +383,9 @@ function createWindow() {
             let visualStyles = false;
             let pulsePresetsReady = false;
             let effectPresetsReady = !['0', '1', '2', '5'].includes('${requestedSmokeStyle}');
-            const playlistReady = document.querySelectorAll('.settings-tab').length === 7
-              && document.querySelectorAll('.music-subtab').length === 3
+            let reportGenerationReady = '${requestedSmokeTab}' !== 'reports';
+            const playlistReady = document.querySelectorAll('.settings-tab').length === 5
+              && document.querySelectorAll('.music-subtab').length === 4
               && Boolean(document.querySelector('#playlistFilesInput'))
               && Boolean(document.querySelector('#playlistFolderInput'));
             const obsOutputReady = Boolean(document.querySelector('[data-tab-panel="stream"]'))
@@ -327,12 +422,21 @@ function createWindow() {
               && Boolean(document.querySelector('#modulationRouteList'))
               && Boolean(document.querySelector('#addModulationRoute'))
               && document.querySelectorAll('[data-modulation-preset]').length === 4;
-            const showSequencerReady = document.querySelectorAll('.live-subtab').length === 4
+            const showSequencerReady = document.querySelectorAll('.live-subtab').length === 6
               && Boolean(document.querySelector('[data-tab-panel="show"]'))
               && Boolean(document.querySelector('#beatBpm'))
               && Boolean(document.querySelector('#tapTempoButton'))
               && Boolean(document.querySelector('#showSequenceList'))
               && Boolean(document.querySelector('#addShowEntryButton'));
+            const showComposerReady = Boolean(document.querySelector('[data-tab-panel="composer"]'))
+              && Boolean(document.querySelector('#openShowComposerButton'))
+              && Boolean(document.querySelector('#composerPanelBuildButton'))
+              && Boolean(document.querySelector('#showComposerWorkspace'))
+              && Boolean(document.querySelector('#composerCueTrack'))
+              && Boolean(document.querySelector('#composerAutomationLanes'))
+              && Boolean(document.querySelector('#composerPlayhead'))
+              && Boolean(document.querySelector('#composerApplyCueButton'))
+              && Boolean(document.querySelector('#composerSnapButton'));
             const liveControlsReady = Boolean(document.querySelector('[data-tab-panel="controls"]'))
               && Boolean(document.querySelector('#midiLearnButton'))
               && Boolean(document.querySelector('#keyboardCaptureButton'))
@@ -353,6 +457,20 @@ function createWindow() {
               && Boolean(document.querySelector('#performanceMode'))
               && Boolean(document.querySelector('#unleashedMode'))
               && typeof window.quarticDesktop?.getHardwareInfo === 'function';
+            const reportCenterReady = Boolean(document.querySelector('[data-tab-panel="reports"]'))
+              && Boolean(document.querySelector('#reportCategory'))
+              && Boolean(document.querySelector('#reportSummary'))
+              && Boolean(document.querySelector('#reportOutput'))
+              && Boolean(document.querySelector('#copyReportButton'))
+              && Boolean(document.querySelector('#saveReportButton'))
+              && Boolean(document.querySelector('#printReportButton'))
+              && Boolean(document.querySelector('#githubReportButton'))
+              && Boolean(document.querySelector('#submitReportButton'))
+              && typeof window.quarticDesktop?.getReportDiagnostics === 'function'
+              && typeof window.quarticDesktop?.saveReport === 'function'
+              && typeof window.quarticDesktop?.printReport === 'function';
+            const performanceAutomationStandbyReady = document.querySelector('#showStatus')?.textContent === 'STOPPED'
+              && !document.querySelector('#songDirectorEnabled')?.checked;
             let offlineEncoderQualityReady = false;
             try {
               const qualitySupport = await VideoEncoder.isConfigSupported({
@@ -478,12 +596,12 @@ function createWindow() {
               mode.dispatchEvent(new Event('change', { bubbles: true }));
               frequencyBands = advancedOpened && advancedPanel.hidden;
             }
-            if (visualStyle && visualStyle.options.length === 6) {
-              for (const value of ['1', '2', '3', '4', '5']) {
+            if (visualStyle && visualStyle.options.length === 7) {
+              for (const value of ['1', '2', '3', '4', '5', '6']) {
                 visualStyle.value = value;
                 visualStyle.dispatchEvent(new Event('change', { bubbles: true }));
               }
-              visualStyles = visualStyle.value === '5';
+              visualStyles = visualStyle.value === '6';
               visualStyle.value = '${requestedSmokeStyle}';
               visualStyle.dispatchEvent(new Event('change', { bubbles: true }));
             }
@@ -576,10 +694,27 @@ function createWindow() {
             const requestedMusicSubtab = document.querySelector('.music-subtab[data-music-tab="${requestedSmokeTab}"]');
             const requestedAppearanceSubtab = document.querySelector('.appearance-subtab[data-appearance-tab="${requestedSmokeTab}"]');
             const requestedLiveSubtab = document.querySelector('.live-subtab[data-live-tab="${requestedSmokeTab}"]');
+            const requestedSystemSubtab = document.querySelector('.system-subtab[data-system-tab="${requestedSmokeTab}"]');
             if (requestedMusicSubtab) requestedMusicSubtab.click();
             else if (requestedAppearanceSubtab) requestedAppearanceSubtab.click();
             else if (requestedLiveSubtab) requestedLiveSubtab.click();
+            else if (requestedSystemSubtab) requestedSystemSubtab.click();
             else document.querySelector('.settings-tab[data-tab="${requestedSmokeTab}"]')?.click();
+            if ('${requestedSmokeTab}' === 'reports') {
+              document.querySelector('#reportSummary').value = 'Smoke-test report';
+              document.querySelector('#reportActual').value = 'Test secret https://discord.com' + '/api/webhooks/123456/example-token';
+              document.querySelector('#generateReportButton')?.click();
+              for (let attempt = 0; attempt < 30; attempt++) {
+                if (document.querySelector('#reportOutput')?.value) break;
+                await new Promise((resolve) => setTimeout(resolve, 100));
+              }
+              const generatedReport = document.querySelector('#reportOutput')?.value || '';
+              reportGenerationReady = generatedReport.includes('# Quartic Pulse Report')
+                && generatedReport.includes('Smoke-test report')
+                && generatedReport.includes('[REDACTED_DISCORD_WEBHOOK]')
+                && !generatedReport.includes('/api/webhooks/');
+            }
+            if (${process.argv.includes('--smoke-composer-workspace')}) document.querySelector('#openShowComposerButton')?.click();
             if (${smokeAdvanced}) document.querySelector('.tab-panel.active details')?.setAttribute('open', '');
             if (${process.argv.includes('--smoke-basic')}) document.querySelector('.interface-mode-switch [data-interface-mode="basic"]')?.click();
             if (${process.argv.includes('--smoke-interface-advanced')}) document.querySelector('.interface-mode-switch [data-interface-mode="advanced"]')?.click();
@@ -588,10 +723,24 @@ function createWindow() {
             if (${smokeScrollQuickControls}) document.querySelector('.quick-controls-card')?.scrollIntoView({ block: 'center' });
             if (${process.argv.includes('--smoke-scroll-unleashed')}) document.querySelector('.unleashed-settings')?.scrollIntoView({ block: 'center' });
             if (${process.argv.includes('--smoke-scroll-bulb')}) document.querySelector('[data-visual-options="5"]')?.scrollIntoView({ block: 'start' });
+            if (${process.argv.includes('--smoke-scroll-song-map')}) document.querySelector('#songMapCard')?.scrollIntoView({ block: 'start' });
+            if (${process.argv.includes('--smoke-scroll-performance-package')}) document.querySelector('.performance-package-card')?.scrollIntoView({ block: 'start' });
+            const performanceHardwareModeBefore = document.querySelector('#performanceMode')?.value;
+            let performanceBlackoutReady = !${process.argv.includes('--smoke-performance-mode')};
+            if (${process.argv.includes('--smoke-performance-mode')}) {
+              const fullscreen = document.querySelector('#performanceFullscreen');
+              fullscreen.checked = false;
+              document.querySelector('#enterPerformanceModeButton')?.click();
+              document.querySelector('#performanceBlackoutButton')?.click();
+              performanceBlackoutReady = document.body.classList.contains('performance-blackout')
+                && document.querySelector('#performanceBlackoutButton')?.textContent === 'RESTORE';
+              document.querySelector('#performanceBlackoutButton')?.click();
+            }
             const activeTopTab = document.querySelector('.settings-tab.active')?.dataset.tab || '';
             const activeMusicTab = document.querySelector('.music-subtab.active')?.dataset.musicTab || '';
             const activeAppearanceTab = document.querySelector('.appearance-subtab.active')?.dataset.appearanceTab || '';
             const activeLiveTab = document.querySelector('.live-subtab.active')?.dataset.liveTab || '';
+            const activeSystemTab = document.querySelector('.system-subtab.active')?.dataset.systemTab || '';
             let outputCaptureReady = !${smokeOutputAudio};
             if (${smokeOutputAudio}) {
               const outputOption = document.querySelector('#audioOutputOptions option');
@@ -644,18 +793,94 @@ function createWindow() {
             const unleashedTextRect = unleashedToggle?.querySelector(':scope > span')?.getBoundingClientRect();
             const unleashedSwitchRect = unleashedToggle?.querySelector(':scope > i')?.getBoundingClientRect();
             const unleashedResetRect = unleashedToggle?.querySelector('.toggle-reset-button')?.getBoundingClientRect();
-            const unleashedLayoutReady = activeTopTab !== 'system' || !${smokeAdvanced} || Boolean(
+            const unleashedLayoutReady = activeSystemTab !== 'system' || !${smokeAdvanced} || Boolean(
               unleashedRect && unleashedTextRect && unleashedSwitchRect && unleashedResetRect
               && unleashedTextRect.width >= 80
               && unleashedSwitchRect.left >= unleashedTextRect.right - 1
               && unleashedResetRect.width <= 30
               && unleashedResetRect.right <= unleashedRect.right + 1
             );
-            const aboutContentReady = activeTopTab !== 'about' || Boolean(
+            const aboutContentReady = activeSystemTab !== 'about' || Boolean(
               document.querySelector('.about-feature-grid')
               && document.querySelector('.about-release-card')
-              && document.querySelector('.about-title > span')?.textContent.includes('0.28.3')
+              && document.querySelector('.about-title > span')?.textContent.includes('0.29.1')
             );
+            const musicPersonalityButtons = [...document.querySelectorAll('[data-music-personality]')];
+            const musicPersonalityReady = musicPersonalityButtons.length === 7
+              && musicPersonalityButtons.filter((button) => button.classList.contains('active')).length === 1
+              && Boolean(document.querySelector('.personality-summary'));
+            const songMapReady = Boolean(
+              document.querySelector('#songMapCanvas')
+              && document.querySelector('#analyzeSongButton')
+              && document.querySelector('#songMapProgress')
+              && document.querySelector('#songMapSections')
+            );
+            const songDirectorReady = Boolean(
+              document.querySelector('#songDirectorEnabled')
+              && document.querySelector('#songDirectorIntensity')
+              && document.querySelector('#songDirectorBehavior')
+              && document.querySelector('#songDirectorBehaviorResolved')
+              && document.querySelector('#songDirectorCueEditor')
+              && document.querySelector('#songDirectorCueStrength')
+              && document.querySelector('#songDirectorCueEmphasis')
+              && document.querySelectorAll('[data-director-style]').length === 4
+              && document.querySelector('#songDirectorPlan')
+            );
+            const performancePackageReady = Boolean(
+              document.querySelector('#performancePackageTitle')
+              && document.querySelector('#performancePackageCreator')
+              && document.querySelector('#performancePackageNotes')
+              && document.querySelector('#exportPerformancePackageButton')
+              && document.querySelector('#importPerformancePackageButton')
+              && document.querySelector('#performancePackageStatus')
+            );
+            const performancePackagePreview = typeof window.__quarticPulseCreatePerformancePackage === 'function'
+              ? window.__quarticPulseCreatePerformancePackage() : null;
+            const performancePackageDataReady = Boolean(
+              performancePackagePreview?.application === 'quartic-pulse-performance'
+              && performancePackagePreview?.schemaVersion === 1
+              && /^QP-[A-F0-9]{8}$/.test(performancePackagePreview?.fingerprint || '')
+              && performancePackagePreview?.performance?.currentVisual?.kind === 'settings'
+              && Array.isArray(performancePackagePreview?.performance?.show?.entries)
+              && !JSON.stringify(performancePackagePreview).includes('filePath')
+            );
+            const performanceModeReady = !${process.argv.includes('--smoke-performance-mode')} || Boolean(
+              document.body.classList.contains('performance-mode')
+              && getComputedStyle(document.querySelector('.control-panel')).display === 'none'
+              && getComputedStyle(document.querySelector('#performanceDock')).display !== 'none'
+              && document.querySelector('#performanceDockCurrent')
+              && document.querySelector('#exitPerformanceModeButton')
+            );
+            const showComposerWorkspaceReady = !${process.argv.includes('--smoke-composer-workspace')} || Boolean(
+              document.body.classList.contains('composer-mode')
+              && getComputedStyle(document.querySelector('.control-panel')).display === 'none'
+              && getComputedStyle(document.querySelector('#showComposerWorkspace')).display === 'grid'
+              && document.querySelector('#showComposerWorkspace').getBoundingClientRect().width === window.innerWidth
+              && document.querySelector('#composerTimelineScroll').clientWidth > 0
+              && document.querySelector('#composerInspector').getBoundingClientRect().height > 0
+            );
+            const composerGenerated = typeof window.__quarticPulseComposeShowEntries === 'function'
+              ? window.__quarticPulseComposeShowEntries({
+                duration: 30,
+                energy: [36, 72, 130, 220, 95, 48],
+                sections: [
+                  { label: 'Intro', start: 0, end: 7.25 },
+                  { label: 'Peak', start: 7.25, end: 20.5 },
+                  { label: 'Outro', start: 20.5, end: 30 }
+                ]
+              }, [{ id: 'smoke-profile-a' }, { id: 'smoke-profile-b' }])
+              : [];
+            const showComposerGenerationReady = composerGenerated.length === 3
+              && composerGenerated[0].value === 7.25
+              && composerGenerated[1].profileId === 'smoke-profile-b'
+              && composerGenerated[0].transition === 'cut'
+              && composerGenerated[1].transition === 'black'
+              && composerGenerated.every((entry) => entry.advance === 'time'
+                && entry.automation.director >= 0 && entry.automation.director <= 1
+                && entry.automation.motion >= 0 && entry.automation.motion <= 2.5
+                && entry.automation.equation >= 0 && entry.automation.equation <= 1.5
+                && entry.automation.flow >= 0 && entry.automation.flow <= 1);
+            const performanceHardwareModePreserved = document.querySelector('#performanceMode')?.value === performanceHardwareModeBefore;
             return {
               ready: Boolean(window.__quarticReady),
               webgl2: Boolean(document.querySelector('#fractalCanvas')?.getContext('webgl2')),
@@ -692,12 +917,26 @@ function createWindow() {
                 rowRight: Math.round(unleashedRect.right)
               } : null,
               aboutContentReady,
+              musicPersonalityReady,
+              songMapReady,
+              songDirectorReady,
+              performancePackageReady,
+              performancePackageDataReady,
+              performanceModeReady,
+              performanceBlackoutReady,
+              performanceHardwareModePreserved,
               appearanceNavigationReady,
               modulationMatrixReady,
               showSequencerReady,
+              showComposerReady,
+              showComposerWorkspaceReady,
+              showComposerGenerationReady,
               liveControlsReady,
               creativeToolsReady,
               performanceAssistantReady,
+              reportCenterReady,
+              reportGenerationReady,
+              performanceAutomationStandbyReady,
               performanceSnapshot: {
                 fps: Number(document.querySelector('#performanceFpsValue')?.textContent || 0),
                 frameMs: Number(document.querySelector('#performanceFrameValue')?.textContent || 0),
@@ -718,7 +957,7 @@ function createWindow() {
               visualEffectControls,
               effectPresetsReady,
               visualOptionsReady: [...document.querySelectorAll('[data-visual-options]')].every((panel) => panel.hidden === (Number(panel.dataset.visualOptions) !== Number('${requestedSmokeStyle}'))),
-              activeTab: activeTopTab === 'music' ? activeMusicTab : (activeTopTab === 'appearance' ? activeAppearanceTab : (activeTopTab === 'live' ? activeLiveTab : activeTopTab)),
+              activeTab: activeTopTab === 'music' ? activeMusicTab : (activeTopTab === 'appearance' ? activeAppearanceTab : (activeTopTab === 'live' ? activeLiveTab : (activeTopTab === 'system' ? activeSystemTab : activeTopTab))),
               activeVisualStyle: document.body.dataset.visualStyle || '',
               dimensionalEnabled: Boolean(document.querySelector('#fractalDimensional')?.checked),
               equationFoldingEnabled: Boolean(document.querySelector('#equationFolding')?.checked),
@@ -736,6 +975,112 @@ function createWindow() {
             hardware: nativeExportEncoder.hardware
           };
           result.nativeExportEncoderReady = ['h264_nvenc', 'h264_qsv', 'h264_amf', 'libx264'].includes(nativeExportEncoder.id);
+          if (smokeSongMap) {
+            await window.webContents.executeJavaScript(`(() => {
+              const sampleRate = 22050;
+              const duration = 18;
+              const sampleCount = sampleRate * duration;
+              const buffer = new ArrayBuffer(44 + sampleCount * 2);
+              const view = new DataView(buffer);
+              const writeText = (offset, value) => {
+                for (let index = 0; index < value.length; index++) view.setUint8(offset + index, value.charCodeAt(index));
+              };
+              writeText(0, 'RIFF');
+              view.setUint32(4, 36 + sampleCount * 2, true);
+              writeText(8, 'WAVE');
+              writeText(12, 'fmt ');
+              view.setUint32(16, 16, true);
+              view.setUint16(20, 1, true);
+              view.setUint16(22, 1, true);
+              view.setUint32(24, sampleRate, true);
+              view.setUint32(28, sampleRate * 2, true);
+              view.setUint16(32, 2, true);
+              view.setUint16(34, 16, true);
+              writeText(36, 'data');
+              view.setUint32(40, sampleCount * 2, true);
+              for (let index = 0; index < sampleCount; index++) {
+                const time = index / sampleRate;
+                const section = Math.floor(time / 6);
+                const beatPhase = time % .5;
+                const beat = beatPhase < .12 ? Math.sin(time * Math.PI * 2 * (section === 1 ? 92 : 68)) * Math.exp(-beatPhase * 24) * (.42 + section * .14) : 0;
+                const tone = Math.sin(time * Math.PI * 2 * (section === 0 ? 330 : (section === 1 ? 880 : 1760))) * (.08 + section * .035);
+                const sample = Math.max(-1, Math.min(1, beat + tone));
+                view.setInt16(44 + index * 2, Math.round(sample * 32767), true);
+              }
+              const file = new File([buffer], 'Quartic-Song-Map-Smoke.wav', { type: 'audio/wav', lastModified: 1 });
+              const transfer = new DataTransfer();
+              transfer.items.add(file);
+              const input = document.querySelector('#audioInput');
+              input.files = transfer.files;
+              input.dispatchEvent(new Event('change', { bubbles: true }));
+            })()`);
+            for (let attempt = 0; attempt < 20; attempt++) {
+              const ready = await window.webContents.executeJavaScript(`Boolean(document.querySelector('#analyzeSongButton') && !document.querySelector('#analyzeSongButton').disabled)`);
+              if (ready) break;
+              await new Promise((resolve) => setTimeout(resolve, 100));
+            }
+            await window.webContents.executeJavaScript(`document.querySelector('#analyzeSongButton')?.click()`);
+            for (let attempt = 0; attempt < 120; attempt++) {
+              const complete = await window.webContents.executeJavaScript(`Boolean(!document.querySelector('#songMapResults')?.hidden && document.querySelectorAll('.song-map-section').length > 0)`);
+              if (complete) break;
+              await new Promise((resolve) => setTimeout(resolve, 100));
+            }
+            result.songMapAnalysis = await window.webContents.executeJavaScript(`(() => ({
+              visible: !document.querySelector('#songMapResults')?.hidden,
+              sections: document.querySelectorAll('.song-map-section').length,
+              stats: document.querySelectorAll('.song-map-stat').length,
+              status: document.querySelector('#songMapStatus')?.textContent || '',
+              canvasWidth: document.querySelector('#songMapCanvas')?.width || 0
+            }))()`);
+            result.songMapAnalysisReady = result.songMapAnalysis.visible
+              && result.songMapAnalysis.sections > 0
+              && result.songMapAnalysis.stats === 4
+              && result.songMapAnalysis.canvasWidth > 0;
+            result.songDirectorAnalysis = await window.webContents.executeJavaScript(`(() => {
+              const enabled = document.querySelector('#songDirectorEnabled');
+              enabled?.click();
+              const behavior = document.querySelector('#songDirectorBehavior');
+              behavior.value = 'electronic';
+              behavior.dispatchEvent(new Event('change', { bubbles: true }));
+              const explicitBehavior = document.querySelector('#songDirectorBehaviorResolved')?.textContent || '';
+              behavior.value = 'auto';
+              behavior.dispatchEvent(new Event('change', { bubbles: true }));
+              const firstCue = document.querySelector('.song-director-cue');
+              firstCue?.click();
+              const cueStrength = document.querySelector('#songDirectorCueStrength');
+              cueStrength.value = '.42';
+              cueStrength.dispatchEvent(new Event('input', { bubbles: true }));
+              const cueEmphasis = document.querySelector('#songDirectorCueEmphasis');
+              cueEmphasis.value = 'equation';
+              cueEmphasis.dispatchEvent(new Event('change', { bubbles: true }));
+              const cueOverrideReady = !document.querySelector('#songDirectorCueEditor')?.hidden
+                && firstCue?.classList.contains('edited')
+                && document.querySelector('#songDirectorCueState')?.textContent === 'EDITED';
+              document.querySelector('#resetSongDirectorCue')?.click();
+              const cueResetReady = !firstCue?.classList.contains('edited')
+                && document.querySelector('#songDirectorCueState')?.textContent === 'AUTO';
+              return {
+                planCues: document.querySelectorAll('.song-director-cue').length,
+                enabled: Boolean(enabled?.checked),
+                status: document.querySelector('#songDirectorStatus')?.textContent || '',
+                currentCue: document.querySelector('#songDirectorNow strong')?.textContent || '',
+                explicitBehavior,
+                automaticBehavior: document.querySelector('#songDirectorBehaviorResolved')?.textContent || '',
+                cueOverrideReady,
+                cueResetReady
+              };
+            })()`);
+            result.songDirectorAnalysisReady = result.songDirectorAnalysis.enabled
+              && result.songDirectorAnalysis.planCues === result.songMapAnalysis.sections
+              && result.songDirectorAnalysis.status === 'ACTIVE'
+              && result.songDirectorAnalysis.explicitBehavior.includes('ELECTRONIC')
+              && result.songDirectorAnalysis.automaticBehavior.startsWith('AUTO')
+              && result.songDirectorAnalysis.cueOverrideReady
+              && result.songDirectorAnalysis.cueResetReady;
+          } else {
+            result.songMapAnalysisReady = true;
+            result.songDirectorAnalysisReady = true;
+          }
           if (process.argv.includes('--smoke-beat-rotation')) {
             await window.webContents.executeJavaScript(`(() => {
               document.querySelector('[data-modulation-preset="dimension"]')?.click();
@@ -859,7 +1204,7 @@ function createWindow() {
           }
           console.log(`SMOKE_TEST ${JSON.stringify(result)}`);
           fs.writeFileSync(path.join(os.tmpdir(), 'quartic-pulse-smoke-result.json'), JSON.stringify(result, null, 2));
-          process.exitCode = result.ready && result.webgl2 && result.frequencyBands && result.visualStyles && result.playlistReady && result.obsOutputReady && result.profilesReady && result.windowsAudioReady && result.outputCaptureReady && result.audioHudReady && result.hudTransportReady && result.stageGeometryReady && result.exportStatusReady && result.sidebarLayoutReady && result.quickControlsLayoutReady && result.mainTabsFit && result.unleashedLayoutReady && result.aboutContentReady && result.appearanceNavigationReady && result.modulationMatrixReady && result.showSequencerReady && result.liveControlsReady && result.creativeToolsReady && result.performanceAssistantReady && result.offlineExportReady && result.exportQolReady && result.nativeExportEncoderReady && result.obsAutomationReady && result.coreEquationReady && result.coreEquationInputReady && result.percentageScalesReady && result.pulseControls && result.customColorRolesReady && result.beatDetectorControls && result.bulbControls && result.pulsePresetsReady && result.visualEffectControls && result.effectPresetsReady && result.visualOptionsReady && result.syntheticPulseReady && result.adaptiveBeatReady && result.obsWindowMovable && result.obsDragStripReady && result.obsChromaSafe && result.rotationVelocityReady && result.activeTab === requestedSmokeTab && result.activeVisualStyle === String(requestedSmokeStyle) && result.canvasWidth > 0 ? 0 : 1;
+          process.exitCode = result.ready && result.webgl2 && result.frequencyBands && result.visualStyles && result.playlistReady && result.obsOutputReady && result.profilesReady && result.windowsAudioReady && result.outputCaptureReady && result.audioHudReady && result.hudTransportReady && result.stageGeometryReady && result.exportStatusReady && result.sidebarLayoutReady && result.quickControlsLayoutReady && result.mainTabsFit && result.unleashedLayoutReady && result.aboutContentReady && result.musicPersonalityReady && result.songMapReady && result.songMapAnalysisReady && result.songDirectorReady && result.songDirectorAnalysisReady && result.appearanceNavigationReady && result.modulationMatrixReady && result.showSequencerReady && result.showComposerReady && result.showComposerWorkspaceReady && result.showComposerGenerationReady && result.liveControlsReady && result.creativeToolsReady && result.performanceAssistantReady && result.reportCenterReady && result.reportGenerationReady && result.performanceAutomationStandbyReady && result.offlineExportReady && result.exportQolReady && result.nativeExportEncoderReady && result.obsAutomationReady && result.coreEquationReady && result.coreEquationInputReady && result.percentageScalesReady && result.pulseControls && result.customColorRolesReady && result.beatDetectorControls && result.bulbControls && result.pulsePresetsReady && result.visualEffectControls && result.effectPresetsReady && result.visualOptionsReady && result.syntheticPulseReady && result.adaptiveBeatReady && result.obsWindowMovable && result.obsDragStripReady && result.obsChromaSafe && result.rotationVelocityReady && result.activeTab === requestedSmokeTab && result.activeVisualStyle === String(requestedSmokeStyle) && result.canvasWidth > 0 ? 0 : 1;
         } catch (error) {
           console.error('SMOKE_TEST_FAILED', error);
           process.exitCode = 1;
@@ -1205,6 +1550,121 @@ async function detectHardware() {
 }
 
 app.whenReady().then(() => {
+  ipcMain.on('report:renderer-error', (event, error) => {
+    if (mainWindow && event.sender === mainWindow.webContents) {
+      recordReportIncident('renderer-javascript', error?.message || 'Renderer JavaScript error.', {
+        stack: sanitizeReportText(error?.stack || '', 8000),
+        kind: sanitizeReportText(error?.kind || 'error', 40)
+      });
+    }
+  });
+  ipcMain.handle('report:get-diagnostics', async (_event, rendererSnapshot) => {
+    let hardware = null;
+    try { hardware = await detectHardware(); } catch (_) { /* Hardware details are optional. */ }
+    const configuration = reportingConfiguration();
+    return {
+      application: {
+        name: app.getName(),
+        version: app.getVersion(),
+        packaged: app.isPackaged,
+        electron: process.versions.electron,
+        chromium: process.versions.chrome,
+        node: process.versions.node
+      },
+      system: {
+        platform: process.platform,
+        architecture: process.arch,
+        windowsRelease: os.release(),
+        windowsVersion: os.version?.() || '',
+        uptimeSeconds: Math.round(os.uptime()),
+        totalMemoryBytes: os.totalmem(),
+        freeMemoryBytes: os.freemem(),
+        cpuModel: String(os.cpus()[0]?.model || 'Unknown CPU'),
+        logicalProcessors: os.cpus().length,
+        gpuDevices: hardware?.gpuDevices || [],
+        gpuFeatures: hardware?.gpuFeatures || {}
+      },
+      renderer: safeRendererDiagnostics(rendererSnapshot),
+      incidents: readReportIncidents(),
+      submission: { enabled: configuration.enabled },
+      projectUrl: reportProjectUrl
+    };
+  });
+  ipcMain.handle('report:clear-incidents', async () => clearReportIncidents());
+  ipcMain.handle('report:save', async (_event, reportText) => {
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const result = await dialog.showSaveDialog({
+      title: 'Save Quartic Pulse diagnostic report',
+      defaultPath: `Quartic-Pulse-Report-${stamp}.txt`,
+      filters: [{ name: 'Text report', extensions: ['txt'] }, { name: 'Markdown', extensions: ['md'] }]
+    });
+    if (result.canceled || !result.filePath) return null;
+    const outputPath = /\.(txt|md)$/i.test(result.filePath) ? result.filePath : `${result.filePath}.txt`;
+    await fs.promises.writeFile(outputPath, sanitizeReportText(reportText, 60000), 'utf8');
+    return outputPath;
+  });
+  ipcMain.handle('report:print', async (event, reportText) => new Promise((resolve, reject) => {
+    const printWindow = new BrowserWindow({
+      width: 820,
+      height: 920,
+      parent: BrowserWindow.fromWebContents(event.sender) || undefined,
+      modal: false,
+      show: false,
+      title: 'Print Quartic Pulse Report',
+      autoHideMenuBar: true,
+      webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false }
+    });
+    const html = reportPrintHtml(reportText);
+    printWindow.loadURL(`data:text/html;base64,${Buffer.from(html, 'utf8').toString('base64')}`);
+    printWindow.webContents.once('did-finish-load', () => {
+      printWindow.show();
+      printWindow.webContents.print({ silent: false, printBackground: true }, (success, failureReason) => {
+        if (!printWindow.isDestroyed()) printWindow.close();
+        if (success) resolve(true);
+        else if (/cancel/i.test(failureReason || '')) resolve(false);
+        else reject(new Error(failureReason || 'The print dialog could not be opened.'));
+      });
+    });
+  }));
+  ipcMain.handle('report:open-issues', async () => {
+    await shell.openExternal(`${reportProjectUrl}/issues/new`);
+    return true;
+  });
+  ipcMain.handle('report:submit', async (_event, reportText) => {
+    const configuration = reportingConfiguration();
+    if (!configuration.enabled) throw new Error('Secure online submission is not configured in this build. Use Copy, Save, Print, or GitHub instead.');
+    const now = Date.now();
+    if (now - lastReportSubmitTime < 30000) throw new Error('Please wait 30 seconds before submitting another report.');
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 12000);
+    try {
+      const report = sanitizeReportText(reportText, 50000);
+      const reportField = (label, maximum) => sanitizeReportText(report.match(new RegExp(`^${label}:\\s*(.+)$`, 'mi'))?.[1] || '', maximum);
+      const response = await fetch(configuration.relayUrl, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'user-agent': `Quartic-Pulse/${app.getVersion()}` },
+        body: JSON.stringify({
+          schemaVersion: 1,
+          project: configuration.project,
+          report,
+          metadata: {
+            reportId: reportField('Report ID', 80),
+            category: reportField('Type', 40),
+            summary: reportField('Summary', 180),
+            version: app.getVersion(),
+            platform: process.platform,
+            architecture: process.arch
+          }
+        }),
+        signal: controller.signal
+      });
+      let result = {};
+      try { result = await response.json(); } catch (_) { /* A successful relay may return no body. */ }
+      if (!response.ok) throw new Error(sanitizeReportText(result?.error || `Report relay returned HTTP ${response.status}.`, 240));
+      lastReportSubmitTime = now;
+      return { accepted: true, reportId: sanitizeReportText(result?.reportId || reportField('Report ID', 80), 80) };
+    } finally { clearTimeout(timeout); }
+  });
   ipcMain.handle('profile:export', async (_event, options) => {
     const suggestedName = String(options?.suggestedName || 'quartic-pulse-profile')
       .replace(/[<>:"/\\|?*]/g, '-')
@@ -1219,6 +1679,24 @@ app.whenReady().then(() => {
     });
     if (result.canceled || !result.filePath) return null;
     const outputPath = result.filePath.toLowerCase().endsWith('.json') ? result.filePath : `${result.filePath}.json`;
+    await fs.promises.writeFile(outputPath, String(options?.json || ''), 'utf8');
+    return outputPath;
+  });
+
+  ipcMain.handle('performance-package:export', async (_event, options) => {
+    const suggestedName = String(options?.suggestedName || 'quartic-pulse-performance')
+      .replace(/[<>:"/\\|?*]/g, '-')
+      .slice(0, 80);
+    const result = await dialog.showSaveDialog({
+      title: 'Export Quartic Pulse performance package',
+      defaultPath: `${suggestedName}.quartic-performance.json`,
+      filters: [
+        { name: 'Quartic Pulse performance package', extensions: ['json'] },
+        { name: 'JSON file', extensions: ['json'] }
+      ]
+    });
+    if (result.canceled || !result.filePath) return null;
+    const outputPath = result.filePath.toLowerCase().endsWith('.json') ? result.filePath : `${result.filePath}.quartic-performance.json`;
     await fs.promises.writeFile(outputPath, String(options?.json || ''), 'utf8');
     return outputPath;
   });
@@ -1629,6 +2107,15 @@ app.whenReady().then(() => {
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
+});
+
+app.on('child-process-gone', (_event, details) => {
+  recordReportIncident('electron-child-process-gone', details.reason || 'Electron child process ended.', {
+    type: details.type,
+    reason: details.reason,
+    exitCode: details.exitCode,
+    serviceName: details.serviceName || ''
+  });
 });
 
 app.on('before-quit', () => {

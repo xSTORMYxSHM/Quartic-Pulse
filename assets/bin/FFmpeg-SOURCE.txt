@@ -1,0 +1,29 @@
+FFmpeg corresponding-source information
+========================================
+
+The adjacent ffmpeg.exe is an unmodified 64-bit static Windows build distributed
+by Gyan Doshi. The adjacent FFmpeg-README.txt identifies the exact build version,
+FFmpeg source commit, configuration, enabled external libraries, and dependency
+versions. The adjacent FFmpeg-LICENSE.txt contains the GNU GPL version 3 terms.
+
+Original projects and source locations:
+
+FFmpeg project and releases: https://ffmpeg.org/
+FFmpeg source repository: https://github.com/FFmpeg/FFmpeg
+Gyan Windows build page: https://www.gyan.dev/ffmpeg/builds/
+Gyan release archive: https://github.com/GyanD/codexffmpeg/releases
+FFmpeg legal guidance: https://ffmpeg.org/legal.html
+GNU GPL version 3: https://www.gnu.org/licenses/gpl-3.0.html
+
+Release maintainers and redistributors
+--------------------------------------
+
+When distributing a Quartic Pulse package containing ffmpeg.exe, provide clear,
+durable access to the complete corresponding source beside the application
+download. The source must correspond to the exact binary and include the build
+scripts, configuration, changes, and source for the statically linked libraries
+required by their licenses. A link to a moving "latest" archive is not enough.
+
+The exact FFmpeg source commit is recorded near the top of FFmpeg-README.txt.
+The external-library versions are recorded near the end of that file. Preserve
+all three FFmpeg notice files with every copy of ffmpeg.exe.

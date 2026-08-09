@@ -4,6 +4,18 @@
   const pageParameters = new URLSearchParams(window.location.search);
   const isObsOutput = pageParameters.get('obs') === '1';
   const isSmokeTest = pageParameters.get('smoke') === '1';
+  if (!isObsOutput) {
+    window.addEventListener('error', (event) => window.quarticDesktop?.reportRendererError?.({
+      kind: 'error',
+      message: event.message || event.error?.message || 'Renderer error',
+      stack: event.error?.stack || ''
+    }));
+    window.addEventListener('unhandledrejection', (event) => window.quarticDesktop?.reportRendererError?.({
+      kind: 'unhandled-rejection',
+      message: event.reason?.message || String(event.reason || 'Unhandled renderer rejection'),
+      stack: event.reason?.stack || ''
+    }));
+  }
   if (isObsOutput) {
     document.body.classList.add('obs-output');
     const obsDragStrip = document.createElement('div');
@@ -88,6 +100,7 @@
     uniform float uPulseDetail;
     uniform float uPulseSize;
     uniform float uBulbPower;
+    uniform float uBulbWarp;
     uniform float uBulbDetail;
     uniform float uBulbAudio;
     uniform float uBulbOrbit;
@@ -97,10 +110,12 @@
     uniform float uBulbYaw;
     uniform float uBulbPitch;
     uniform int uBulbSteps;
+    uniform vec3 uBulbHotspots[3];
     uniform int uPulseEventCount;
     uniform float uPulseEventAge[16];
     uniform float uPulseEventStrength[16];
     uniform float uPulseEventBand[16];
+    uniform float uPulseEventSeed[16];
     uniform float uRotation;
     uniform float uEquation;
     uniform float uFrequencyHue;
@@ -117,6 +132,8 @@
     uniform int uPalette;
     uniform float uChromaKey;
     uniform float uChromaThreshold;
+    uniform sampler2D uMainframeRoom;
+    uniform float uMainframeReady;
 
     vec3 cosinePalette(float t, vec3 a, vec3 b, vec3 c, vec3 d) {
       return a + b * cos(6.2831853 * (c * t + d));
@@ -251,11 +268,86 @@
       return mat2(c, -s, s, c);
     }
 
+    float bulbDirectionalHotspot(vec3 direction, vec3 origin, float sharpness) {
+      return pow(clamp(.5 + .5 * dot(direction, origin), 0.0, 1.0), sharpness);
+    }
+
+    float localizedBulbDeformation(vec3 point) {
+      vec3 direction = point / max(length(point), .0001);
+      float bassRegion = bulbDirectionalHotspot(direction, uBulbHotspots[0], 13.0) * uEquationBass;
+      float midRegion = bulbDirectionalHotspot(direction, uBulbHotspots[1], 16.0) * uEquationMids;
+      float highRegion = bulbDirectionalHotspot(direction, uBulbHotspots[2], 20.0) * uEquationHighs;
+      vec3 beatOrigin = normalize(uBulbHotspots[0] - uBulbHotspots[1] + uBulbHotspots[2] + vec3(.001));
+      float beatRegion = bulbDirectionalHotspot(direction, beatOrigin, 24.0) * uEquationBeat;
+      float breathing = .72 + .28 * sin(uTime * (1.35 + .55 * uMotion)
+        + dot(direction, vec3(2.7, 4.1, 3.3)));
+      return uBulbAudio * breathing
+        * (.0090 * bassRegion + .0070 * midRegion + .0045 * highRegion + .0120 * beatRegion);
+    }
+
+    float bulbHash(float seed) {
+      return fract(sin(seed * 127.1 + 311.7) * 43758.5453123);
+    }
+
+    vec3 bulbEventDirection(float seed) {
+      float vertical = bulbHash(seed + 2.13) * 2.0 - 1.0;
+      float angle = bulbHash(seed + 8.71) * 6.2831853;
+      float horizontal = sqrt(max(0.0, 1.0 - vertical * vertical));
+      return vec3(horizontal * cos(angle), vertical, horizontal * sin(angle));
+    }
+
+    vec3 localizedBulbPulseLight(vec3 point, float frequencyShift) {
+      vec3 direction = point / max(length(point), .0001);
+      vec3 pulseLight = vec3(0.0);
+      for (int eventIndex = 0; eventIndex < 16; eventIndex++) {
+        if (eventIndex >= uPulseEventCount) break;
+        float age = uPulseEventAge[eventIndex];
+        float strength = uPulseEventStrength[eventIndex];
+        float band = uPulseEventBand[eventIndex];
+        float seed = uPulseEventSeed[eventIndex] + band * 17.31;
+        vec3 origin = bulbEventDirection(seed);
+        float surfaceDistance = length(direction - origin);
+        float waveRadius = .035 + max(0.0, age) * (.30 + band * .035);
+        float sharpness = 25.0 + band * 5.0;
+        float wave = exp(-abs(surfaceDistance - waveRadius) * sharpness);
+        float behind = waveRadius - surfaceDistance;
+        float trail = step(0.0, behind) * exp(-behind * 7.5)
+          * (.28 + .72 * pow(.5 + .5 * cos(behind * (58.0 + band * 11.0) - age * 2.2), 6.0));
+        float sourceFlash = exp(-surfaceDistance * 23.0) * exp(-max(0.0, age) * 2.8);
+        float life = exp(-max(0.0, age) * .62)
+          * (1.0 - smoothstep(1.72, 2.02, waveRadius));
+        float colorPosition = .10 + band * .34 + frequencyShift + seed * .013;
+        pulseLight += palette(colorPosition)
+          * (wave + trail * .24 + sourceFlash * 1.35)
+          * life * strength;
+      }
+      return pulseLight * uBulbAudio;
+    }
+
     float mandelbulbDistance(vec3 point) {
-      float audioPower = (.34 * uEquationBass + .20 * uEquationMids + .18 * uEquationBeat) * uBulbAudio;
-      float power = clamp(uBulbPower + audioPower, 2.0, 10.0);
+      // Mandelbulb azimuth wraps at -PI/+PI. Fractional powers turn that
+      // harmless coordinate wrap into a visible split, so recurrence power
+      // stays integral and music deforms the domain in Cartesian space.
+      float power = floor(clamp(uBulbPower, 2.0, 10.0) + .5);
       float foldAmount = clamp(uBulbFold + (.10 * uEquationMids + .07 * uEquationBeat) * uBulbAudio, 0.0, 1.0);
-      vec3 z = point;
+      float musicWarp = uBulbAudio * (
+        .0100 * uEquationBass
+        + .0080 * uEquationMids
+        + .0060 * uEquationHighs
+        + .0120 * uEquationBeat
+      );
+      vec3 recurrenceWarp = vec3(
+        sin(point.y * 3.1 + point.z * 1.7 + uTime * .37),
+        sin(point.z * 3.7 + point.x * 1.3 - uTime * .31),
+        sin(point.x * 3.3 + point.y * 1.9 + uTime * .29)
+      );
+      recurrenceWarp += .35 * vec3(
+        sin(point.z * 5.1 - point.y * 2.3 - uTime * .23),
+        sin(point.x * 4.7 - point.z * 2.1 + uTime * .27),
+        sin(point.y * 4.9 - point.x * 2.5 - uTime * .19)
+      );
+      vec3 recurrencePoint = point + recurrenceWarp * (musicWarp + uBulbWarp * .018);
+      vec3 z = recurrencePoint;
       float derivative = 1.0;
       float radius = 0.0;
       int detailIterations = 5 + int(floor(clamp(uBulbDetail, 0.0, 1.0) * 6.0));
@@ -270,11 +362,12 @@
         derivative = pow(safeRadius, power - 1.0) * power * derivative + 1.0;
         theta *= power;
         phi *= power;
-        z = radiusPower * vec3(sin(theta) * cos(phi), sin(phi) * sin(theta), cos(theta)) + point;
+        z = radiusPower * vec3(sin(theta) * cos(phi), sin(phi) * sin(theta), cos(theta)) + recurrencePoint;
         vec3 folded = abs(z) - vec3(.16 + .10 * sin(uTime * .21), .12, .18);
         z = mix(z, folded, foldAmount * .32);
       }
-      return .5 * log(max(radius, 0.00001)) * radius / max(derivative, 0.00001);
+      float distanceEstimate = .5 * log(max(radius, 0.00001)) * radius / max(derivative, 0.00001);
+      return distanceEstimate - localizedBulbDeformation(point);
     }
 
     vec3 mandelbulbNormal(vec3 point) {
@@ -350,17 +443,182 @@
       vec3 halfVector = normalize(keyLight - rayDirection);
       float specular = pow(max(0.0, dot(normal, halfVector)), 38.0 - 12.0 * uEquationHighs);
       float occlusion = mandelbulbOcclusion(point, normal);
-      float angleBands = atan(point.y, point.x) / 6.2831853;
-      float surfaceBands = length(point) * (.52 + .12 * uEquationHighs) + angleBands
-        + uTime * uFlow * .018 + frequencyShift;
+      vec3 objectDirection = point / max(length(point), .0001);
+      float seamlessField = dot(
+        sin(point * vec3(3.7, 4.3, 5.1) + vec3(.4, 2.1, 4.2)),
+        vec3(.085, .070, .055)
+      ) + dot(
+        cos(point.yzx * vec3(5.3, 3.1, 4.7) + vec3(1.7, .2, 3.4)),
+        vec3(.050, .042, .036)
+      );
+      float directionalField = dot(objectDirection, normalize(vec3(.61, -.37, .70))) * .11;
+      float surfaceBands = length(point) * (.52 + .12 * uEquationHighs)
+        + seamlessField + directionalField + uTime * uFlow * .018 + frequencyShift;
       vec3 surface = palette(surfaceBands);
       vec3 secondary = palette(surfaceBands + .31 + .08 * uEquationMids);
       vec3 color = surface * (.12 + diffuse * 1.05 + fill * .28) * occlusion;
       color += secondary * rim * (.18 + .42 * uBulbGlow + .12 * uEquationHighs);
       color += vec3(.88, .96, 1.0) * specular * (.22 + .75 * uBulbGlow);
       color += palette(surfaceBands + .58) * (.035 * uEquationBass + .055 * uEquationBeat) * uBulbAudio;
+      color += localizedBulbPulseLight(point, frequencyShift) * (.18 + .52 * uBulbGlow);
       float fog = 1.0 - exp(-travel * .045);
       return mix(color, background, fog);
+    }
+
+    float mainframeEllipse(vec2 uv, vec2 center, vec2 stretch, float radius, float sharpness) {
+      return exp(-abs(length((uv - center) * stretch) - radius) * sharpness);
+    }
+
+    vec3 renderMainframeRoom(vec2 screenUv, float frequencyShift) {
+      vec2 uv = screenUv;
+      float sourceAspect = 1672.0 / 939.0;
+      float outputAspect = uResolution.x / max(1.0, uResolution.y);
+      if (outputAspect > sourceAspect) uv.y = (uv.y - .5) * sourceAspect / outputAspect + .5;
+      else uv.x = (uv.x - .5) * outputAspect / sourceAspect + .5;
+
+      float bassDrive = pow(clamp(uEquationBass * 1.55 + uBass * .72 + uRms * .16, 0.0, 1.0), .58);
+      float midDrive = pow(clamp(uEquationMids * 1.50 + uMids * .68 + uRms * .13, 0.0, 1.0), .62);
+      float highDrive = pow(clamp(uEquationHighs * 1.45 + uHighs * .66, 0.0, 1.0), .64);
+      float beatDrive = pow(clamp(max(uEquationBeat, uBeat) * 1.25, 0.0, 1.0), .70);
+      vec2 perspectiveOrigin = vec2(.5, .47);
+      float cameraPush = (.006 * bassDrive + .011 * beatDrive) * clamp(uMotion, 0.0, 2.0);
+      uv = perspectiveOrigin + (uv - perspectiveOrigin) * (1.0 - cameraPush);
+
+      vec2 cameraDrift = vec2(
+        sin(uTime * .113) + .38 * sin(uTime * .047),
+        cos(uTime * .091) + .31 * sin(uTime * .061)
+      ) * (.0015 + .0028 * uMotion + .0028 * midDrive);
+      float floorDepth = smoothstep(.57, .02, uv.y);
+      float sideDepth = smoothstep(.30, .49, abs(uv.x - .5));
+      float ceilingDepth = smoothstep(.70, .98, uv.y);
+      float parallaxDepth = clamp(floorDepth * .72 + sideDepth * .48 + ceilingDepth * .24, 0.0, 1.0);
+      vec2 textureUv = clamp(uv + cameraDrift * parallaxDepth, vec2(.001), vec2(.999));
+
+      vec3 room = uMainframeReady > .5
+        ? texture(uMainframeRoom, textureUv).rgb
+        : palette(.57 + uv.y * .16 + frequencyShift) * (.05 + .18 * (1.0 - uv.y));
+      float roomLuma = dot(room, vec3(.2126, .7152, .0722));
+      float blueCircuit = smoothstep(.015, .34, room.b - room.r * .42);
+      vec2 sourceTexel = vec2(1.0 / 1672.0, 1.0 / 939.0);
+      vec3 roomLeft = texture(uMainframeRoom, clamp(textureUv - vec2(sourceTexel.x, 0.0), vec2(.001), vec2(.999))).rgb;
+      vec3 roomRight = texture(uMainframeRoom, clamp(textureUv + vec2(sourceTexel.x, 0.0), vec2(.001), vec2(.999))).rgb;
+      vec3 roomDown = texture(uMainframeRoom, clamp(textureUv - vec2(0.0, sourceTexel.y), vec2(.001), vec2(.999))).rgb;
+      vec3 roomUp = texture(uMainframeRoom, clamp(textureUv + vec2(0.0, sourceTexel.y), vec2(.001), vec2(.999))).rgb;
+      vec3 lumaWeights = vec3(.2126, .7152, .0722);
+      vec2 lumaGradient = vec2(dot(roomRight - roomLeft, lumaWeights), dot(roomUp - roomDown, lumaWeights));
+      vec2 blueGradient = vec2(roomRight.b - roomLeft.b, roomUp.b - roomDown.b);
+      float structuralContour = smoothstep(.055, .32,
+        length(lumaGradient) * 4.4 + length(blueGradient) * 1.7);
+      float primaryContour = pow(structuralContour, 1.55);
+      float energizedContour = clamp(primaryContour * 1.10 + blueCircuit * .08, 0.0, 1.0);
+      float contourGate = .055 + energizedContour * 1.20;
+      vec3 lowColor = palette(.10 + frequencyShift);
+      vec3 midColor = palette(.46 + frequencyShift);
+      vec3 highColor = palette(.80 + frequencyShift);
+      vec3 color = room * (.74 + .16 * uRms + .05 * bassDrive);
+      color += midColor * blueCircuit * (.045 + .24 * midDrive);
+
+      float perspectiveWidth = .085 + floorDepth * .91;
+      float lanePosition = (uv.x - .5) / max(.025, perspectiveWidth);
+      float laneLines = pow(.5 + .5 * cos(lanePosition * 31.4159), 14.0);
+      float lanePackets = pow(.5 + .5 * cos(
+        floorDepth * 78.0 - uTime * (3.8 + 4.6 * uFlow + 6.5 * bassDrive) + lanePosition * 2.1
+      ), 9.0);
+      float laneSurge = pow(.5 + .5 * cos(
+        floorDepth * 31.0 - uTime * (2.4 + 4.2 * uFlow + 3.2 * midDrive)
+      ), 8.0);
+      float laneBounds = 1.0 - smoothstep(.82, 1.10, abs(lanePosition));
+      float floorData = floorDepth * laneBounds
+        * laneLines * (.16 + .84 * lanePackets + .24 * laneSurge)
+        * contourGate;
+      color += lowColor * floorData * (.14 + .96 * bassDrive + .42 * beatDrive);
+
+      float wallMask = sideDepth
+        * smoothstep(.12, .24, uv.y)
+        * (1.0 - smoothstep(.79, .94, uv.y));
+      float wallTracks = pow(.5 + .5 * cos((uv.x - .5) * 285.0), 17.0);
+      float wallPackets = pow(.5 + .5 * cos(
+        uv.y * 112.0 + sign(uv.x - .5) * uTime * (2.8 + 4.8 * uFlow + 7.0 * highDrive)
+      ), 10.0);
+      float wallData = wallMask * wallTracks * (.20 + .80 * wallPackets) * contourGate;
+      vec2 rackCell = floor(vec2(uv.x * 188.0, uv.y * 104.0));
+      float rackRandom = fract(sin(dot(rackCell, vec2(12.9898, 78.233))) * 43758.5453);
+      float rackBlink = step(.82, rackRandom)
+        * pow(.5 + .5 * cos(uTime * (3.0 + 9.0 * highDrive) + rackRandom * 6.2831853), 12.0)
+        * wallMask * energizedContour;
+      color += highColor * wallData * (.12 + .90 * highDrive + .30 * beatDrive);
+      color += mix(midColor, highColor, rackRandom) * rackBlink * (.08 + .82 * highDrive);
+
+      float reactorBeam = exp(-abs(uv.x - .5) * (72.0 - 16.0 * bassDrive))
+        * smoothstep(.20, .31, uv.y)
+        * (1.0 - smoothstep(.82, .98, uv.y));
+      float reactorPackets = pow(.5 + .5 * cos(
+        uv.y * 62.0 - uTime * (4.0 + 8.0 * midDrive)
+      ), 9.0);
+      float reactorCore = exp(-abs(uv.x - .5) * (22.0 - 6.0 * midDrive))
+        * smoothstep(.23, .37, uv.y)
+        * (1.0 - smoothstep(.63, .78, uv.y));
+      float ringExpansion = .0045 * bassDrive + .0090 * beatDrive;
+      float reactorRings = mainframeEllipse(uv, vec2(.5, .282), vec2(1.0, 3.15), .135 + ringExpansion, 145.0)
+        + mainframeEllipse(uv, vec2(.5, .497), vec2(1.0, 3.85), .128 + ringExpansion * .82, 150.0)
+        + mainframeEllipse(uv, vec2(.5, .731), vec2(1.0, 3.10), .143 + ringExpansion * 1.12, 145.0);
+      float reactorEnergy = .20 + .92 * bassDrive + .54 * midDrive + .72 * beatDrive;
+      float reactorContour = clamp(energizedContour + blueCircuit * .18, 0.0, 1.0);
+      color += midColor * reactorBeam * (.08 + .34 * reactorEnergy)
+        * (.48 + .52 * reactorPackets) * (.18 + 1.08 * reactorContour);
+      color += highColor * reactorCore * (.055 + .32 * midDrive + .14 * highDrive)
+        * (.16 + 1.02 * reactorContour);
+      color += mix(lowColor, highColor, .58) * reactorRings * (.15 + .76 * reactorEnergy)
+        * (.12 + 1.18 * reactorContour);
+
+      vec2 wavePoint = (uv - vec2(.5, .49)) * vec2(1.0, outputAspect);
+      float waveDistance = length(wavePoint);
+      vec3 eventWaves = vec3(0.0);
+      for (int eventIndex = 0; eventIndex < 16; eventIndex++) {
+        if (eventIndex >= uPulseEventCount) break;
+        float age = max(0.0, uPulseEventAge[eventIndex]);
+        float strength = uPulseEventStrength[eventIndex];
+        float band = uPulseEventBand[eventIndex];
+        float waveRadius = .035 + age * (.13 + band * .018);
+        float wave = exp(-abs(waveDistance - waveRadius) * (84.0 - band * 8.0));
+        float echo = exp(-abs(waveDistance - max(.0, waveRadius - .028)) * (68.0 - band * 6.0));
+        float life = exp(-age * .82) * (1.0 - smoothstep(.72, .96, waveRadius));
+        eventWaves += palette(.10 + band * .34 + frequencyShift)
+          * (wave + echo * .42) * life * strength * (.52 + .95 * uMotion);
+      }
+      color += eventWaves * contourGate;
+
+      float stormRegion = smoothstep(.69, .91, uv.y)
+        * (1.0 - smoothstep(.18, .46, abs(uv.x - .5)));
+      float sourceLightning = pow(clamp(room.b * 1.20 - room.r * .32 - roomLuma * .18, 0.0, 1.0), 1.45);
+      float stormFlicker = .04 + .32 * highDrive + .44 * beatDrive + .08 * uRms;
+      color += highColor * stormRegion * sourceLightning * stormFlicker;
+
+      float consoleMask = smoothstep(.25, .34, uv.x)
+        * (1.0 - smoothstep(.66, .75, uv.x))
+        * smoothstep(.025, .075, uv.y)
+        * (1.0 - smoothstep(.16, .22, uv.y));
+      float consoleSweep = pow(.5 + .5 * cos(
+        uv.x * 74.0 - uTime * (2.0 + 5.0 * midDrive)
+      ), 11.0);
+      color += mix(lowColor, midColor, .58) * consoleMask * consoleSweep
+        * energizedContour * (.06 + .58 * midDrive);
+
+      float reactorZone = (1.0 - smoothstep(.10, .30, abs(uv.x - .5)))
+        * smoothstep(.18, .30, uv.y) * (1.0 - smoothstep(.77, .90, uv.y));
+      float contourEnergy = floorDepth * bassDrive
+        + wallMask * highDrive
+        + reactorZone * (midDrive + beatDrive * .72)
+        + stormRegion * highDrive * .55;
+      vec3 routedContourColor = mix(lowColor, highColor, clamp(uv.y, 0.0, 1.0));
+      color += routedContourColor * primaryContour * contourEnergy * (.20 + .62 * uMotion);
+
+      float depthShade = 1.0 - parallaxDepth * (.05 - .025 * uEquationBass);
+      color *= depthShade;
+      color += midColor * blueCircuit * blueCircuit * (.028 + .09 * uFrequencyColor + .06 * midDrive);
+      float peakLuma = dot(color, vec3(.2126, .7152, .0722));
+      color *= 1.0 / (1.0 + max(0.0, peakLuma - .68) * .78);
+      return color / (1.0 + color * .16);
     }
 
     void main() {
@@ -861,6 +1119,8 @@
         color += palette(screenUv.x + .68 + frequencyShift) * lowerEcho * (.18 + .55 * uBass);
       } else if (uVisualStyle == 5) {
         color = renderMandelbulb(visualPoint * 2.0, frequencyShift);
+      } else if (uVisualStyle == 6) {
+        color = renderMainframeRoom(screenUv, frequencyShift);
       }
 
       float vignette = 1.0 - .48 * dot(p, p);
@@ -911,7 +1171,7 @@
   gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
 
   const uniforms = {};
-  for (const name of ['uResolution','uCenter','uScale','uTime','uBass','uMids','uHighs','uRms','uBeat','uFlow','uMotion','uFractalDimensional','uFractalTilt','uFractalDepthSpeed','uFractalPerspective','uFractalSlice','uFractalLighting','uFractalAudioDepth','uEquationFolding','uEquationFold','uEquationWarp','uEquationFoldMotion','uEquationFoldOffset','uEquationWarpScale','uEquationFoldAudio','uCoreCStrength','uCoreBias','uBarWidth','uBarGlow','uBarReflection','uBarMotion','uBarEcho','uBarGrid','uBarStyle','uRadialSize','uRadialGlow','uRadialWaves','uRadialTwist','uRadialSpokes','uRadialAtmosphere','uPulseJagged','uPulseTrail','uPulseDetail','uPulseSize','uPulseEventCount','uBulbPower','uBulbDetail','uBulbAudio','uBulbOrbit','uBulbFold','uBulbGlow','uBulbCamera','uBulbYaw','uBulbPitch','uBulbSteps','uRotation','uEquation','uFrequencyHue','uFrequencyColor','uFractalType','uVisualStyle','uCustom0','uCustom1','uCustom2','uCustom3','uIterations','uPalette','uChromaKey','uChromaThreshold']) {
+  for (const name of ['uResolution','uCenter','uScale','uTime','uBass','uMids','uHighs','uRms','uBeat','uFlow','uMotion','uFractalDimensional','uFractalTilt','uFractalDepthSpeed','uFractalPerspective','uFractalSlice','uFractalLighting','uFractalAudioDepth','uEquationFolding','uEquationFold','uEquationWarp','uEquationFoldMotion','uEquationFoldOffset','uEquationWarpScale','uEquationFoldAudio','uCoreCStrength','uCoreBias','uBarWidth','uBarGlow','uBarReflection','uBarMotion','uBarEcho','uBarGrid','uBarStyle','uRadialSize','uRadialGlow','uRadialWaves','uRadialTwist','uRadialSpokes','uRadialAtmosphere','uPulseJagged','uPulseTrail','uPulseDetail','uPulseSize','uPulseEventCount','uBulbPower','uBulbWarp','uBulbDetail','uBulbAudio','uBulbOrbit','uBulbFold','uBulbGlow','uBulbCamera','uBulbYaw','uBulbPitch','uBulbSteps','uRotation','uEquation','uFrequencyHue','uFrequencyColor','uFractalType','uVisualStyle','uCustom0','uCustom1','uCustom2','uCustom3','uIterations','uPalette','uChromaKey','uChromaThreshold','uMainframeReady']) {
     uniforms[name] = gl.getUniformLocation(program, name);
   }
   for (const name of ['uEquationBass','uEquationMids','uEquationHighs','uEquationBeat']) {
@@ -922,6 +1182,35 @@
   uniforms.uPulseEventAge = gl.getUniformLocation(program, 'uPulseEventAge[0]');
   uniforms.uPulseEventStrength = gl.getUniformLocation(program, 'uPulseEventStrength[0]');
   uniforms.uPulseEventBand = gl.getUniformLocation(program, 'uPulseEventBand[0]');
+  uniforms.uPulseEventSeed = gl.getUniformLocation(program, 'uPulseEventSeed[0]');
+  uniforms.uBulbHotspots = gl.getUniformLocation(program, 'uBulbHotspots[0]');
+  uniforms.uMainframeRoom = gl.getUniformLocation(program, 'uMainframeRoom');
+
+  const mainframeRoomTexture = gl.createTexture();
+  let mainframeRoomReady = false;
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_2D, mainframeRoomTexture);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE,
+    new Uint8Array([2, 5, 12, 255]));
+  gl.generateMipmap(gl.TEXTURE_2D);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  const mainframeRoomImage = new Image();
+  mainframeRoomImage.addEventListener('load', () => {
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, mainframeRoomTexture);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, mainframeRoomImage);
+    gl.generateMipmap(gl.TEXTURE_2D);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+    mainframeRoomReady = true;
+  });
+  mainframeRoomImage.addEventListener('error', () => {
+    console.warn('Tempest Mainframe Room texture could not be loaded.');
+  });
+  mainframeRoomImage.src = new URL('../../assets/tempest-mainframe-room.png', window.location.href).href;
 
   const defaultFrequencyBands = Object.freeze({
     floor: 25,
@@ -929,7 +1218,36 @@
     midHigh: 2400,
     ceiling: 12000
   });
+  const musicPersonalityProfiles = Object.freeze({
+    balanced: Object.freeze({
+      label: 'Balanced', description: 'Natural response across most music', icon: [52, 66, 58],
+      bands: defaultFrequencyBands, gains: [1, 1, 1], smoothing: .8, beatSensitivity: .65, beatCooldownMs: 150, autoTarget: .74
+    }),
+    electronic: Object.freeze({
+      label: 'Electronic / EDM', description: 'Fast kicks, sub-bass, and bright transients', icon: [82, 48, 72],
+      bands: Object.freeze({ floor: 28, lowMid: 160, midHigh: 2200, ceiling: 14000 }), gains: [1.12, .94, 1.05], smoothing: .72, beatSensitivity: .78, beatCooldownMs: 115, autoTarget: .76
+    }),
+    hiphop: Object.freeze({
+      label: 'Hip-Hop', description: 'Weighty lows with steadier vocal space', icon: [88, 54, 38],
+      bands: Object.freeze({ floor: 22, lowMid: 210, midHigh: 2600, ceiling: 12000 }), gains: [1.18, .92, .88], smoothing: .78, beatSensitivity: .72, beatCooldownMs: 145, autoTarget: .74
+    }),
+    rock: Object.freeze({
+      label: 'Rock / Metal', description: 'Punch, guitars, cymbals, and quick attacks', icon: [52, 78, 84],
+      bands: Object.freeze({ floor: 35, lowMid: 240, midHigh: 3200, ceiling: 15000 }), gains: [.95, 1.08, 1.1], smoothing: .66, beatSensitivity: .7, beatCooldownMs: 120, autoTarget: .72
+    }),
+    pop: Object.freeze({
+      label: 'Pop', description: 'Clear vocals with polished full-range motion', icon: [58, 84, 66],
+      bands: Object.freeze({ floor: 30, lowMid: 190, midHigh: 2800, ceiling: 15000 }), gains: [1, 1.08, 1.02], smoothing: .75, beatSensitivity: .68, beatCooldownMs: 135, autoTarget: .74
+    }),
+    ambient: Object.freeze({
+      label: 'Ambient / Classical', description: 'Slow, detailed movement for wide dynamics', icon: [38, 62, 88],
+      bands: Object.freeze({ floor: 25, lowMid: 150, midHigh: 1800, ceiling: 16000 }), gains: [.92, 1.06, 1.12], smoothing: .9, beatSensitivity: .52, beatCooldownMs: 190, autoTarget: .68
+    })
+  });
   const maximumPulseEvents = 16;
+  const bulbHotspotData = new Float32Array(9);
+  const bulbHotspotFrom = new Float32Array(3);
+  const bulbHotspotTo = new Float32Array(3);
 
   const state = {
     center: { x: -0.16, y: 0.0 },
@@ -995,6 +1313,7 @@
     pulseEventAges: new Float32Array(maximumPulseEvents),
     pulseEventStrengths: new Float32Array(maximumPulseEvents),
     pulseEventBands: new Float32Array(maximumPulseEvents),
+    pulseEventSeeds: new Float32Array(maximumPulseEvents),
     spin: 0.18,
     modulationRotationPhase: 0,
     equation: 0.09,
@@ -1007,6 +1326,15 @@
     autoReactivity: true,
     autoReactivityGain: 1,
     autoReactivityTarget: 0.74,
+    musicPersonality: 'balanced',
+    songDirectorEnabled: false,
+    songDirectorStyle: 'cinematic',
+    songDirectorBehavior: 'auto',
+    songDirectorIntensity: .55,
+    songDirectorValues: {},
+    analysisBassGain: 1,
+    analysisMidGain: 1,
+    analysisHighGain: 1,
     frequencyBandMode: 'basic',
     frequencyFloor: defaultFrequencyBands.floor,
     lowMidSplit: defaultFrequencyBands.lowMid,
@@ -1051,6 +1379,8 @@
     showEntryStartBeat: 0,
     showTransitioning: false,
     showTransitionBlack: false,
+    operatorMode: false,
+    performanceBlackout: false,
     monitorVolume: 0.82,
     monitorMuted: false,
     analysisSmoothing: 0.8,
@@ -1112,8 +1442,9 @@
     'bulbPower', 'bulbDetail', 'bulbAudio', 'bulbOrbit', 'bulbFold', 'bulbGlow', 'bulbCamera', 'bulbYaw', 'bulbPitch',
     'spin', 'modulationRotationPhase', 'equation', 'equationSmoothing', 'visualTime', 'palette', 'reactivity', 'frequencyColorEnabled', 'frequencyColorAmount', 'frequencyHue',
     'bass', 'mids', 'highs', 'rms', 'beat', 'autoDrift', 'beatPulse', 'obsChromaKey', 'obsChromaThreshold',
-    'modulationEnabled', 'showTransitionBlack',
+    'modulationEnabled', 'showTransitionBlack', 'performanceBlackout',
     'nowPlayingEnabled', 'nowPlayingTitle', 'nowPlayingArtist', 'nowPlayingPosition', 'cameraMotionPreset'
+    ,'songDirectorEnabled', 'songDirectorStyle', 'songDirectorBehavior', 'songDirectorIntensity'
   ];
   let obsSyncFps = Number(pageParameters.get('fps')) === 30 ? 30 : 60;
   let obsLastStateSent = 0;
@@ -1128,6 +1459,7 @@
     snapshot.waveformData = Array.from(state.waveformData);
     snapshot.pulseEvents = state.pulseEvents.map((event) => ({ ...event }));
     snapshot.modulationValues = { ...state.modulationValues };
+    snapshot.songDirectorValues = { ...state.songDirectorValues };
     snapshot.audioActive = audioIsActive();
     snapshot.nowPlayingTitle = currentNowPlayingTitle();
     return snapshot;
@@ -1144,9 +1476,11 @@
     if (Array.isArray(snapshot.waveformData)) state.waveformData.set(snapshot.waveformData.slice(0, 64));
     if (Array.isArray(snapshot.pulseEvents)) state.pulseEvents = snapshot.pulseEvents.map((event) => ({ ...event }));
     if (snapshot.modulationValues && typeof snapshot.modulationValues === 'object') state.modulationValues = { ...snapshot.modulationValues };
+    if (snapshot.songDirectorValues && typeof snapshot.songDirectorValues === 'object') state.songDirectorValues = { ...snapshot.songDirectorValues };
     obsRemoteAudioActive = Boolean(snapshot.audioActive);
     if (isObsOutput) {
       $('#showTransitionOverlay')?.classList.toggle('visible', Boolean(state.showTransitionBlack));
+      document.body.classList.toggle('performance-blackout', Boolean(state.performanceBlackout));
       updateNowPlayingOverlay();
     }
   }
@@ -1172,7 +1506,7 @@
     flow: { label: 'Color Flow', scale: .55 },
     motion: { label: 'Visual Motion', scale: 1.0 },
     pulseJagged: { label: 'Pulse Jaggedness', scale: .9 },
-    bulbPower: { label: '3D Fractal Power', scale: 1.5 },
+    bulbPower: { label: '3D Recurrence Warp', scale: 1.5 },
     bulbFold: { label: '3D Volumetric Fold', scale: .7 },
     bulbGlow: { label: '3D Surface Glow', scale: 1.0 }
   });
@@ -1307,7 +1641,7 @@
     bulb: {
       quartic: { label: 'Quartic Core', values: { bulbPower: 4, bulbDetail: .55, bulbAudio: .65, bulbOrbit: .28, bulbFold: 0, bulbGlow: 1.2, bulbCamera: 3.75 } },
       deep: { label: 'Deep Orbit', values: { bulbPower: 4, bulbDetail: .84, bulbAudio: .48, bulbOrbit: .16, bulbFold: .08, bulbGlow: 1.45, bulbCamera: 3.25 } },
-      storm: { label: 'Storm Fold', values: { bulbPower: 4.35, bulbDetail: .7, bulbAudio: 1, bulbOrbit: .42, bulbFold: .72, bulbGlow: 1.5, bulbCamera: 3.85 } },
+      storm: { label: 'Storm Fold', values: { bulbPower: 4, bulbDetail: .7, bulbAudio: 1, bulbOrbit: .42, bulbFold: .72, bulbGlow: 1.5, bulbCamera: 3.85 } },
       neon: { label: 'Neon Shell', values: { bulbPower: 6, bulbDetail: .45, bulbAudio: .78, bulbOrbit: -.35, bulbFold: .28, bulbGlow: 2, bulbCamera: 4.1 } }
     }
   });
@@ -1337,6 +1671,8 @@
     volume: { defaultRange: .82, min: 0, max: 100, step: 1, decimals: 0, fromRange: (value) => value * 100, toRange: (value) => value / 100, tip: 'Controls speaker volume only. Exported audio remains at full level.' },
     frequencyColorAmount: { defaultRange: .55, min: 0, max: 100, step: 1, decimals: 0, fromRange: (value) => value / 2 * 100, toRange: (value) => value / 100 * 2, tip: 'Controls frequency-driven palette movement from 0 to 100 percent.' },
     analysisSmoothing: { defaultRange: .8, min: 0, max: 100, step: 1, decimals: 0, fromRange: (value) => value * 100, toRange: (value) => value / 100, tip: 'Higher percentages create steadier color and meter movement; lower percentages react faster.' },
+    songDirectorIntensity: { defaultRange: .55, min: 0, max: 100, step: 1, decimals: 0, fromRange: (value) => value * 100, toRange: (value) => value / 100, tip: 'Scales the Director cue layer without changing the underlying visual preset. Lower values keep section changes restrained.' },
+    songDirectorCueStrength: { defaultRange: 1, min: 0, max: 100, step: 1, decimals: 0, fromRange: (value) => value * 100, toRange: (value) => value / 100, tip: 'Reduces this section from its automatically generated cue strength. One hundred percent preserves the full generated cue; zero makes the section visually still.' },
     frequencyFloor: { defaultRange: 25, min: 20, max: 500, step: 5, decimals: 0, tip: 'Lowest frequency included in the low band. Frequencies below this value are ignored by the visualizer.' },
     lowMidSplit: { defaultRange: 180, min: 80, max: 1200, step: 10, decimals: 0, tip: 'Boundary between the low and mid bands. Moving it higher lets more upper-bass energy drive low-frequency effects.' },
     midHighSplit: { defaultRange: 2400, min: 400, max: 8000, step: 50, decimals: 0, tip: 'Boundary between the mid and high bands. Moving it higher keeps more presence frequencies in the mid band.' },
@@ -1378,7 +1714,7 @@
     pulseJagged: { defaultRange: 1, min: 0, max: 100, step: 1, decimals: 0, fromRange: (value) => value / 2 * 100, toRange: (value) => value / 100 * 2, tip: 'Controls Pulse Ring jaggedness from 0 to 100 percent.' },
     pulseTrail: { defaultRange: 1, min: 0, max: 100, step: 1, decimals: 0, fromRange: (value) => value / 2 * 100, toRange: (value) => value / 100 * 2, tip: 'Controls Pulse Ring trails from 0 to 100 percent.' },
     pulseDetail: { defaultRange: 1.25, min: 0, max: 100, step: 1, decimals: 0, fromRange: (value) => value / 2 * 100, toRange: (value) => value / 100 * 2, tip: 'Controls Pulse Ring contour detail from 0 to 100 percent.' },
-    bulbPower: { defaultRange: 4, min: 2, max: 10, step: .1, decimals: 1, tip: 'The exponent used by the 3D Mandelbulb recurrence. Power 4 is the Quartic Pulse signature shape.' },
+    bulbPower: { defaultRange: 4, min: 2, max: 10, step: 1, decimals: 0, tip: 'The whole-number exponent used by the 3D Mandelbulb recurrence. Integer powers keep the spherical angle wrap seamless; Power 4 is the Quartic Pulse signature shape.' },
     bulbDetail: { defaultRange: .55, min: 0, max: 100, step: 1, decimals: 0, fromRange: (value) => value * 100, toRange: (value) => value / 100, tip: 'Controls recurrence depth and ray-marching precision. Adaptive quality can still reduce live render resolution.' },
     bulbAudio: { defaultRange: .65, min: 0, max: 100, step: 1, decimals: 0, fromRange: (value) => value * 100, toRange: (value) => value / 100, tip: 'Lets bass, mids, highs, and beats reshape the 3D recurrence, camera, and surface light.' },
     bulbOrbit: { defaultRange: .28, min: -50, max: 50, step: 1, decimals: 0, fromRange: (value) => value * 50, toRange: (value) => value / 50, tip: 'Automatically orbits the camera. Negative values reverse direction; zero leaves manual camera orientation still.' },
@@ -1408,6 +1744,8 @@
     exportDetail: { defaultValue: '1.6', tip: 'Multiplies iteration detail during export without changing live preview quality.' },
     obsResolution: { defaultValue: '1920x1080', tip: 'Sets the exact client size of the clean window selected by OBS Window Capture.' },
     obsFps: { defaultValue: '60', tip: 'Sets how often the control window sends visual and music-analysis state to the OBS output.' }
+    ,songDirectorBehavior: { defaultValue: 'auto', tip: 'Auto follows the Music Personality stored with the Song Map. An override changes directing behavior without changing analyzer bands or the visual preset.' }
+    ,songDirectorCueEmphasis: { defaultValue: 'auto', tip: 'Focuses this section on one family of visual controls while retaining a smaller amount of the other automatically generated cues.' }
     ,showAdvanceMode: { defaultValue: 'beats', tip: 'Advance each show entry after musical beats or elapsed seconds.' }
     ,showTransition: { defaultValue: 'black', tip: 'Cut immediately or briefly fade through black without layering conventional and fractal visuals.' }
     ,cameraPathEasing: { defaultValue: 'smooth', tip: 'Smooth is balanced, Linear keeps constant speed, and Cinematic eases very gently at both ends.' }
@@ -1419,6 +1757,7 @@
   const checkboxSettingDefaults = {
     loopPlayback: false,
     frequencyColor: true,
+    songDirectorEnabled: false,
     autoReactivity: true,
     adaptiveQuality: true,
     beatPulse: true,
@@ -1556,6 +1895,8 @@
   }
 
   function getActiveFrequencyBands() {
+    const personality = musicPersonalityProfiles[state.musicPersonality];
+    if (personality) return personality.bands;
     if (state.frequencyBandMode === 'basic') return defaultFrequencyBands;
     return {
       floor: state.frequencyFloor,
@@ -1574,6 +1915,110 @@
     const bands = getActiveFrequencyBands();
     $('#advancedFrequencyBands').hidden = !advanced;
     $('#frequencyBandSummary').textContent = `LOW ${formatFrequency(bands.floor)}–${formatFrequency(bands.lowMid)} Hz · MIDS ${formatFrequency(bands.lowMid)}–${formatFrequency(bands.midHigh)} Hz · HIGHS ${formatFrequency(bands.midHigh)}–${formatFrequency(bands.ceiling)} Hz`;
+  }
+
+  function renderMusicPersonality() {
+    const mount = $('#musicPersonalityMount');
+    if (!mount) return;
+    const activeProfile = musicPersonalityProfiles[state.musicPersonality];
+    const bands = getActiveFrequencyBands();
+    mount.innerHTML = `
+      <div class="section-heading personality-heading"><span>MUSIC PERSONALITY</span><small>${activeProfile ? 'PROFILE ACTIVE' : 'MANUAL'}</small></div>
+      <div class="music-personality-grid" role="radiogroup" aria-label="Music Personality profiles">
+        ${Object.entries(musicPersonalityProfiles).map(([id, profile]) => `
+          <button class="music-personality-card${state.musicPersonality === id ? ' active' : ''}" type="button" data-music-personality="${id}" role="radio" aria-checked="${state.musicPersonality === id}">
+            <span class="personality-icon" aria-hidden="true">${profile.icon.map((height) => `<i style="height:${height}%"></i>`).join('')}</span>
+            <span><strong>${profile.label}</strong><small>${profile.description}</small></span>
+          </button>`).join('')}
+        <button class="music-personality-card${state.musicPersonality === 'custom' ? ' active' : ''}" type="button" data-music-personality="custom" role="radio" aria-checked="${state.musicPersonality === 'custom'}">
+          <span class="personality-icon custom" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span><strong>Custom</strong><small>Use your advanced analyzer controls</small></span>
+        </button>
+      </div>
+      <div class="personality-summary">
+        <div><strong>${activeProfile?.label || 'Custom analyzer'}</strong><small>${formatFrequency(bands.floor)}-${formatFrequency(bands.lowMid)} Hz low · ${formatFrequency(bands.lowMid)}-${formatFrequency(bands.midHigh)} Hz mid · ${formatFrequency(bands.midHigh)}-${formatFrequency(bands.ceiling)} Hz high</small></div>
+        <div class="personality-response"><span>BASS ${Math.round(state.analysisBassGain * 100)}%</span><span>MIDS ${Math.round(state.analysisMidGain * 100)}%</span><span>HIGHS ${Math.round(state.analysisHighGain * 100)}%</span></div>
+      </div>`;
+  }
+
+  let applyingMusicPersonality = false;
+
+  function setMusicPersonalityCustom({ preserveProfileBands = true } = {}) {
+    if (applyingMusicPersonality || state.musicPersonality === 'custom') return;
+    const activeBands = getActiveFrequencyBands();
+    state.musicPersonality = 'custom';
+    const control = $('#musicPersonality');
+    if (control) control.value = 'custom';
+    if (preserveProfileBands) {
+      state.frequencyFloor = activeBands.floor;
+      state.lowMidSplit = activeBands.lowMid;
+      state.midHighSplit = activeBands.midHigh;
+      state.frequencyCeiling = activeBands.ceiling;
+      state.frequencyBandMode = 'advanced';
+      $('#frequencyBandMode').value = 'advanced';
+      for (const id of ['frequencyFloor', 'lowMidSplit', 'midHighSplit', 'frequencyCeiling']) {
+        $(`#${id}`).value = String(state[id]);
+        $(`#${id}`)._syncNumericValue?.();
+      }
+    }
+    renderMusicPersonality();
+    updateFrequencyBandUi();
+    scheduleSongMapRefresh();
+  }
+
+  function applyMusicPersonality(requestedId, { quiet = false } = {}) {
+    const id = musicPersonalityProfiles[requestedId] ? requestedId : 'custom';
+    const profile = musicPersonalityProfiles[id];
+    applyingMusicPersonality = true;
+    state.musicPersonality = id;
+    $('#musicPersonality').value = id;
+    if (profile) {
+      [state.analysisBassGain, state.analysisMidGain, state.analysisHighGain] = profile.gains;
+      state.frequencyFloor = profile.bands.floor;
+      state.lowMidSplit = profile.bands.lowMid;
+      state.midHighSplit = profile.bands.midHigh;
+      state.frequencyCeiling = profile.bands.ceiling;
+      for (const controlId of ['frequencyFloor', 'lowMidSplit', 'midHighSplit', 'frequencyCeiling']) {
+        $(`#${controlId}`).value = String(state[controlId]);
+        $(`#${controlId}`)._syncNumericValue?.();
+      }
+      state.analysisSmoothing = profile.smoothing;
+      state.beatSensitivity = profile.beatSensitivity;
+      state.beatCooldownMs = profile.beatCooldownMs;
+      state.autoReactivityTarget = profile.autoTarget;
+      $('#analysisSmoothing').value = String(profile.smoothing);
+      $('#analysisSmoothing')._syncNumericValue?.();
+      $('#analysisSmoothingValue').value = `${Math.round(profile.smoothing * 100)}%`;
+      $('#beatSensitivity').value = String(profile.beatSensitivity);
+      $('#beatSensitivity')._syncNumericValue?.();
+      $('#beatSensitivityValue').value = `${Math.round(profile.beatSensitivity * 100)}%`;
+      $('#beatCooldown').value = String(profile.beatCooldownMs);
+      $('#beatCooldown')._syncNumericValue?.();
+      $('#beatCooldownValue').value = `${Math.round(profile.beatCooldownMs)} ms`;
+      if (analyser) analyser.smoothingTimeConstant = profile.smoothing;
+      resetBeatDetector({ keepTotal: true });
+    } else {
+      state.analysisBassGain = 1;
+      state.analysisMidGain = 1;
+      state.analysisHighGain = 1;
+    }
+    applyingMusicPersonality = false;
+    updateFrequencyBandUi();
+    renderMusicPersonality();
+    scheduleSongMapRefresh();
+    if (!quiet) showToast(`${profile?.label || 'Custom'} music response selected`);
+  }
+
+  function initializeMusicPersonality() {
+    const mount = $('#musicPersonalityMount');
+    if (!mount) return;
+    mount.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-music-personality]');
+      if (!button) return;
+      $('#musicPersonality').value = button.dataset.musicPersonality;
+      $('#musicPersonality').dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    applyMusicPersonality(state.musicPersonality, { quiet: true });
   }
 
   function setFrequencyBoundary(key, requestedValue) {
@@ -1694,7 +2139,12 @@
     if (state.pulseGlobalCooldown > 0 || candidates.length === 0) return;
     candidates.sort((first, second) => second.score - first.score);
     const chosen = candidates[0];
-    state.pulseEvents.push({ age: 0, band: chosen.band, strength: chosen.intensity });
+    state.pulseEvents.push({
+      age: 0,
+      band: chosen.band,
+      strength: chosen.intensity,
+      seed: state.pulseAcceptedTotal + 1 + chosen.band * .37
+    });
     state.pulseAcceptedTotal += 1;
     const eventLimit = activePulseEventLimit();
     if (state.pulseEvents.length > eventLimit) {
@@ -1735,9 +2185,9 @@
     const rms = Math.sqrt(squareSum / timeData.length);
     const manualGain = state.reactivity;
     const bands = getActiveFrequencyBands();
-    const rawBass = averageBand(bands.floor, bands.lowMid) * 1.6;
-    const rawMids = averageBand(bands.lowMid, bands.midHigh) * 1.45;
-    const rawHighs = averageBand(bands.midHigh, bands.ceiling) * 1.8;
+    const rawBass = averageBand(bands.floor, bands.lowMid) * 1.6 * state.analysisBassGain;
+    const rawMids = averageBand(bands.lowMid, bands.midHigh) * 1.45 * state.analysisMidGain;
+    const rawHighs = averageBand(bands.midHigh, bands.ceiling) * 1.8 * state.analysisHighGain;
     const rawPeak = Math.max(rawBass, rawMids, rawHighs);
     if (state.autoReactivity && rawPeak > .03) {
       const desiredGain = clamp(state.autoReactivityTarget / Math.max(.03, rawPeak * manualGain), .25, 3);
@@ -1845,14 +2295,441 @@
     return changed;
   }
 
+  function serializeShowAutomation(automation) {
+    const source = automation && typeof automation === 'object' ? automation : {};
+    const result = {};
+    const numericRanges = {
+      director: [0, 1],
+      motion: [0, 2.5],
+      equation: [0, 1.5],
+      flow: [0, 1]
+    };
+    for (const [key, range] of Object.entries(numericRanges)) {
+      const value = Number(source[key]);
+      if (Number.isFinite(value)) result[key] = clamp(value, range[0], range[1]);
+    }
+    if (['off', 'orbit', 'drift', 'zoom'].includes(source.camera)) result.camera = source.camera;
+    return result;
+  }
+
+  function escapeShowMarkup(value) {
+    return String(value ?? '').replace(/[&<>"']/g, (character) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    })[character]);
+  }
+
   function serializeShowEntry(entry) {
+    const advance = entry.advance === 'time' ? 'time' : 'beats';
+    const numericValue = Number(entry.value) || 1;
     return {
       id: entry.id,
       profileId: entry.profileId,
-      advance: entry.advance === 'time' ? 'time' : 'beats',
-      value: clamp(Math.round(Number(entry.value) || 1), 1, 3600),
-      transition: entry.transition === 'cut' ? 'cut' : 'black'
+      label: String(entry.label || '').replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, 50),
+      advance,
+      value: advance === 'time' ? clamp(Math.round(numericValue * 100) / 100, .1, 3600) : clamp(Math.round(numericValue), 1, 3600),
+      transition: entry.transition === 'cut' ? 'cut' : 'black',
+      automation: serializeShowAutomation(entry.automation)
     };
+  }
+
+  let composerSelectedCueId = '';
+  let composerRecording = false;
+  let composerDragCueId = '';
+  let composerTimelineWidth = 960;
+  let composerInitialized = false;
+
+  function showEntrySeconds(entry) {
+    const value = clamp(Number(entry?.value) || 1, 1, 3600);
+    return entry?.advance === 'time' ? value : value * 60 / Math.max(1, effectiveBpm());
+  }
+
+  function showSequenceDuration() {
+    return state.showSequence.reduce((total, entry) => total + showEntrySeconds(entry), 0);
+  }
+
+  function showEntryStartSeconds(index) {
+    return state.showSequence.slice(0, Math.max(0, index)).reduce((total, entry) => total + showEntrySeconds(entry), 0);
+  }
+
+  function selectedComposerIndex() {
+    return state.showSequence.findIndex((entry) => entry.id === composerSelectedCueId);
+  }
+
+  function composerFullProfiles() {
+    return savedProfiles.filter((profile) => profile.kind === 'settings');
+  }
+
+  function ensureComposerBaseProfile() {
+    let profiles = composerFullProfiles();
+    if (profiles.length) return profiles;
+    const profile = {
+      id: crypto.randomUUID?.() || `composer-${Date.now()}`,
+      name: 'Composer Base',
+      kind: 'settings',
+      favorite: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      data: captureProfileData('settings')
+    };
+    savedProfiles.unshift(profile);
+    persistSavedProfiles();
+    renderSavedProfiles(profile.id);
+    renderShowProfileOptions();
+    profiles = [profile];
+    return profiles;
+  }
+
+  function songMapSectionEnergy(map, section) {
+    if (!map?.energy?.length || !map.duration) return .45;
+    const startIndex = clamp(Math.floor(section.start / map.duration * map.energy.length), 0, map.energy.length - 1);
+    const endIndex = clamp(Math.ceil(section.end / map.duration * map.energy.length), startIndex + 1, map.energy.length);
+    let sum = 0;
+    for (let index = startIndex; index < endIndex; index += 1) sum += Number(map.energy[index]) || 0;
+    return clamp(sum / Math.max(1, endIndex - startIndex) / 255, 0, 1);
+  }
+
+  function composerCameraForSection(section, energy) {
+    const label = String(section?.label || '').toLowerCase();
+    if (/intro|outro|opening|ending/.test(label)) return 'drift';
+    if (/peak|drop|build|climax|chorus/.test(label) || energy > .72) return 'orbit';
+    if (/break|bridge|quiet|verse/.test(label) || energy < .34) return 'zoom';
+    return 'off';
+  }
+
+  function composeShowEntriesFromSongMap(map, profiles) {
+    if (!map?.sections?.length || !profiles?.length) return [];
+    return map.sections.slice(0, 100).map((section, index) => {
+      const energy = songMapSectionEnergy(map, section);
+      return serializeShowEntry({
+        id: crypto.randomUUID?.() || `cue-${Date.now()}-${index}`,
+        profileId: profiles[index % profiles.length].id,
+        label: section.label || `Section ${index + 1}`,
+        advance: 'time',
+        value: Math.max(.1, Math.round((section.end - section.start) * 100) / 100),
+        transition: index === 0 ? 'cut' : 'black',
+        automation: {
+          director: clamp(.3 + energy * .48, 0, 1),
+          motion: clamp(.35 + energy * 1.2, 0, 2.5),
+          equation: clamp(.025 + energy * .16, 0, 1.5),
+          flow: clamp(.12 + energy * .56, 0, 1),
+          camera: composerCameraForSection(section, energy)
+        }
+      });
+    });
+  }
+
+  function buildShowFromSongMap() {
+    if (!activeSongMap?.sections?.length) {
+      showToast('Create a Song Map for the loaded track first.', true);
+      activateTab('analysis');
+      return;
+    }
+    if (state.showSequence.length && !window.confirm('Replace the current show sequence with Song Map cues?')) return;
+    const profiles = ensureComposerBaseProfile();
+    state.showPlaying = false;
+    state.showIndex = -1;
+    state.showSequence = composeShowEntriesFromSongMap(activeSongMap, profiles);
+    composerSelectedCueId = state.showSequence[0]?.id || '';
+    persistShowSequence();
+    renderShowSequence();
+    renderShowComposer();
+    showToast(`Built ${state.showSequence.length} cues from the Song Map.`);
+  }
+
+  function composerPercent(value, maximum) {
+    return Number.isFinite(value) ? String(Math.round(value / maximum * 100)) : '';
+  }
+
+  function renderComposerInspector() {
+    if (!composerInitialized) return;
+    const index = selectedComposerIndex();
+    const entry = state.showSequence[index];
+    const controls = $('#composerInspector').querySelectorAll('input, select, button');
+    controls.forEach((control) => { control.disabled = !entry; });
+    $('#composerSelectedStatus').textContent = entry ? `CUE ${index + 1} OF ${state.showSequence.length}` : 'NONE';
+    const profileSelect = $('#composerCueProfile');
+    profileSelect.replaceChildren();
+    savedProfiles.forEach((profile) => {
+      const option = document.createElement('option');
+      option.value = profile.id;
+      option.textContent = `${profile.kind === 'colors' ? 'COLOR' : 'FULL'} · ${profile.name}`;
+      profileSelect.appendChild(option);
+    });
+    if (!entry) {
+      $('#composerCueLabel').value = '';
+      $('#composerCueDuration').value = '16';
+      ['composerCueDirector', 'composerCueMotion', 'composerCueEquation', 'composerCueFlow'].forEach((id) => { $(`#${id}`).value = ''; });
+      return;
+    }
+    const automation = serializeShowAutomation(entry.automation);
+    $('#composerCueLabel').value = entry.label || '';
+    profileSelect.value = entry.profileId;
+    $('#composerCueAdvance').value = entry.advance;
+    $('#composerCueDuration').value = entry.value;
+    $('#composerCueTransition').value = entry.transition;
+    $('#composerCueCamera').value = automation.camera || '';
+    $('#composerCueDirector').value = composerPercent(automation.director, 1);
+    $('#composerCueMotion').value = composerPercent(automation.motion, 2.5);
+    $('#composerCueEquation').value = composerPercent(automation.equation, 1.5);
+    $('#composerCueFlow').value = composerPercent(automation.flow, 1);
+    $('#composerMoveLeftButton').disabled = index <= 0;
+    $('#composerMoveRightButton').disabled = index < 0 || index >= state.showSequence.length - 1;
+    $('#composerSnapButton').disabled = !activeSongMap?.sections?.length;
+  }
+
+  function composerLaneValue(entry, key, maximum) {
+    const automation = serializeShowAutomation(entry.automation);
+    if (key === 'camera') return automation.camera ? automation.camera.toUpperCase() : 'PROFILE';
+    const value = automation[key];
+    return Number.isFinite(value) ? `${Math.round(value / maximum * 100)}%` : 'PROFILE';
+  }
+
+  function updateComposerPlayhead(entryProgress = 0) {
+    if (!composerInitialized) return;
+    const total = showSequenceDuration();
+    const index = state.showIndex;
+    const seconds = index >= 0 ? showEntryStartSeconds(index) + showEntrySeconds(state.showSequence[index]) * clamp(entryProgress, 0, 1) : 0;
+    $('#composerPlayhead').style.left = `${total ? seconds / total * composerTimelineWidth : 0}px`;
+  }
+
+  function renderShowComposer() {
+    if (!composerInitialized) return;
+    if (composerSelectedCueId && selectedComposerIndex() < 0) composerSelectedCueId = '';
+    if (!composerSelectedCueId && state.showSequence.length) composerSelectedCueId = state.showSequence[0].id;
+    const duration = showSequenceDuration();
+    const count = state.showSequence.length;
+    $('#composerCueCount').textContent = `${count} ${count === 1 ? 'CUE' : 'CUES'}`;
+    $('#composerDuration').textContent = formatTime(duration);
+    $('#composerPanelCueCount').textContent = String(count);
+    $('#composerPanelDuration').textContent = formatTime(duration);
+    $('#composerPanelStatus').textContent = activeSongMap ? 'SONG MAP READY' : 'MANUAL';
+    $('#composerSnapStatus').textContent = activeSongMap ? 'SECTION / BEAT READY' : 'BEAT GRID READY';
+    $('#composerPlayButton').textContent = state.showPlaying ? 'PAUSE SHOW' : 'PLAY SHOW';
+    $('#composerRecordButton').classList.toggle('active', composerRecording);
+    $('#composerRecordButton').textContent = composerRecording ? 'RECORDING AUTOMATION' : 'RECORD AUTOMATION';
+
+    composerTimelineWidth = Math.max(960, Math.round(duration * 18));
+    const ruler = $('#composerRuler');
+    const track = $('#composerCueTrack');
+    const lanes = $('#composerAutomationLanes');
+    [ruler, track, lanes].forEach((element) => { element.style.width = `${composerTimelineWidth}px`; });
+    ruler.replaceChildren();
+    const rulerStep = duration > 900 ? 120 : (duration > 360 ? 60 : (duration > 120 ? 30 : 10));
+    for (let second = 0; second <= Math.max(duration, rulerStep); second += rulerStep) {
+      const marker = document.createElement('span');
+      marker.style.left = `${duration ? second / duration * composerTimelineWidth : 0}px`;
+      marker.textContent = formatTime(second);
+      ruler.appendChild(marker);
+    }
+    track.replaceChildren();
+    const laneKeys = [['director', 1], ['motion', 2.5], ['equation', 1.5], ['flow', 1], ['camera', 1]];
+    lanes.replaceChildren(...laneKeys.map(([key, maximum]) => {
+      const lane = document.createElement('div');
+      lane.className = 'composer-automation-lane';
+      state.showSequence.forEach((entry, index) => {
+        const segment = document.createElement('span');
+        const width = duration ? showEntrySeconds(entry) / duration * composerTimelineWidth : composerTimelineWidth;
+        const automation = serializeShowAutomation(entry.automation);
+        const normalized = key === 'camera' ? (automation.camera ? .7 : .12) : (Number.isFinite(automation[key]) ? automation[key] / maximum : .12);
+        segment.style.width = `${Math.max(18, width)}px`;
+        const level = clamp(normalized, .08, 1);
+        segment.style.background = `linear-gradient(90deg, rgba(135,92,255,${(.05 + level * .18).toFixed(3)}), rgba(92,245,220,${(.025 + level * .11).toFixed(3)}))`;
+        segment.style.color = `rgba(207,215,229,${(.48 + level * .46).toFixed(3)})`;
+        segment.textContent = composerLaneValue(entry, key, maximum);
+        segment.dataset.index = String(index);
+        lane.appendChild(segment);
+      });
+      return lane;
+    }));
+    state.showSequence.forEach((entry, index) => {
+      const profile = showProfileForEntry(entry);
+      const cue = document.createElement('button');
+      cue.type = 'button';
+      cue.className = `composer-cue${entry.id === composerSelectedCueId ? ' selected' : ''}${index === state.showIndex ? ' active' : ''}`;
+      cue.dataset.cueId = entry.id;
+      cue.draggable = true;
+      cue.style.width = `${Math.max(18, duration ? showEntrySeconds(entry) / duration * composerTimelineWidth : composerTimelineWidth)}px`;
+      cue.innerHTML = `<strong>${escapeShowMarkup(entry.label || `Cue ${index + 1}`)}</strong><span>${escapeShowMarkup(profile?.name || 'Missing profile')}</span><small>${formatTime(showEntrySeconds(entry))}</small>`;
+      track.appendChild(cue);
+    });
+    renderComposerInspector();
+    updateComposerPlayhead();
+  }
+
+  function commitComposerCue() {
+    const index = selectedComposerIndex();
+    if (index < 0) return;
+    const entry = state.showSequence[index];
+    const readPercent = (id, maximum) => {
+      const raw = $(`#${id}`).value.trim();
+      return raw === '' ? undefined : clamp(Number(raw) || 0, 0, 100) / 100 * maximum;
+    };
+    entry.label = $('#composerCueLabel').value;
+    entry.profileId = $('#composerCueProfile').value;
+    entry.advance = $('#composerCueAdvance').value;
+    const durationValue = Number($('#composerCueDuration').value) || 1;
+    entry.value = entry.advance === 'time' ? clamp(Math.round(durationValue * 100) / 100, .1, 3600) : clamp(Math.round(durationValue), 1, 3600);
+    entry.transition = $('#composerCueTransition').value;
+    entry.automation = serializeShowAutomation({
+      camera: $('#composerCueCamera').value,
+      director: readPercent('composerCueDirector', 1),
+      motion: readPercent('composerCueMotion', 2.5),
+      equation: readPercent('composerCueEquation', 1.5),
+      flow: readPercent('composerCueFlow', 1)
+    });
+    state.showSequence[index] = serializeShowEntry(entry);
+    composerSelectedCueId = state.showSequence[index].id;
+    persistShowSequence();
+    renderShowSequence();
+    renderShowComposer();
+  }
+
+  function moveComposerCue(direction) {
+    const index = selectedComposerIndex();
+    const target = index + direction;
+    if (index < 0 || target < 0 || target >= state.showSequence.length) return;
+    [state.showSequence[index], state.showSequence[target]] = [state.showSequence[target], state.showSequence[index]];
+    state.showPlaying = false;
+    state.showIndex = -1;
+    persistShowSequence();
+    renderShowSequence();
+    renderShowComposer();
+  }
+
+  function snapComposerCueToSection() {
+    const index = selectedComposerIndex();
+    const section = activeSongMap?.sections?.[index];
+    if (index < 0 || !section) return showToast('This cue has no matching Song Map section.', true);
+    const entry = state.showSequence[index];
+    entry.label = section.label || entry.label;
+    entry.advance = 'time';
+    entry.value = Math.max(.1, Math.round((section.end - section.start) * 100) / 100);
+    persistShowSequence();
+    renderShowSequence();
+    renderShowComposer();
+    showToast(`Cue snapped to ${section.label || `section ${index + 1}`}.`);
+  }
+
+  function selectComposerCue(cueId, { apply = true, seek = true } = {}) {
+    composerSelectedCueId = cueId;
+    const index = selectedComposerIndex();
+    if (index < 0) return;
+    if (apply) applyShowEntry(index, true);
+    if (seek && state.audioMode === 'deck' && Number.isFinite(audio.duration)) {
+      audio.currentTime = clamp(showEntryStartSeconds(index), 0, audio.duration);
+      updateSongMapPlayhead(audio.currentTime);
+    }
+    renderShowComposer();
+  }
+
+  function setShowComposerOpen(open) {
+    const workspace = $('#showComposerWorkspace');
+    workspace.hidden = !open;
+    document.body.classList.toggle('composer-mode', open);
+    if (open) renderShowComposer();
+    requestAnimationFrame(setCanvasSize);
+  }
+
+  function initializeShowComposer() {
+    composerInitialized = true;
+    $('#composerBuildButton').addEventListener('click', buildShowFromSongMap);
+    $('#composerPanelBuildButton').addEventListener('click', buildShowFromSongMap);
+    $('#openShowComposerButton').addEventListener('click', () => setShowComposerOpen(true));
+    $('#closeShowComposerButton').addEventListener('click', () => setShowComposerOpen(false));
+    $('#composerPlayButton').addEventListener('click', () => $('#showPlayButton').click());
+    $('#composerAddCueButton').addEventListener('click', () => {
+      const profile = ensureComposerBaseProfile()[0];
+      const entry = serializeShowEntry({
+        id: crypto.randomUUID?.() || `cue-${Date.now()}`,
+        profileId: profile.id,
+        label: `Cue ${state.showSequence.length + 1}`,
+        advance: 'beats', value: 16, transition: state.showSequence.length ? 'black' : 'cut', automation: {}
+      });
+      state.showSequence.push(entry);
+      composerSelectedCueId = entry.id;
+      persistShowSequence();
+      renderShowSequence();
+      renderShowComposer();
+    });
+    $('#composerRecordButton').addEventListener('click', () => {
+      composerRecording = !composerRecording;
+      renderShowComposer();
+      showToast(composerRecording ? 'Automation recording armed. Live control changes will update the selected cue.' : 'Automation recording stopped.');
+    });
+    $('#composerCueTrack').addEventListener('click', (event) => {
+      const cue = event.target.closest('[data-cue-id]');
+      if (cue) selectComposerCue(cue.dataset.cueId);
+    });
+    $('#composerCueTrack').addEventListener('dragstart', (event) => {
+      composerDragCueId = event.target.closest('[data-cue-id]')?.dataset.cueId || '';
+      if (composerDragCueId) event.dataTransfer.effectAllowed = 'move';
+    });
+    $('#composerCueTrack').addEventListener('dragover', (event) => { if (composerDragCueId) event.preventDefault(); });
+    $('#composerCueTrack').addEventListener('drop', (event) => {
+      event.preventDefault();
+      const targetId = event.target.closest('[data-cue-id]')?.dataset.cueId;
+      const sourceIndex = state.showSequence.findIndex((entry) => entry.id === composerDragCueId);
+      const targetIndex = state.showSequence.findIndex((entry) => entry.id === targetId);
+      if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) return;
+      const [entry] = state.showSequence.splice(sourceIndex, 1);
+      state.showSequence.splice(targetIndex, 0, entry);
+      state.showPlaying = false;
+      state.showIndex = -1;
+      persistShowSequence();
+      renderShowSequence();
+      renderShowComposer();
+    });
+    $('#composerApplyCueButton').addEventListener('click', commitComposerCue);
+    $('#composerMoveLeftButton').addEventListener('click', () => moveComposerCue(-1));
+    $('#composerMoveRightButton').addEventListener('click', () => moveComposerCue(1));
+    $('#composerSnapButton').addEventListener('click', snapComposerCueToSection);
+    $('#composerDeleteCueButton').addEventListener('click', () => {
+      const index = selectedComposerIndex();
+      if (index < 0) return;
+      state.showSequence.splice(index, 1);
+      composerSelectedCueId = state.showSequence[Math.min(index, state.showSequence.length - 1)]?.id || '';
+      state.showPlaying = false;
+      state.showIndex = -1;
+      persistShowSequence();
+      renderShowSequence();
+      renderShowComposer();
+    });
+    document.addEventListener('input', (event) => {
+      if (!composerRecording || selectedComposerIndex() < 0) return;
+      const mapping = {
+        songDirectorIntensity: ['director', 1], motion: ['motion', 2.5], equationMod: ['equation', 1.5], flow: ['flow', 1]
+      }[event.target.id];
+      if (!mapping) return;
+      const entry = state.showSequence[selectedComposerIndex()];
+      entry.automation = { ...serializeShowAutomation(entry.automation), [mapping[0]]: clamp(Number(event.target.value) || 0, 0, mapping[1]) };
+      persistShowSequence();
+      renderShowComposer();
+    });
+    document.addEventListener('click', (event) => {
+      if (!composerRecording || selectedComposerIndex() < 0) return;
+      const camera = event.target.closest('[data-camera-preset]')?.dataset.cameraPreset;
+      if (!camera) return;
+      const entry = state.showSequence[selectedComposerIndex()];
+      entry.automation = { ...serializeShowAutomation(entry.automation), camera };
+      persistShowSequence();
+      renderShowComposer();
+    });
+    if (isSmokeTest) window.__quarticPulseComposeShowEntries = composeShowEntriesFromSongMap;
+    renderShowComposer();
+  }
+
+  function applyShowCueAutomation(entry) {
+    const automation = serializeShowAutomation(entry?.automation);
+    const controlValues = {};
+    if (Number.isFinite(automation.director)) controlValues.songDirectorIntensity = automation.director;
+    if (Number.isFinite(automation.motion)) controlValues.motion = automation.motion;
+    if (Number.isFinite(automation.equation)) controlValues.equationMod = automation.equation;
+    if (Number.isFinite(automation.flow)) controlValues.flow = automation.flow;
+    applyControlValues(controlValues, fullProfileControlIds);
+    if (automation.camera) {
+      state.cameraMotionPreset = automation.camera;
+      document.querySelectorAll('[data-camera-preset]').forEach((button) => button.classList.toggle('active', button.dataset.cameraPreset === automation.camera));
+    }
   }
 
   function persistShowSequence() {
@@ -1887,10 +2764,106 @@
     $('#showStatus').textContent = state.showPlaying ? 'PLAYING' : (state.showIndex >= 0 ? 'PAUSED' : 'STOPPED');
     const entry = state.showSequence[state.showIndex];
     const profile = showProfileForEntry(entry);
-    $('#showCurrentLabel').textContent = profile ? `${state.showIndex + 1}/${state.showSequence.length} · ${profile.name}` : 'Nothing queued';
+    $('#showCurrentLabel').textContent = profile ? `${state.showIndex + 1}/${state.showSequence.length} · ${entry.label || profile.name}` : 'Nothing queued';
     document.querySelectorAll('.show-entry').forEach((element) => {
       element.classList.toggle('active', Number(element.dataset.index) === state.showIndex);
     });
+    if (composerInitialized) {
+      $('#composerPlayButton').textContent = state.showPlaying ? 'PAUSE SHOW' : 'PLAY SHOW';
+      document.querySelectorAll('.composer-cue').forEach((element) => {
+        const index = state.showSequence.findIndex((candidate) => candidate.id === element.dataset.cueId);
+        element.classList.toggle('active', index === state.showIndex);
+      });
+    }
+    updatePerformanceDock();
+  }
+
+  const performanceModeStorageKey = 'quarticPulsePerformanceModeV1';
+
+  function nextShowProfileLabel() {
+    if (!state.showSequence.length) return 'No show sequence queued';
+    if (state.showShuffle && state.showPlaying) return 'Next: shuffled entry';
+    const nextIndex = state.showIndex < 0 ? 0 : state.showIndex + 1;
+    if (nextIndex >= state.showSequence.length && !state.showLoop) return 'Next: end of show';
+    const entry = state.showSequence[((nextIndex % state.showSequence.length) + state.showSequence.length) % state.showSequence.length];
+    return `Next: ${showProfileForEntry(entry)?.name || 'Missing profile'}`;
+  }
+
+  function updatePerformanceDock() {
+    const dock = $('#performanceDock');
+    if (!dock) return;
+    const entry = state.showSequence[state.showIndex];
+    const profile = showProfileForEntry(entry);
+    $('#performanceDockState').textContent = state.performanceBlackout
+      ? 'BLACKOUT ACTIVE'
+      : (state.showPlaying ? 'SHOW PLAYING' : (state.showIndex >= 0 ? 'SHOW PAUSED' : 'PERFORMANCE MODE'));
+    $('#performanceDockCurrent').textContent = profile
+      ? `${state.showIndex + 1}/${state.showSequence.length} · ${profile.name}`
+      : (state.audioName || 'Manual visual');
+    $('#performanceDockNext').textContent = nextShowProfileLabel();
+    $('#performancePlayButton').textContent = state.showPlaying ? 'PAUSE' : (state.showIndex >= 0 ? 'RESUME' : 'START');
+    $('#performancePlayButton').disabled = state.showSequence.length === 0;
+    $('#performancePreviousButton').disabled = state.showSequence.length === 0;
+    $('#performanceNextButton').disabled = state.showSequence.length === 0;
+    $('#performanceBlackoutButton').textContent = state.performanceBlackout ? 'RESTORE' : 'BLACKOUT';
+  }
+
+  function setPerformanceBlackout(enabled) {
+    state.performanceBlackout = Boolean(enabled);
+    document.body.classList.toggle('performance-blackout', state.performanceBlackout);
+    $('#performanceBlackoutOverlay')?.setAttribute('aria-hidden', String(!state.performanceBlackout));
+    updatePerformanceDock();
+  }
+
+  async function setPerformanceMode(enabled) {
+    if (isObsOutput) return;
+    state.operatorMode = Boolean(enabled);
+    const keepHud = $('#performanceShowHud').checked;
+    document.body.classList.toggle('performance-mode', state.operatorMode);
+    document.body.classList.toggle('performance-hide-hud', state.operatorMode && !keepHud);
+    $('#performanceDock').hidden = !state.operatorMode;
+    try {
+      localStorage.setItem(performanceModeStorageKey, JSON.stringify({
+        fullscreen: $('#performanceFullscreen').checked,
+        showHud: keepHud
+      }));
+    } catch (_) { /* Performance preferences are optional. */ }
+    if (state.operatorMode && $('#performanceFullscreen').checked && !document.fullscreenElement) {
+      try { await document.documentElement.requestFullscreen(); }
+      catch (error) { showToast(`Fullscreen was not available: ${error.message}`, true); }
+    } else if (!state.operatorMode && document.fullscreenElement) {
+      try { await document.exitFullscreen(); } catch (_) { /* The window may already be leaving fullscreen. */ }
+    }
+    if (!state.operatorMode) setPerformanceBlackout(false);
+    updatePerformanceDock();
+    requestAnimationFrame(setCanvasSize);
+  }
+
+  function initializePerformanceMode() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(performanceModeStorageKey) || 'null');
+      if (saved && typeof saved === 'object') {
+        $('#performanceFullscreen').checked = saved.fullscreen !== false;
+        $('#performanceShowHud').checked = saved.showHud !== false;
+      }
+    } catch (_) { /* Keep the safe defaults. */ }
+    $('#enterPerformanceModeButton').addEventListener('click', () => setPerformanceMode(true));
+    $('#exitPerformanceModeButton').addEventListener('click', () => setPerformanceMode(false));
+    $('#performanceShowHud').addEventListener('change', (event) => {
+      if (state.operatorMode) document.body.classList.toggle('performance-hide-hud', !event.target.checked);
+    });
+    $('#performancePreviousButton').addEventListener('click', () => advanceShow(-1));
+    $('#performancePlayButton').addEventListener('click', () => $('#showPlayButton').click());
+    $('#performanceNextButton').addEventListener('click', () => advanceShow(1));
+    $('#performanceBlackoutButton').addEventListener('click', () => setPerformanceBlackout(!state.performanceBlackout));
+    document.addEventListener('fullscreenchange', () => {
+      if (state.operatorMode && $('#performanceFullscreen').checked && !document.fullscreenElement) {
+        setPerformanceMode(false);
+        return;
+      }
+      if (state.operatorMode) requestAnimationFrame(setCanvasSize);
+    });
+    updatePerformanceDock();
   }
 
   function applyShowEntry(index, forceCut = false) {
@@ -1902,6 +2875,7 @@
     const finish = () => {
       state.showIndex = safeIndex;
       applySavedProfile(profile);
+      applyShowCueAutomation(entry);
       resetShowEntryClock();
       updateShowUi();
     };
@@ -1938,13 +2912,18 @@
   }
 
   function updateShowSequencer(beatChanged) {
-    if (!state.showPlaying || state.showIndex < 0 || state.showTransitioning) return;
+    if (!state.showPlaying || state.showIndex < 0 || state.showTransitioning) {
+      if (composerInitialized && state.showIndex < 0) updateComposerPlayhead(0);
+      return;
+    }
     const entry = state.showSequence[state.showIndex];
     if (!entry) return;
     let progress = 0;
     if (entry.advance === 'time') progress = (beatClock() - state.showEntryStartTime) / entry.value;
     else progress = (state.beatGridIndex - state.showEntryStartBeat + state.beatGridPhase) / entry.value;
     $('#showProgressFill').style.width = `${clamp(progress * 100, 0, 100)}%`;
+    $('#performanceDockProgress').style.width = `${clamp(progress * 100, 0, 100)}%`;
+    updateComposerPlayhead(progress);
     if (progress >= 1 && (entry.advance === 'time' || beatChanged)) advanceShow(1);
   }
 
@@ -1965,6 +2944,55 @@
       }
     }
     gl.viewport(0, 0, canvas.width, canvas.height);
+  }
+
+  function bulbHotspotHash(seed) {
+    const value = Math.sin(seed * 127.1 + 311.7) * 43758.5453123;
+    return value - Math.floor(value);
+  }
+
+  function fillSeededBulbDirection(target, seed) {
+    const vertical = bulbHotspotHash(seed + 2.13) * 2 - 1;
+    const angle = bulbHotspotHash(seed + 8.71) * Math.PI * 2;
+    const horizontal = Math.sqrt(Math.max(0, 1 - vertical * vertical));
+    target[0] = horizontal * Math.cos(angle);
+    target[1] = vertical;
+    target[2] = horizontal * Math.sin(angle);
+  }
+
+  function updateBulbHotspots(time) {
+    const offsets = [1.3, 7.1, 13.7];
+    const rates = [.075, .105, .14];
+    for (let index = 0; index < 3; index++) {
+      const phase = time * rates[index] + offsets[index];
+      const cell = Math.floor(phase);
+      const progress = phase - cell;
+      const eased = progress * progress * (3 - 2 * progress);
+      const seedOffset = offsets[index] * 19.7;
+      fillSeededBulbDirection(bulbHotspotFrom, cell + seedOffset);
+      fillSeededBulbDirection(bulbHotspotTo, cell + 1 + seedOffset);
+      const x = bulbHotspotFrom[0] + (bulbHotspotTo[0] - bulbHotspotFrom[0]) * eased;
+      const y = bulbHotspotFrom[1] + (bulbHotspotTo[1] - bulbHotspotFrom[1]) * eased;
+      const z = bulbHotspotFrom[2] + (bulbHotspotTo[2] - bulbHotspotFrom[2]) * eased;
+      const length = Math.max(.0001, Math.hypot(x, y, z));
+      const dataIndex = index * 3;
+      bulbHotspotData[dataIndex] = x / length;
+      bulbHotspotData[dataIndex + 1] = y / length;
+      bulbHotspotData[dataIndex + 2] = z / length;
+    }
+    gl.uniform3fv(uniforms.uBulbHotspots, bulbHotspotData);
+  }
+
+  function combinedRenderModulation(base = {}, director = {}) {
+    const combined = { ...base };
+    for (const [key, value] of Object.entries(director)) {
+      if (!Number.isFinite(value) || ['cueIndex', 'sectionProgress', 'rotationOffset', 'panX', 'panY'].includes(key)) continue;
+      combined[key] = clamp((combined[key] || 0) + value, -2, 2);
+    }
+    combined.rotationOffset = Number(director.rotationOffset) || 0;
+    combined.panX = Number(director.panX) || 0;
+    combined.panY = Number(director.panY) || 0;
+    return combined;
   }
 
   function render(now) {
@@ -1995,7 +3023,12 @@
     if (!state.offlineExporting) state.visualTime = state.exporting
       ? audio.currentTime
       : state.visualTime + delta * ((isObsOutput ? obsRemoteAudioActive : audioIsActive()) ? 1 : .18);
-    const modulation = updateAudioModulation(delta);
+    const baseModulation = updateAudioModulation(delta);
+    const directorTime = state.offlineExporting
+      ? (state.offlineCurrentTime || 0)
+      : (state.audioMode === 'deck' && Number.isFinite(audio.currentTime) ? audio.currentTime : state.visualTime);
+    const director = isObsOutput ? (state.songDirectorValues || {}) : updateSongDirector(directorTime);
+    const modulation = combinedRenderModulation(baseModulation, director);
     const cameraMotion = cameraPresetTransform();
     const beatChanged = (isObsOutput || state.offlineExporting) ? false : updateBeatGrid();
     if (!isObsOutput && !state.offlineExporting) updateShowSequencer(beatChanged);
@@ -2008,15 +3041,16 @@
     const motionEnergy = modulatedMotion * (.32 + state.rms * .34 + state.mids * .26);
     const orbitRadius = state.autoDrift ? (.012 + .022 * state.mids) * motionEnergy / Math.sqrt(state.zoom * modulatedZoom) : 0;
     const orbitAngle = state.visualTime * (.21 + .12 * state.mids) * Math.sign(state.spin || 1);
-    const renderCenterX = state.center.x + Math.cos(orbitAngle) * orbitRadius + cameraMotion.x;
-    const renderCenterY = state.center.y + Math.sin(orbitAngle * 1.17) * orbitRadius + cameraMotion.y;
+    const renderCenterX = state.center.x + Math.cos(orbitAngle) * orbitRadius + cameraMotion.x + modulation.panX;
+    const renderCenterY = state.center.y + Math.sin(orbitAngle * 1.17) * orbitRadius + cameraMotion.y + modulation.panY;
     if (!isObsOutput) {
       const nextModulationRotationPhase = state.modulationRotationPhase + (modulation.rotation || 0) * delta;
       state.modulationRotationPhase = Math.atan2(Math.sin(nextModulationRotationPhase), Math.cos(nextModulationRotationPhase));
     }
     const rotation = state.visualTime * state.spin * modulatedMotion
       + Math.sin(state.visualTime * .63) * .035 * state.mids * modulatedMotion
-      + state.modulationRotationPhase;
+      + state.modulationRotationPhase
+      + modulation.rotationOffset;
     if (Number.isFinite(window.__quarticPulseRotation)) {
       const rotationDelta = Math.atan2(Math.sin(rotation - window.__quarticPulseRotation), Math.cos(rotation - window.__quarticPulseRotation));
       window.__quarticPulseMaxRotationStep = Math.max(Number(window.__quarticPulseMaxRotationStep || 0), Math.abs(rotationDelta));
@@ -2071,7 +3105,8 @@
     gl.uniform1f(uniforms.uPulseTrail, state.pulseTrail);
     gl.uniform1f(uniforms.uPulseDetail, state.pulseDetail);
     gl.uniform1f(uniforms.uPulseSize, state.pulseSize);
-    gl.uniform1f(uniforms.uBulbPower, clamp(state.bulbPower + (modulation.bulbPower || 0), 2, 10));
+    gl.uniform1f(uniforms.uBulbPower, Math.round(clamp(state.bulbPower, 2, 10)));
+    gl.uniform1f(uniforms.uBulbWarp, clamp(modulation.bulbPower || 0, -1.5, 1.5));
     gl.uniform1f(uniforms.uBulbDetail, state.bulbDetail);
     gl.uniform1f(uniforms.uBulbAudio, state.bulbAudio);
     gl.uniform1f(uniforms.uBulbOrbit, state.bulbOrbit);
@@ -2080,6 +3115,11 @@
     gl.uniform1f(uniforms.uBulbCamera, state.bulbCamera);
     gl.uniform1f(uniforms.uBulbYaw, state.bulbYaw);
     gl.uniform1f(uniforms.uBulbPitch, state.bulbPitch);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, mainframeRoomTexture);
+    gl.uniform1i(uniforms.uMainframeRoom, 0);
+    gl.uniform1f(uniforms.uMainframeReady, mainframeRoomReady ? 1 : 0);
+    updateBulbHotspots(state.visualTime);
     let bulbSteps = 42 + state.bulbDetail * 54;
     if (state.exporting) bulbSteps *= 1.12 + Math.min(2.5, state.exportDetail) * .32;
     else bulbSteps *= (.74 + state.performanceScale * .26) * state.bulbLiveBudget * (state.unleashedMode ? 1.24 : 1);
@@ -2087,17 +3127,22 @@
     state.pulseEventAges.fill(-1);
     state.pulseEventStrengths.fill(0);
     state.pulseEventBands.fill(0);
+    state.pulseEventSeeds.fill(0);
     const pulseEventCount = Math.min(maximumPulseEvents, state.pulseEvents.length);
     for (let index = 0; index < pulseEventCount; index++) {
       const event = state.pulseEvents[index];
       state.pulseEventAges[index] = event.age;
       state.pulseEventStrengths[index] = event.strength;
       state.pulseEventBands[index] = event.band;
+      state.pulseEventSeeds[index] = Number.isFinite(event.seed)
+        ? event.seed
+        : index + event.band * .37 + 1;
     }
     gl.uniform1i(uniforms.uPulseEventCount, pulseEventCount);
     gl.uniform1fv(uniforms.uPulseEventAge, state.pulseEventAges);
     gl.uniform1fv(uniforms.uPulseEventStrength, state.pulseEventStrengths);
     gl.uniform1fv(uniforms.uPulseEventBand, state.pulseEventBands);
+    gl.uniform1fv(uniforms.uPulseEventSeed, state.pulseEventSeeds);
     window.__quarticPulseEventCount = pulseEventCount;
     window.__quarticPulseEventLimit = activePulseEventLimit();
     window.__quarticPulseAcceptedTotal = state.pulseAcceptedTotal;
@@ -2152,7 +3197,7 @@
     const displayedScale = Math.round(state.performanceScale * 20) * 5;
     $('#adaptiveQualityText').textContent = `${displayedScale}% render scale`;
     $('#autoReactivityText').textContent = state.autoReactivity
-      ? `Target 74% · ${state.autoReactivityGain.toFixed(2)}× gain`
+      ? `Target ${Math.round(state.autoReactivityTarget * 100)}% · ${state.autoReactivityGain.toFixed(2)}× gain`
       : 'Manual sensitivity only';
     $('#frequencyColorMarker').style.left = `${Math.max(0, Math.min(100, state.frequencyHue * 100))}%`;
     $('#dominantFrequencyValue').textContent = state.dominantBand.toUpperCase();
@@ -2167,6 +3212,10 @@
       const progress = audio.duration ? displayTime / audio.duration : 0;
       $('#timelineFill').style.width = `${Math.min(100, progress * 100)}%`;
       $('#timeReadout').textContent = `${formatTime(displayTime)} / ${formatTime(audio.duration)}`;
+      $('#timeline').setAttribute('aria-valuemax', String(Math.round(audio.duration)));
+      $('#timeline').setAttribute('aria-valuenow', String(Math.round(displayTime)));
+      $('#timeline').setAttribute('aria-valuetext', `${formatTime(displayTime)} of ${formatTime(audio.duration)}`);
+      updateSongMapPlayhead(displayTime);
       const liveRecordingActive = state.exporting
         && exportSession?.mode === 'live'
         && mediaRecorder?.state === 'recording';
@@ -2185,6 +3234,25 @@
     }
   }
 
+  let visualIntensityDisplayScore = null;
+  let visualIntensityDisplayedPercent = null;
+  let visualIntensityDisplayedLevel = 'calm';
+  let visualIntensityLastSampleAt = 0;
+  let visualIntensityLastPaintAt = 0;
+
+  function stableVisualIntensityLevel(score) {
+    if (visualIntensityDisplayedLevel === 'intense') {
+      if (score >= .64) return 'intense';
+      return score >= .35 ? 'active' : 'calm';
+    }
+    if (visualIntensityDisplayedLevel === 'active') {
+      if (score >= .70) return 'intense';
+      return score >= .35 ? 'active' : 'calm';
+    }
+    if (score >= .70) return 'intense';
+    return score >= .40 ? 'active' : 'calm';
+  }
+
   function updateVisualIntensityMeter() {
     const card = $('#visualIntensityCard');
     if (!card) return;
@@ -2197,28 +3265,51 @@
     const color = state.frequencyColorEnabled ? clamp(state.frequencyColorAmount || 0, 0, 1) : 0;
     const liveEnergy = clamp((state.rms * .55) + (state.beat * .45), 0, 1);
     const beatWeight = $('#beatPulse')?.checked ? .11 : 0;
-    const score = clamp(
+    const rawScore = clamp(
       reactivity * .26 + motion * .18 + equation * .21 + folding * .16 + color * .08 + liveEnergy * .11 + beatWeight,
       0,
       1
     );
-    const percent = Math.round(score * 100);
-    let level = 'calm';
-    let label = 'CALM';
-    let description = 'Current motion and audio response are unlikely to create rapid flashes.';
-    if (score >= .68) {
-      level = 'intense';
-      label = 'INTENSE';
-      description = 'Strong motion or rapid color/math changes are active. Consider Low Flash for sensitive viewers.';
-    } else if (score >= .38) {
-      level = 'active';
-      label = 'ACTIVE';
-      description = 'Moderate movement and music response are active; review before streaming to a broad audience.';
+
+    const now = performance.now();
+    if (visualIntensityDisplayScore === null) {
+      visualIntensityDisplayScore = rawScore;
+    } else {
+      const elapsed = clamp((now - visualIntensityLastSampleAt) / 1000, 1 / 240, .25);
+      const timeConstant = rawScore > visualIntensityDisplayScore ? .45 : 2.2;
+      const envelopeAmount = 1 - Math.exp(-elapsed / timeConstant);
+      visualIntensityDisplayScore += (rawScore - visualIntensityDisplayScore) * envelopeAmount;
     }
-    card.dataset.level = level;
-    $('#visualIntensityLabel').textContent = `${label} · ${percent}%`;
-    $('#visualIntensityFill').style.width = `${Math.max(3, percent)}%`;
-    $('#visualIntensityText').textContent = description;
+    visualIntensityLastSampleAt = now;
+
+    const candidatePercent = Math.round(visualIntensityDisplayScore * 100);
+    const candidateLevel = stableVisualIntensityLevel(visualIntensityDisplayScore);
+    const levelChanged = candidateLevel !== visualIntensityDisplayedLevel;
+    const percentChangedEnough = visualIntensityDisplayedPercent === null
+      || Math.abs(candidatePercent - visualIntensityDisplayedPercent) >= 2;
+    if (!levelChanged && (!percentChangedEnough || now - visualIntensityLastPaintAt < 300)) return;
+
+    visualIntensityDisplayedLevel = candidateLevel;
+    visualIntensityDisplayedPercent = candidatePercent;
+    visualIntensityLastPaintAt = now;
+    const presentation = {
+      calm: {
+        label: 'CALM',
+        description: 'Current motion and audio response are unlikely to create rapid flashes.'
+      },
+      active: {
+        label: 'ACTIVE',
+        description: 'Moderate movement and music response are active; review before streaming to a broad audience.'
+      },
+      intense: {
+        label: 'INTENSE',
+        description: 'Strong motion or rapid color/math changes are active. Consider Low Flash for sensitive viewers.'
+      }
+    }[visualIntensityDisplayedLevel];
+    card.dataset.level = visualIntensityDisplayedLevel;
+    $('#visualIntensityLabel').textContent = `${presentation.label} · ${visualIntensityDisplayedPercent}%`;
+    $('#visualIntensityFill').style.width = `${Math.max(3, visualIntensityDisplayedPercent)}%`;
+    $('#visualIntensityText').textContent = presentation.description;
   }
 
   function formatTime(seconds) {
@@ -3073,6 +4164,8 @@
     showPrevious: { label: 'Show · Previous Entry', mode: 'trigger', run: () => advanceShow(-1) },
     showNext: { label: 'Show · Next Entry', mode: 'trigger', run: () => advanceShow(1) },
     showStop: { label: 'Show · Stop', mode: 'trigger', run: () => $('#showStopButton').click() },
+    performanceMode: { label: 'Performance · Toggle Operator Mode', mode: 'trigger', run: () => setPerformanceMode(!state.operatorMode) },
+    performanceBlackout: { label: 'Performance · Toggle Blackout', mode: 'trigger', run: () => setPerformanceBlackout(!state.performanceBlackout) },
     tapTempo: { label: 'Beat Grid · Tap Tempo', mode: 'trigger', run: () => $('#tapTempoButton').click() },
     visualNext: { label: 'Visual · Next Type', mode: 'trigger', run: () => {
       const control = $('#visualStyle');
@@ -3895,19 +4988,216 @@
     });
   }
 
+  let reportDiagnostics = null;
+  let reportSelectedIncidentId = '';
+  let reportGeneratedId = '';
+
+  function rendererReportSnapshot() {
+    let webglRenderer = 'Unknown WebGL renderer';
+    try { webglRenderer = gl.getParameter(gl.RENDERER) || webglRenderer; } catch (_) { /* Renderer label is optional. */ }
+    return {
+      visualStyle: state.visualStyle,
+      fractalType: state.fractalType,
+      audioMode: state.audioMode,
+      exporting: state.exporting,
+      exportMode: $('#exportMode')?.value || 'offline',
+      resolution: $('#resolution')?.value || '',
+      fps: $('#fps')?.value || '',
+      performanceMode: state.performanceMode,
+      unleashed: state.unleashedMode,
+      adaptiveQuality: state.adaptiveQuality,
+      interfaceMode: state.interfaceMode,
+      webglRenderer
+    };
+  }
+
+  function reportIncidentLabel(incident) {
+    const time = new Date(incident.timestamp);
+    const date = Number.isNaN(time.getTime()) ? 'Unknown time' : time.toLocaleString();
+    return `${date} · ${incident.source} · ${incident.message}`.slice(0, 180);
+  }
+
+  function renderReportIncidents() {
+    const incidents = reportDiagnostics?.incidents || [];
+    const select = $('#reportIncidentSelect');
+    select.replaceChildren();
+    if (!incidents.length) {
+      const option = document.createElement('option');
+      option.value = '';
+      option.textContent = 'No captured crashes';
+      select.appendChild(option);
+      reportSelectedIncidentId = '';
+    } else {
+      incidents.forEach((incident) => {
+        const option = document.createElement('option');
+        option.value = incident.id;
+        option.textContent = reportIncidentLabel(incident);
+        select.appendChild(option);
+      });
+      if (!incidents.some((incident) => incident.id === select.value)) select.value = incidents[0].id;
+    }
+    $('#reportIncidentCount').textContent = `${incidents.length} SAVED`;
+    $('#reportUseIncidentButton').disabled = !incidents.length;
+    $('#reportClearIncidentsButton').disabled = !incidents.length;
+    const selected = Boolean(reportSelectedIncidentId && incidents.some((incident) => incident.id === reportSelectedIncidentId));
+    $('#reportUseIncidentButton').classList.toggle('active', selected);
+    $('#reportUseIncidentButton').textContent = selected ? 'REMOVE SELECTED' : 'INCLUDE SELECTED';
+  }
+
+  function reportValue(id, fallback = 'Not provided') {
+    const value = $(`#${id}`).value.trim();
+    return value || fallback;
+  }
+
+  function sanitizeGeneratedReport(value) {
+    return String(value || '')
+      .replace(/https:\/\/(?:canary\.|ptb\.)?discord(?:app)?\.com\/api\/webhooks\/\d+\/[A-Za-z0-9._-]+/gi, '[REDACTED_DISCORD_WEBHOOK]')
+      .replace(/([?&](?:token|key|secret|password)=)[^&\s]+/gi, '$1[REDACTED]');
+  }
+
+  function buildReportText(diagnostics) {
+    const incident = diagnostics?.incidents?.find((candidate) => candidate.id === reportSelectedIncidentId);
+    const appInfo = diagnostics?.application || {};
+    const system = diagnostics?.system || {};
+    const renderer = diagnostics?.renderer || {};
+    reportGeneratedId = `QP-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(16).slice(2, 6).toUpperCase()}`;
+    const lines = [
+      '# Quartic Pulse Report',
+      '',
+      `Report ID: ${reportGeneratedId}`,
+      `Created: ${new Date().toISOString()}`,
+      `Type: ${$('#reportCategory').selectedOptions[0]?.textContent || 'Bug'}`,
+      `Summary: ${reportValue('reportSummary')}`,
+      `Contact: ${reportValue('reportContact')}`,
+      '',
+      '## What happened',
+      reportValue('reportActual'),
+      '',
+      '## Steps to reproduce',
+      reportValue('reportSteps'),
+      '',
+      '## Expected result',
+      reportValue('reportExpected')
+    ];
+    if (incident) {
+      lines.push('', '## Captured incident',
+        `Time: ${incident.timestamp}`,
+        `Source: ${incident.source}`,
+        `Message: ${incident.message}`,
+        incident.stack ? `Stack:\n${incident.stack}` : 'Stack: Not available',
+        incident.details ? `Details: ${incident.details}` : '');
+    }
+    if ($('#reportIncludeDiagnostics').checked) {
+      const gpuNames = (system.gpuDevices || []).map((device) => device.deviceString).filter(Boolean);
+      lines.push('', '## Sanitized diagnostics',
+        `Quartic Pulse: ${appInfo.version || 'Unknown'}${appInfo.packaged ? ' packaged' : ' development'}`,
+        `Electron / Chromium: ${appInfo.electron || '?'} / ${appInfo.chromium || '?'}`,
+        `Windows: ${system.windowsVersion || system.windowsRelease || 'Unknown'} · ${system.architecture || '?'}`,
+        `CPU: ${system.cpuModel || 'Unknown'} · ${system.logicalProcessors || '?'} logical processors`,
+        `Memory: ${formatByteSize(system.totalMemoryBytes || 0)} total · ${formatByteSize(system.freeMemoryBytes || 0)} free`,
+        `GPU: ${gpuNames.join(' | ') || renderer.webglRenderer || 'Unknown'}`,
+        `Visual: style ${renderer.visualStyle ?? '?'} · equation ${renderer.fractalType ?? '?'} · ${renderer.interfaceMode || '?'} UI`,
+        `Audio: ${renderer.audioMode || '?'} · Export active: ${renderer.exporting || 'false'}`,
+        `Performance: ${renderer.performanceMode || '?'} · Unleashed: ${renderer.unleashed || 'false'} · Adaptive: ${renderer.adaptiveQuality || 'false'}`);
+    }
+    lines.push('', 'Privacy: Quartic Pulse removes known local user paths, temporary paths, query-string secrets, and Discord webhook URLs. Audio files and audio content are not included.');
+    return sanitizeGeneratedReport(lines.filter((line) => line !== '').join('\n\n').replace(/\n{3,}/g, '\n\n')).slice(0, 50000);
+  }
+
+  async function refreshReportDiagnostics() {
+    reportDiagnostics = await window.quarticDesktop.getReportDiagnostics(rendererReportSnapshot());
+    renderReportIncidents();
+    const canSubmit = Boolean(reportDiagnostics.submission?.enabled);
+    $('#submitReportButton').disabled = !canSubmit || !$('#reportOutput').value;
+    $('#reportSubmitNote').classList.toggle('available', canSubmit);
+    $('#reportSubmitNote').textContent = canSubmit
+      ? 'Secure submission is available. The public relay forwards the sanitized report without revealing Discord credentials.'
+      : 'Online submission is not configured in this build. Copy, Save, Print/PDF, and GitHub remain available; Discord credentials are never stored in the public app.';
+    return reportDiagnostics;
+  }
+
+  function setReportActionsEnabled(enabled) {
+    ['copyReportButton', 'saveReportButton', 'printReportButton', 'githubReportButton'].forEach((id) => { $(`#${id}`).disabled = !enabled; });
+    $('#submitReportButton').disabled = !enabled || !reportDiagnostics?.submission?.enabled;
+  }
+
+  function initializeReportCenter() {
+    $('#reportUseIncidentButton').addEventListener('click', () => {
+      const selected = $('#reportIncidentSelect').value;
+      reportSelectedIncidentId = reportSelectedIncidentId === selected ? '' : selected;
+      renderReportIncidents();
+    });
+    $('#reportClearIncidentsButton').addEventListener('click', async () => {
+      if (!window.confirm('Clear the locally saved crash and error history?')) return;
+      await window.quarticDesktop.clearReportIncidents();
+      reportSelectedIncidentId = '';
+      await refreshReportDiagnostics();
+      showToast('Local incident history cleared');
+    });
+    $('#generateReportButton').addEventListener('click', async () => {
+      $('#reportCenterStatus').textContent = 'COLLECTING';
+      try {
+        const diagnostics = await refreshReportDiagnostics();
+        const report = buildReportText(diagnostics);
+        $('#reportOutput').value = report;
+        $('#reportLengthStatus').textContent = `${report.length.toLocaleString()} CHARACTERS`;
+        $('#reportCenterStatus').textContent = 'REPORT READY';
+        setReportActionsEnabled(true);
+      } catch (error) {
+        $('#reportCenterStatus').textContent = 'FAILED';
+        showToast(`Report generation failed: ${error.message}`, true);
+      }
+    });
+    $('#copyReportButton').addEventListener('click', async () => {
+      await navigator.clipboard.writeText($('#reportOutput').value);
+      showToast(`${reportGeneratedId || 'Report'} copied to the clipboard`);
+    });
+    $('#saveReportButton').addEventListener('click', async () => {
+      const outputPath = await window.quarticDesktop.saveReport($('#reportOutput').value);
+      if (outputPath) showToast('Diagnostic report saved');
+    });
+    $('#printReportButton').addEventListener('click', async () => {
+      const printed = await window.quarticDesktop.printReport($('#reportOutput').value);
+      showToast(printed ? 'Report sent to the selected printer' : 'Printing cancelled');
+    });
+    $('#githubReportButton').addEventListener('click', async () => {
+      await navigator.clipboard.writeText($('#reportOutput').value);
+      await window.quarticDesktop.openReportIssues();
+      showToast('Report copied; paste it into the new GitHub issue');
+    });
+    $('#submitReportButton').addEventListener('click', async () => {
+      $('#submitReportButton').disabled = true;
+      $('#reportCenterStatus').textContent = 'SENDING';
+      try {
+        const result = await window.quarticDesktop.submitReport($('#reportOutput').value);
+        $('#reportCenterStatus').textContent = 'SENT';
+        showToast(result?.reportId ? `Report ${result.reportId} sent successfully` : 'Report sent successfully');
+      } catch (error) {
+        $('#reportCenterStatus').textContent = 'SEND FAILED';
+        showToast(error.message, true);
+      } finally { $('#submitReportButton').disabled = !reportDiagnostics?.submission?.enabled; }
+    });
+    refreshReportDiagnostics().catch((error) => {
+      $('#reportCenterStatus').textContent = 'DIAGNOSTICS UNAVAILABLE';
+      showToast(error.message, true);
+    });
+  }
+
   function activateTab(tabName) {
     if (tabName === 'live') tabName = 'show';
-    const musicTabNames = ['music', 'playlist', 'frequency-color'];
+    const musicTabNames = ['music', 'playlist', 'analysis', 'frequency-color'];
     const appearanceTabNames = ['appearance', 'reactivity', 'dimensional', 'folding', 'mapping'];
-    const liveTabNames = ['show', 'controls', 'camera', 'tools'];
+    const liveTabNames = ['show', 'composer', 'controls', 'camera', 'tools', 'stream'];
+    const systemTabNames = ['system', 'reports', 'about'];
     if (state.interfaceMode === 'basic' && ['reactivity', 'dimensional', 'folding', 'mapping'].includes(tabName)) {
       tabName = 'appearance';
     }
     const inMusicGroup = musicTabNames.includes(tabName);
     const inAppearanceGroup = appearanceTabNames.includes(tabName);
     const inLiveGroup = liveTabNames.includes(tabName);
+    const inSystemGroup = systemTabNames.includes(tabName);
     document.body.classList.toggle('appearance-active', inAppearanceGroup);
-    const topLevelTab = inMusicGroup ? 'music' : (inAppearanceGroup ? 'appearance' : (inLiveGroup ? 'live' : tabName));
+    const topLevelTab = inMusicGroup ? 'music' : (inAppearanceGroup ? 'appearance' : (inLiveGroup ? 'live' : (inSystemGroup ? 'system' : tabName)));
     document.querySelectorAll('.settings-tab').forEach((button) => {
       const active = button.dataset.tab === topLevelTab;
       button.classList.toggle('active', active);
@@ -3934,6 +5224,13 @@
       button.classList.toggle('active', active);
       button.setAttribute('aria-selected', String(active));
     });
+    const systemSubtabs = document.querySelector('.system-subtabs');
+    systemSubtabs.hidden = !inSystemGroup;
+    document.querySelectorAll('.system-subtab').forEach((button) => {
+      const active = inSystemGroup && button.dataset.systemTab === tabName;
+      button.classList.toggle('active', active);
+      button.setAttribute('aria-selected', String(active));
+    });
     document.querySelectorAll('.tab-panel').forEach((panel) => {
       const active = panel.dataset.tabPanel === tabName;
       panel.classList.toggle('active', active);
@@ -3942,7 +5239,7 @@
   }
 
   function updateVisualStyleOptions() {
-    const names = ['Fractal', 'Spectrum Bars', 'Radial Spectrum', 'Pulse Rings', 'Waveform Field', '3D Mandelbulb'];
+    const names = ['Fractal', 'Spectrum Bars', 'Radial Spectrum', 'Pulse Rings', 'Waveform Field', '3D Mandelbulb', 'Mainframe Room'];
     document.querySelectorAll('[data-visual-style]').forEach((button) => {
       const active = Number(button.dataset.visualStyle) === state.visualStyle;
       button.classList.toggle('active', active);
@@ -4023,7 +5320,7 @@
   }
 
   function visualEffectOutput(id, rangeValue) {
-    return id === 'bulbPower' ? Number(rangeValue).toFixed(1) : normalizedPercent(id, rangeValue);
+    return id === 'bulbPower' ? String(Math.round(Number(rangeValue))) : normalizedPercent(id, rangeValue);
   }
 
   function markEffectPresetCustom(groupName) {
@@ -4241,7 +5538,9 @@
       return;
     }
     applyControlDefaults({ flow: .28, motion: .85, reactivity: .9 });
-    showToast('Waveform Field quick controls reset');
+    showToast(state.visualStyle === 6
+      ? 'Mainframe Room quick controls reset'
+      : 'Waveform Field quick controls reset');
   }
 
   function updateZoomControls() {
@@ -4399,7 +5698,8 @@
     'zoom', 'flow', 'autoReactivity', 'reactivity', 'motion', 'spin', 'equationSmoothing', 'equationMod',
     'adaptiveQuality', 'beatPulse', 'autoDrift',
     'iterations', 'resolution', 'fps', 'videoFormat', 'exportDetail', 'showExportPreview', 'exportCompleteSound',
-    'obsResolution', 'obsFps', 'obsAlwaysOnTop', 'obsChromaKey', 'obsChromaThreshold'
+    'obsResolution', 'obsFps', 'obsAlwaysOnTop', 'obsChromaKey', 'obsChromaThreshold',
+    'musicPersonality', 'songDirectorStyle', 'songDirectorBehavior', 'songDirectorIntensity'
   ];
   let savedProfiles = [];
 
@@ -4601,7 +5901,7 @@
   }
 
   function quickSaveCurrentVisualProfile() {
-    const visualNames = ['Fractal', 'Spectrum Bars', 'Radial Spectrum', 'Pulse Rings', 'Waveform Field', '3D Mandelbulb'];
+    const visualNames = ['Fractal', 'Spectrum Bars', 'Radial Spectrum', 'Pulse Rings', 'Waveform Field', '3D Mandelbulb', 'Mainframe Room'];
     const stamp = new Date().toISOString().replace('T', ' ').slice(0, 19).replaceAll(':', '-');
     $('#profileName').value = `${visualNames[state.visualStyle] || visualNames[0]} · ${stamp}`.slice(0, 60);
     $('#profileKind').value = 'settings';
@@ -4696,6 +5996,268 @@
     });
   }
 
+  const performancePackageApplication = 'quartic-pulse-performance';
+  const performancePackageSchemaVersion = 1;
+  const performancePackageAppVersion = '0.29.1';
+  const pendingPerformanceMapStorageKey = 'quarticPulsePendingPerformanceMapV1';
+
+  function stableStringify(value) {
+    if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
+    if (value && typeof value === 'object') {
+      return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${stableStringify(value[key])}`).join(',')}}`;
+    }
+    return JSON.stringify(value);
+  }
+
+  function jsonSafeClone(value) {
+    return JSON.parse(JSON.stringify(value));
+  }
+
+  function cleanPackageText(value, maximum, fallback = '') {
+    return String(value ?? '').replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, maximum) || fallback;
+  }
+
+  function performanceTrackIdentity(item = currentPlaylistItem(), map = activeSongMap) {
+    if (!item?.file) return null;
+    const fileName = cleanPackageText(item.file.name, 240, 'Unknown audio file');
+    const duration = Number.isFinite(Number(map?.duration)) ? Number(Number(map.duration).toFixed(3)) : 0;
+    const portableSource = [fileName.toLowerCase(), Number(item.file.size) || 0, duration.toFixed(3)].join('|');
+    return {
+      displayName: cleanPackageText(item.name, 160, fileName.replace(/\.[^.]+$/, '')),
+      fileName,
+      size: Math.max(0, Number(item.file.size) || 0),
+      lastModified: Math.max(0, Number(item.file.lastModified) || 0),
+      duration,
+      fingerprint: `TRACK-${hashSongMapText(portableSource).toUpperCase()}`
+    };
+  }
+
+  function performanceTrackMatches(identity, item = currentPlaylistItem()) {
+    if (!identity || !item?.file) return false;
+    const nameMatches = String(identity.fileName || '').toLowerCase() === String(item.file.name || '').toLowerCase();
+    const sizeMatches = Number(identity.size) > 0 && Number(identity.size) === Number(item.file.size);
+    const duration = Number(identity.duration) || 0;
+    const durationMatches = !duration || !Number.isFinite(audio.duration) || Math.abs(duration - audio.duration) <= 1.25;
+    return nameMatches && sizeMatches && durationMatches;
+  }
+
+  function currentDirectorCuePackage() {
+    if (!activeSongMap?.key) return {};
+    const entry = readSongDirectorOverrides().find((candidate) => candidate.mapKey === activeSongMap.key);
+    return entry?.cues && typeof entry.cues === 'object' ? jsonSafeClone(entry.cues) : {};
+  }
+
+  function portableSongMap() {
+    if (!activeSongMap || !validSongMap(activeSongMap)) return null;
+    const map = jsonSafeClone(activeSongMap);
+    delete map.key;
+    return map;
+  }
+
+  function createPerformancePackage() {
+    const title = cleanPackageText($('#performancePackageTitle').value, 80,
+      state.audioName ? `${state.audioName} Performance` : 'Quartic Pulse Performance');
+    const creator = cleanPackageText($('#performancePackageCreator').value, 80, 'Quartic Pulse Creator');
+    const notes = cleanPackageText($('#performancePackageNotes').value, 500);
+    const referencedIds = new Set(state.showSequence.map((entry) => entry.profileId));
+    const showProfiles = savedProfiles.filter((profile) => referencedIds.has(profile.id)).map(jsonSafeClone);
+    const currentVisual = {
+      id: 'performance-current-visual',
+      name: title,
+      kind: 'settings',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      data: captureProfileData('settings')
+    };
+    const packageData = {
+      metadata: { title, creator, notes },
+      track: performanceTrackIdentity(),
+      currentVisual,
+      show: {
+        entries: state.showSequence.map(serializeShowEntry),
+        profiles: showProfiles,
+        loop: state.showLoop,
+        shuffle: state.showShuffle,
+        autoBpm: state.autoBpm,
+        manualBpm: Number(state.manualBpm.toFixed(3)),
+        beatOffsetMs: state.beatOffsetMs
+      },
+      director: {
+        enabled: state.songDirectorEnabled,
+        style: state.songDirectorStyle,
+        behavior: state.songDirectorBehavior,
+        intensity: Number(state.songDirectorIntensity.toFixed(4)),
+        map: portableSongMap(),
+        cueOverrides: currentDirectorCuePackage()
+      }
+    };
+    return {
+      application: performancePackageApplication,
+      schemaVersion: performancePackageSchemaVersion,
+      appVersion: performancePackageAppVersion,
+      exportedAt: new Date().toISOString(),
+      fingerprint: `QP-${hashSongMapText(stableStringify(packageData)).toUpperCase()}`,
+      performance: packageData
+    };
+  }
+
+  function setPerformancePackageStatus(message) {
+    const status = $('#performancePackageStatus');
+    if (status) status.textContent = message;
+  }
+
+  async function exportPerformancePackage() {
+    const documentData = createPerformancePackage();
+    const suggestedName = documentData.performance.metadata.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'quartic-pulse-performance';
+    const outputPath = await window.quarticDesktop.exportPerformancePackage(suggestedName, JSON.stringify(documentData, null, 2));
+    if (!outputPath) return;
+    setPerformancePackageStatus(`${documentData.fingerprint} · Package exported without audio.`);
+    showToast(`Performance package exported: ${outputPath}`);
+  }
+
+  function installPerformanceSongMap(performance) {
+    const portableMap = performance?.director?.map;
+    const identity = performance?.track;
+    if (!portableMap || !identity) return 'No Song Map was included.';
+    if (!performanceTrackMatches(identity)) {
+      try {
+        localStorage.setItem(pendingPerformanceMapStorageKey, JSON.stringify({
+          track: identity,
+          map: portableMap,
+          cues: performance.director.cueOverrides || {},
+          savedAt: new Date().toISOString()
+        }));
+      } catch (_) { /* A package remains usable without pending map storage. */ }
+      return `Load ${identity.fileName} to attach its packaged Song Map.`;
+    }
+    const key = songMapKey();
+    const map = { ...jsonSafeClone(portableMap), key, trackName: currentPlaylistItem()?.name || identity.displayName, updatedAt: new Date().toISOString() };
+    if (!key || !validSongMap(map)) return 'The packaged Song Map was not compatible.';
+    cacheSongMap(map);
+    activeSongMap = map;
+    const cues = performance.director.cueOverrides && typeof performance.director.cueOverrides === 'object'
+      ? jsonSafeClone(performance.director.cueOverrides) : {};
+    const overrides = readSongDirectorOverrides().filter((entry) => entry.mapKey !== key);
+    if (Object.keys(cues).length) overrides.unshift({ mapKey: key, updatedAt: new Date().toISOString(), cues });
+    try { localStorage.setItem(songDirectorOverridesStorageKey, JSON.stringify(overrides.slice(0, 20))); }
+    catch (_) { /* Cue restoration is optional if local storage is unavailable. */ }
+    try { localStorage.removeItem(pendingPerformanceMapStorageKey); } catch (_) { /* Optional cleanup. */ }
+    renderSongMap();
+    return `Song Map matched ${identity.fingerprint}.`;
+  }
+
+  function tryRestorePendingPerformanceMap() {
+    if (!currentPlaylistItem()?.file) return false;
+    try {
+      const pending = JSON.parse(localStorage.getItem(pendingPerformanceMapStorageKey) || 'null');
+      if (!pending?.map || !performanceTrackMatches(pending.track)) return false;
+      const message = installPerformanceSongMap({ track: pending.track, director: { map: pending.map, cueOverrides: pending.cues || {} } });
+      setPerformancePackageStatus(message);
+      showToast('Packaged Song Map attached to the loaded track');
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function importPerformanceProfiles(performance) {
+    const imported = Array.isArray(performance?.show?.profiles) ? performance.show.profiles.filter(validProfile).slice(0, 100) : [];
+    const idMap = new Map();
+    const now = new Date().toISOString();
+    const profiles = imported.map((profile, index) => {
+      const id = crypto.randomUUID?.() || `${Date.now()}-${index}-${Math.random()}`;
+      idMap.set(profile.id, id);
+      return {
+        id,
+        name: cleanPackageText(profile.name, 60, `Imported Show Profile ${index + 1}`),
+        kind: profile.kind,
+        createdAt: now,
+        updatedAt: now,
+        data: jsonSafeClone(profile.data)
+      };
+    });
+    savedProfiles = [...profiles, ...savedProfiles].slice(0, 100);
+    persistSavedProfiles();
+    const entries = Array.isArray(performance?.show?.entries) ? performance.show.entries : [];
+    state.showSequence = entries.slice(0, 100).map((entry, index) => ({
+      ...serializeShowEntry({ ...entry, profileId: idMap.get(entry.profileId) || '' }),
+      id: crypto.randomUUID?.() || `${Date.now()}-show-${index}`
+    })).filter((entry) => savedProfiles.some((profile) => profile.id === entry.profileId));
+    state.showLoop = performance.show?.loop !== false;
+    state.showShuffle = Boolean(performance.show?.shuffle);
+    state.autoBpm = performance.show?.autoBpm !== false;
+    state.manualBpm = clamp(Number(performance.show?.manualBpm) || 120, 60, 200);
+    state.beatOffsetMs = clamp(Math.round(Number(performance.show?.beatOffsetMs) || 0), -500, 500);
+    state.showPlaying = false;
+    state.showIndex = -1;
+    persistShowSequence();
+    renderSavedProfiles(profiles[0]?.id || '');
+    renderShowSequence();
+    $('#showLoop').checked = state.showLoop;
+    $('#showShuffle').checked = state.showShuffle;
+    $('#autoBpm').checked = state.autoBpm;
+    $('#beatBpm').value = state.manualBpm;
+    $('#beatOffset').value = state.beatOffsetMs;
+    $('#beatBpm')._syncNumericValue?.();
+    $('#beatOffset')._syncNumericValue?.();
+    updateBeatGridUi();
+  }
+
+  async function importPerformancePackageFile(file) {
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) throw new Error('Performance packages must be smaller than 10 MB.');
+    const parsed = JSON.parse(await file.text());
+    if (parsed?.application !== performancePackageApplication || Number(parsed?.schemaVersion) !== performancePackageSchemaVersion) {
+      throw new Error('This is not a compatible Quartic Pulse performance package.');
+    }
+    const performance = parsed.performance;
+    if (!performance || typeof performance !== 'object' || !validProfile(performance.currentVisual)) {
+      throw new Error('The performance package is incomplete or damaged.');
+    }
+    const expectedFingerprint = `QP-${hashSongMapText(stableStringify(performance)).toUpperCase()}`;
+    if (parsed.fingerprint !== expectedFingerprint) throw new Error('The package fingerprint does not match its contents.');
+    try { localStorage.removeItem(pendingPerformanceMapStorageKey); } catch (_) { /* Optional cleanup. */ }
+    applySavedProfile(performance.currentVisual, { quiet: true });
+    importPerformanceProfiles(performance);
+    const mapMessage = installPerformanceSongMap(performance);
+    const director = performance.director && typeof performance.director === 'object' ? performance.director : {};
+    state.songDirectorEnabled = false;
+    state.songDirectorValues = {};
+    state.songDirectorStyle = songDirectorStyles[director.style] ? director.style : state.songDirectorStyle;
+    state.songDirectorBehavior = director.behavior === 'auto' || songDirectorBehaviors[director.behavior]
+      ? director.behavior
+      : state.songDirectorBehavior;
+    const importedDirectorIntensity = Number(director.intensity);
+    state.songDirectorIntensity = Number.isFinite(importedDirectorIntensity)
+      ? clamp(importedDirectorIntensity, 0, 1)
+      : state.songDirectorIntensity;
+    $('#songDirectorEnabled').checked = false;
+    $('#songDirectorStyle').value = state.songDirectorStyle;
+    $('#songDirectorBehavior').value = state.songDirectorBehavior;
+    $('#songDirectorIntensity').value = String(state.songDirectorIntensity);
+    $('#songDirectorIntensity')._syncNumericValue?.();
+    $('#songDirectorIntensityValue').value = `${Math.round(state.songDirectorIntensity * 100)}%`;
+    renderSongDirector();
+    $('#performancePackageTitle').value = cleanPackageText(performance.metadata?.title, 80, 'Imported Performance');
+    $('#performancePackageCreator').value = cleanPackageText(performance.metadata?.creator, 80, 'Unknown creator');
+    $('#performancePackageNotes').value = cleanPackageText(performance.metadata?.notes, 500);
+    setPerformancePackageStatus(`${expectedFingerprint} · ${mapMessage}`);
+    showToast(`${performance.metadata?.title || 'Performance package'} imported in standby without audio`);
+  }
+
+  function initializePerformancePackages() {
+    $('#exportPerformancePackageButton').addEventListener('click', () => exportPerformancePackage().catch((error) => showToast(`Package export failed: ${error.message}`, true)));
+    $('#importPerformancePackageButton').addEventListener('click', () => $('#importPerformancePackageInput').click());
+    $('#importPerformancePackageInput').addEventListener('change', async (event) => {
+      try { await importPerformancePackageFile(event.target.files[0]); }
+      catch (error) { showToast(`Package import failed: ${error.message}`, true); }
+      finally { event.target.value = ''; }
+    });
+    if (new URLSearchParams(window.location.search).get('smoke') === '1') {
+      window.__quarticPulseCreatePerformancePackage = createPerformancePackage;
+    }
+  }
+
   const sessionAutosaveStorageKey = 'quarticPulseSessionAutosaveV1';
   let sessionAutosaveTimer = 0;
   let sessionRestoreActive = false;
@@ -4762,7 +6324,14 @@
           showToast(`Settings restored; the last song could not be reopened: ${error.message}`, true);
         }
       }
-      showToast('Previous Quartic Pulse session restored');
+      state.showPlaying = false;
+      state.showIndex = -1;
+      state.songDirectorEnabled = false;
+      state.songDirectorValues = {};
+      $('#songDirectorEnabled').checked = false;
+      renderSongDirector();
+      updateShowUi();
+      showToast('Previous session restored · show and Song Director remain in standby');
     } finally {
       sessionRestoreActive = false;
       saveSessionSnapshot();
@@ -4977,6 +6546,7 @@
     }
     $('#addShowEntryButton').disabled = !savedProfiles.length;
     renderShowSequence();
+    if (composerInitialized) renderShowComposer();
   }
 
   function renderShowSequence() {
@@ -4990,7 +6560,7 @@
       element.dataset.index = String(index);
       element.innerHTML = `
         <span class="show-entry-index">${index + 1}</span>
-        <div class="show-entry-body" data-show-action="select" tabindex="0"><strong>${profile?.name || 'Missing profile'}</strong><small>${entry.advance === 'time' ? `${entry.value} seconds` : `${entry.value} beats`} · ${entry.transition === 'cut' ? 'Cut' : 'Fade through black'}</small></div>
+        <div class="show-entry-body" data-show-action="select" tabindex="0"><strong>${escapeShowMarkup(entry.label || profile?.name || 'Missing profile')}</strong><small>${escapeShowMarkup(profile?.name || 'Missing profile')} · ${entry.advance === 'time' ? `${entry.value} seconds` : `${entry.value} beats`} · ${entry.transition === 'cut' ? 'Cut' : 'Fade through black'}</small></div>
         <button type="button" data-show-action="up" title="Move up">↑</button>
         <button type="button" data-show-action="down" title="Move down">↓</button>
         <button type="button" data-show-action="delete" title="Remove">×</button>`;
@@ -4998,6 +6568,7 @@
     });
     $('#showSequenceEmpty').hidden = state.showSequence.length > 0;
     updateShowUi();
+    if (composerInitialized) renderShowComposer();
   }
 
   function updateBeatGridUi() {
@@ -5128,6 +6699,7 @@
       state.showPlaying = false;
       state.showIndex = -1;
       $('#showProgressFill').style.width = '0%';
+      $('#performanceDockProgress').style.width = '0%';
       updateShowUi();
     });
     $('#showLoop').addEventListener('change', (event) => { state.showLoop = event.target.checked; persistShowSequence(); });
@@ -5380,6 +6952,7 @@
     $('#skipForwardButton').disabled = !deckAvailable;
     $('#exportButton').disabled = !hasTrack;
     updateNowPlayingOverlay();
+    updatePerformanceDock();
   }
 
   function updatePlaylistControls() {
@@ -5434,11 +7007,18 @@
     $('#audioSourceSelect').value = 'deck';
     setAudioSourceStatus('DECK', false);
     audio.pause();
+    if (songMapAnalyzing) songMapAnalysisJob += 1;
+    songMapAnalyzing = false;
+    activeSongMap = null;
     resetPulseEvents();
     state.playlistIndex = index;
     state.audioName = item.name;
     audio.src = item.source;
     audio.load();
+    // A source swap can occur before the media element's asynchronous pause
+    // event updates the HUD. Reset the transport immediately for a newly
+    // selected track unless this selection explicitly requested autoplay.
+    setPlayState();
     $('#trackName').textContent = item.name;
     $('#trackMeta').textContent = item.meta;
     $('#timelineFill').style.width = '0%';
@@ -5446,6 +7026,7 @@
     $('#revealButton').hidden = true;
     updateTrackControls();
     renderPlaylist();
+    loadSongMapForCurrentTrack();
     showToast(`${item.name} selected`);
     if (autoplay) {
       createAudioGraph();
@@ -5513,12 +7094,16 @@
   function resetAudioDeck() {
     resetPulseEvents();
     state.audioName = '';
+    if (songMapAnalyzing) songMapAnalysisJob += 1;
+    songMapAnalyzing = false;
+    activeSongMap = null;
     $('#trackName').textContent = 'No audio loaded';
     $('#trackMeta').textContent = 'Drop songs anywhere, choose files, or choose a local folder';
     $('#timelineFill').style.width = '0%';
     $('#timeReadout').textContent = '00:00 / 00:00';
     updateTrackControls();
     setPlayState();
+    if (songMapInitialized) renderSongMap();
   }
 
   function clearPlaylist() {
@@ -5647,9 +7232,9 @@
         magnitudes[bin] = clamp((decibels + 90) / 70, 0, 1);
       }
       const bands = getActiveFrequencyBands();
-      const rawBass = averageHz(bands.floor, bands.lowMid) * 1.6;
-      const rawMids = averageHz(bands.lowMid, bands.midHigh) * 1.45;
-      const rawHighs = averageHz(bands.midHigh, bands.ceiling) * 1.8;
+      const rawBass = averageHz(bands.floor, bands.lowMid) * 1.6 * state.analysisBassGain;
+      const rawMids = averageHz(bands.lowMid, bands.midHigh) * 1.45 * state.analysisMidGain;
+      const rawHighs = averageHz(bands.midHigh, bands.ceiling) * 1.8 * state.analysisHighGain;
       const rawPeak = Math.max(rawBass, rawMids, rawHighs);
       if (state.autoReactivity && rawPeak > .03) {
         const desiredGain = clamp(state.autoReactivityTarget / Math.max(.03, rawPeak * state.reactivity), .25, 3);
@@ -5688,6 +7273,939 @@
       updateAdaptiveBeatDetector(beatLow, beatLowMid, 1 / fps, { register: false });
       createMusicPulseEvents([bass, mids, highs]);
     };
+  }
+
+  const songMapCacheStorageKey = 'quarticPulseSongMapsV1';
+  const songMapCacheVersion = 1;
+  const songMapCacheLimit = 10;
+  const songMapSectionColors = ['#45ddcf', '#826dff', '#ed68df', '#f2bd59', '#55a8ff', '#78df78'];
+  let activeSongMap = null;
+  let songMapAnalyzing = false;
+  let songMapAnalysisJob = 0;
+  let songMapInitialized = false;
+  let songMapRefreshTimer = 0;
+  let activeSongDirectorPlan = [];
+  let songDirectorInitialized = false;
+  let songDirectorLastUiUpdate = 0;
+  let selectedSongDirectorCueIndex = -1;
+  let selectedSongDirectorMapKey = '';
+  const songDirectorOverridesStorageKey = 'quarticPulseDirectorOverridesV1';
+
+  const songDirectorStyles = Object.freeze({
+    subtle: { label: 'Subtle', master: .48, camera: .62, equation: .48, color: .6, depth: .42, fold: .34 },
+    cinematic: { label: 'Cinematic', master: 1, camera: 1.12, equation: .82, color: .95, depth: 1.08, fold: .72 },
+    mathematical: { label: 'Mathematical', master: .94, camera: .65, equation: 1.35, color: .88, depth: .92, fold: 1.24 },
+    storm: { label: 'Storm', master: 1.22, camera: 1.12, equation: 1.16, color: 1.2, depth: 1.16, fold: 1.08 }
+  });
+
+  const songDirectorBehaviors = Object.freeze({
+    balanced: { label: 'Balanced', camera: 1, equation: 1, color: 1, motion: 1, depth: 1, fold: 1, pulse: 1, rotation: 1, bass: 1, mids: 1, highs: 1, transition: .18 },
+    electronic: { label: 'Electronic / EDM', camera: 1.08, equation: 1.08, color: 1.25, motion: 1.25, depth: 1.05, fold: 1.05, pulse: 1.35, rotation: 1.12, bass: 1.25, mids: .95, highs: 1.2, transition: .11 },
+    hiphop: { label: 'Hip-Hop', camera: 1.2, equation: 1.1, color: .9, motion: .85, depth: .8, fold: .9, pulse: 1.05, rotation: .65, bass: 1.45, mids: 1, highs: .75, transition: .22 },
+    rock: { label: 'Rock / Metal', camera: 1, equation: 1.15, color: 1, motion: 1.2, depth: 1, fold: 1.18, pulse: 1.3, rotation: 1.05, bass: 1.05, mids: 1.3, highs: 1.18, transition: .13 },
+    pop: { label: 'Pop', camera: .95, equation: .9, color: 1.35, motion: 1.05, depth: .95, fold: .8, pulse: 1.1, rotation: .9, bass: .95, mids: 1.15, highs: 1.25, transition: .16 },
+    ambient: { label: 'Ambient / Classical', camera: .72, equation: .58, color: .82, motion: .62, depth: 1.35, fold: .68, pulse: .35, rotation: .42, bass: .7, mids: 1.12, highs: .95, transition: .34 }
+  });
+
+  function resolveSongDirectorBehavior(map = activeSongMap) {
+    if (songDirectorBehaviors[state.songDirectorBehavior]) return state.songDirectorBehavior;
+    return songDirectorBehaviors[map?.personality] ? map.personality : 'balanced';
+  }
+
+  function behaviorTargetScale(key, behavior) {
+    if (['zoom', 'panX', 'panY'].includes(key)) return behavior.camera;
+    if (key === 'rotationOffset') return behavior.rotation;
+    if (key === 'motion') return behavior.motion;
+    if (['equation', 'bulbPower'].includes(key)) return behavior.equation;
+    if (['frequencyHue', 'flow', 'bulbGlow'].includes(key)) return behavior.color;
+    if (['fractalTilt', 'fractalSlice'].includes(key)) return behavior.depth;
+    if (['equationFold', 'equationWarp', 'bulbFold'].includes(key)) return behavior.fold;
+    if (key === 'pulseJagged') return behavior.pulse;
+    return 1;
+  }
+
+  function readSongDirectorOverrides() {
+    try {
+      const entries = JSON.parse(localStorage.getItem(songDirectorOverridesStorageKey) || '[]');
+      return Array.isArray(entries) ? entries.filter((entry) => entry && typeof entry.mapKey === 'string' && entry.cues && typeof entry.cues === 'object') : [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function songDirectorOverrideFor(index) {
+    if (!activeSongMap?.key) return null;
+    const set = readSongDirectorOverrides().find((entry) => entry.mapKey === activeSongMap.key);
+    const override = set?.cues?.[index];
+    if (!override) return null;
+    return {
+      strength: clamp(Number(override.strength), 0, 1),
+      emphasis: ['auto', 'camera', 'equation', 'color', 'dimension', 'fold'].includes(override.emphasis) ? override.emphasis : 'auto'
+    };
+  }
+
+  function writeSongDirectorOverride(index, override) {
+    if (!activeSongMap?.key || index < 0) return;
+    const entries = readSongDirectorOverrides().filter((entry) => entry.mapKey !== activeSongMap.key);
+    const existing = readSongDirectorOverrides().find((entry) => entry.mapKey === activeSongMap.key) || { mapKey: activeSongMap.key, cues: {} };
+    const cues = { ...existing.cues };
+    const strength = clamp(Number(override?.strength), 0, 1);
+    const emphasis = ['camera', 'equation', 'color', 'dimension', 'fold'].includes(override?.emphasis) ? override.emphasis : 'auto';
+    if (!override || (Math.abs(strength - 1) < .0001 && emphasis === 'auto')) delete cues[index];
+    else cues[index] = { strength, emphasis };
+    if (Object.keys(cues).length) entries.unshift({ mapKey: activeSongMap.key, updatedAt: new Date().toISOString(), cues });
+    try { localStorage.setItem(songDirectorOverridesStorageKey, JSON.stringify(entries.slice(0, 20))); }
+    catch (_) { /* Cue edits remain optional if local storage is unavailable. */ }
+  }
+
+  function directorEmphasisGroup(key) {
+    if (['zoom', 'rotationOffset', 'panX', 'panY', 'motion'].includes(key)) return 'camera';
+    if (['equation', 'bulbPower'].includes(key)) return 'equation';
+    if (['frequencyHue', 'flow', 'bulbGlow', 'pulseJagged'].includes(key)) return 'color';
+    if (['fractalTilt', 'fractalSlice'].includes(key)) return 'dimension';
+    if (['equationFold', 'equationWarp', 'bulbFold'].includes(key)) return 'fold';
+    return 'other';
+  }
+
+  function directorCueTargets(cue) {
+    const override = songDirectorOverrideFor(cue.index);
+    if (!override) return cue.targets;
+    return Object.fromEntries(Object.entries(cue.targets).map(([key, value]) => {
+      const emphasisScale = override.emphasis === 'auto'
+        ? 1
+        : (directorEmphasisGroup(key) === override.emphasis ? 1.35 : .72);
+      return [key, value * override.strength * emphasisScale];
+    }));
+  }
+
+  function directorSeedUnit(text) {
+    return parseInt(hashSongMapText(String(text)), 16) / 0xffffffff;
+  }
+
+  function directorSectionArc(kind) {
+    return ({ intro: .32, build: .76, peak: 1, breakdown: .24, bass: .76, lift: .72, outro: .18, steady: .56 })[kind] ?? .56;
+  }
+
+  function generateSongDirectorPlan(map = activeSongMap) {
+    if (!map?.sections?.length) return [];
+    const behaviorId = resolveSongDirectorBehavior(map);
+    const behavior = songDirectorBehaviors[behaviorId];
+    return map.sections.map((section, index) => {
+      const randomA = directorSeedUnit(`${map.key}|${index}|a`);
+      const randomB = directorSeedUnit(`${map.key}|${index}|b`);
+      const direction = randomA < .5 ? -1 : 1;
+      const arc = directorSectionArc(section.kind);
+      const energy = clamp(Number(section.energy) || 0, 0, 1);
+      const bass = clamp((Number(section.bass) || 0) * behavior.bass, 0, 1.35);
+      const mids = clamp((Number(section.mids) || 0) * behavior.mids, 0, 1.35);
+      const highs = clamp((Number(section.highs) || 0) * behavior.highs, 0, 1.35);
+      const brightness = highs - bass;
+      const sectionLength = Math.max(.1, (Number(section.end) || map.duration) - (Number(section.start) || 0));
+      const sectionBeatCount = map.beats.filter((beat) => beat >= section.start && beat < section.end).length;
+      const beatRate = clamp(sectionBeatCount / sectionLength / 2.5, 0, 1);
+      const buildDirection = section.kind === 'build' ? 1 : (section.kind === 'outro' ? -1 : 0);
+      return {
+        index,
+        start: Number(section.start) || 0,
+        end: Number(section.end) || map.duration,
+        label: section.label || `Movement ${index + 1}`,
+        kind: section.kind || 'steady',
+        energy,
+        behaviorId,
+        transitionFraction: behavior.transition,
+        targets: Object.fromEntries(Object.entries({
+          zoom: (arc - .46) * .14 + buildDirection * .025,
+          rotationOffset: direction * (.018 + arc * .052 + randomB * .018),
+          panX: direction * (.004 + randomB * .014) * (.45 + arc),
+          panY: (randomA - .5) * .022 * (.5 + arc),
+          equation: Math.max(0, .012 + energy * .105 + arc * .035),
+          frequencyHue: brightness * .18 + direction * (.025 + randomB * .045),
+          flow: .018 + arc * .085 + highs * .035,
+          motion: .025 + arc * .16 + energy * .09 + beatRate * .035,
+          fractalTilt: .015 + arc * .095 + mids * .035,
+          fractalSlice: .01 + arc * .072 + highs * .03,
+          equationFold: .004 + arc * .025 + mids * .012,
+          equationWarp: .006 + arc * .038 + bass * .014,
+          bulbPower: direction * (.04 + arc * .12),
+          bulbFold: .004 + arc * .026,
+          bulbGlow: .025 + arc * .14 + highs * .05,
+          pulseJagged: .02 + arc * .13 + beatRate * .055
+        }).map(([key, value]) => [key, value * behaviorTargetScale(key, behavior)]))
+      };
+    });
+  }
+
+  function smoothstep01(value) {
+    const t = clamp(value, 0, 1);
+    return t * t * (3 - 2 * t);
+  }
+
+  function directorTargetScale(key, style) {
+    if (['zoom', 'rotationOffset', 'panX', 'panY', 'motion'].includes(key)) return style.camera;
+    if (['equation', 'bulbPower'].includes(key)) return style.equation;
+    if (['frequencyHue', 'flow', 'bulbGlow'].includes(key)) return style.color;
+    if (['fractalTilt', 'fractalSlice'].includes(key)) return style.depth;
+    if (['equationFold', 'equationWarp', 'bulbFold'].includes(key)) return style.fold;
+    return 1;
+  }
+
+  function updateSongDirector(time) {
+    if (isObsOutput) return state.songDirectorValues || {};
+    if (!state.songDirectorEnabled || !activeSongMap || !activeSongDirectorPlan.length) {
+      state.songDirectorValues = {};
+      updateSongDirectorNow(null, {}, time);
+      return state.songDirectorValues;
+    }
+    const duration = activeSongMap.duration || 1;
+    const songTime = clamp(Number(time) || 0, 0, duration);
+    let index = activeSongDirectorPlan.findIndex((cue) => songTime >= cue.start && songTime < cue.end);
+    if (index < 0) index = activeSongDirectorPlan.length - 1;
+    const cue = activeSongDirectorPlan[index];
+    const previous = activeSongDirectorPlan[Math.max(0, index - 1)];
+    const sectionLength = Math.max(.1, cue.end - cue.start);
+    const sectionProgress = clamp((songTime - cue.start) / sectionLength, 0, 1);
+    const transition = Math.min(7, Math.max(.65, sectionLength * (cue.transitionFraction || .18)));
+    const blend = index ? smoothstep01((songTime - cue.start) / transition) : 1;
+    let arcEnvelope = 1;
+    if (cue.kind === 'build') arcEnvelope = .56 + .44 * smoothstep01(sectionProgress);
+    else if (cue.kind === 'outro') arcEnvelope = 1 - .68 * smoothstep01(sectionProgress);
+    else if (cue.kind === 'intro') arcEnvelope = .55 + .45 * smoothstep01(sectionProgress);
+    const style = songDirectorStyles[state.songDirectorStyle] || songDirectorStyles.cinematic;
+    const master = clamp(state.songDirectorIntensity, 0, 1) * style.master;
+    const values = { cueIndex: index, cueLabel: cue.label, sectionProgress };
+    const previousTargets = directorCueTargets(previous);
+    const cueTargets = directorCueTargets(cue);
+    for (const key of Object.keys(cueTargets)) {
+      const from = previousTargets[key] || 0;
+      const to = cueTargets[key] || 0;
+      values[key] = (from + (to - from) * blend) * master * directorTargetScale(key, style) * arcEnvelope;
+    }
+    if (!state.fractalDimensional) {
+      values.fractalTilt = 0;
+      values.fractalSlice = 0;
+    }
+    if (!state.equationFolding) {
+      values.equationFold = 0;
+      values.equationWarp = 0;
+    }
+    state.songDirectorValues = values;
+    updateSongDirectorNow(cue, values, songTime);
+    return values;
+  }
+
+  function updateSongDirectorNow(cue, values, time) {
+    if (!songDirectorInitialized || performance.now() - songDirectorLastUiUpdate < 120) return;
+    songDirectorLastUiUpdate = performance.now();
+    const now = $('#songDirectorNow');
+    if (!now) return;
+    const label = now.querySelector('strong');
+    if (!activeSongMap) label.textContent = 'WAITING FOR SONG MAP';
+    else if (!state.songDirectorEnabled) label.textContent = 'DIRECTOR STANDBY';
+    else label.textContent = `${cue?.label || 'MOVEMENT'} · ${formatTime(time)}`;
+    const meters = now.querySelectorAll('.song-director-meters i');
+    const levels = [Math.abs(values.motion || 0) * 4, Math.abs(values.equation || 0) * 7, Math.abs(values.frequencyHue || 0) * 6, Math.abs(values.zoom || 0) * 7];
+    meters.forEach((meter, index) => { meter.style.height = `${8 + clamp(levels[index], 0, 1) * 92}%`; });
+    document.querySelectorAll('.song-director-cue').forEach((button) => button.classList.toggle('active', Number(button.dataset.cueIndex) === values.cueIndex));
+  }
+
+  function renderSongDirector() {
+    if (!songDirectorInitialized) return;
+    activeSongDirectorPlan = generateSongDirectorPlan(activeSongMap);
+    const ready = activeSongDirectorPlan.length > 0;
+    const resolvedBehaviorId = resolveSongDirectorBehavior(activeSongMap);
+    const resolvedBehavior = songDirectorBehaviors[resolvedBehaviorId];
+    const status = $('#songDirectorStatus');
+    status.textContent = ready ? (state.songDirectorEnabled ? 'ACTIVE' : 'PLAN READY') : 'NEEDS SONG MAP';
+    status.dataset.tone = state.songDirectorEnabled && ready ? 'active' : '';
+    $('#songDirectorEnabled').disabled = !ready;
+    $('#songDirectorEnabled').checked = state.songDirectorEnabled && ready;
+    $('#songDirectorIntensity').disabled = !ready;
+    $('#songDirectorBehavior').disabled = !ready;
+    $('#songDirectorBehavior').value = state.songDirectorBehavior;
+    $('#songDirectorBehaviorResolved').textContent = `${state.songDirectorBehavior === 'auto' ? 'AUTO · ' : ''}${resolvedBehavior.label.toUpperCase()}`;
+    if ((activeSongMap?.key || '') !== selectedSongDirectorMapKey) {
+      selectedSongDirectorMapKey = activeSongMap?.key || '';
+      selectedSongDirectorCueIndex = -1;
+    }
+    if (selectedSongDirectorCueIndex >= activeSongDirectorPlan.length) selectedSongDirectorCueIndex = -1;
+    document.querySelectorAll('[data-director-style]').forEach((button) => {
+      const active = button.dataset.directorStyle === state.songDirectorStyle;
+      button.disabled = !ready;
+      button.classList.toggle('active', active);
+      button.setAttribute('aria-checked', String(active));
+    });
+    const plan = $('#songDirectorPlan');
+    plan.replaceChildren(...activeSongDirectorPlan.map((cue, index) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'song-director-cue';
+      button.classList.toggle('edited', Boolean(songDirectorOverrideFor(index)));
+      button.classList.toggle('selected', selectedSongDirectorCueIndex === index);
+      button.dataset.cueIndex = String(index);
+      button.style.setProperty('--cue-color', songMapSectionColors[index % songMapSectionColors.length]);
+      button.innerHTML = `<strong>${cue.label}</strong><small>${formatTime(cue.start)} · ${cue.kind.toUpperCase()}</small>`;
+      button.addEventListener('click', () => {
+        selectedSongDirectorCueIndex = index;
+        renderSongDirectorCueEditor();
+        document.querySelectorAll('.song-director-cue').forEach((cueButton) => cueButton.classList.toggle('selected', Number(cueButton.dataset.cueIndex) === index));
+        if (state.audioMode !== 'deck' || !Number.isFinite(audio.duration)) return;
+        audio.currentTime = Math.min(audio.duration, cue.start);
+        updateSongMapPlayhead(audio.currentTime);
+        updateSongDirector(audio.currentTime);
+      });
+      return button;
+    }));
+    renderSongDirectorCueEditor();
+    updateSongDirectorNow(null, {}, audio.currentTime);
+  }
+
+  function renderSongDirectorCueEditor() {
+    if (!songDirectorInitialized) return;
+    const editor = $('#songDirectorCueEditor');
+    const cue = activeSongDirectorPlan[selectedSongDirectorCueIndex];
+    editor.hidden = !cue;
+    if (!cue) return;
+    const override = songDirectorOverrideFor(selectedSongDirectorCueIndex);
+    $('#songDirectorCueName').textContent = cue.label;
+    $('#songDirectorCueState').textContent = override ? 'EDITED' : 'AUTO';
+    $('#songDirectorCueEmphasis').value = override?.emphasis || 'auto';
+    $('#songDirectorCueStrength').value = String(override?.strength ?? 1);
+    $('#songDirectorCueStrength')._syncNumericValue?.();
+    $('#songDirectorCueStrengthValue').value = `${Math.round((override?.strength ?? 1) * 100)}%`;
+    $('#resetSongDirectorCue').disabled = !override;
+  }
+
+  function initializeSongDirector() {
+    songDirectorInitialized = true;
+    $('#songDirectorEnabled').addEventListener('change', (event) => {
+      state.songDirectorEnabled = event.target.checked;
+      if (!state.songDirectorEnabled) state.songDirectorValues = {};
+      renderSongDirector();
+      showToast(state.songDirectorEnabled ? 'Mathematical Song Director enabled' : 'Song Director standing by');
+    });
+    $('#songDirectorIntensity').addEventListener('input', (event) => {
+      state.songDirectorIntensity = Number(event.target.value);
+      $('#songDirectorIntensityValue').value = `${Math.round(state.songDirectorIntensity * 100)}%`;
+    });
+    $('#songDirectorStyleGrid').addEventListener('click', (event) => {
+      const button = event.target.closest('[data-director-style]');
+      if (!button || button.disabled) return;
+      state.songDirectorStyle = button.dataset.directorStyle;
+      $('#songDirectorStyle').value = state.songDirectorStyle;
+      renderSongDirector();
+      showToast(`${songDirectorStyles[state.songDirectorStyle].label} Song Director selected`);
+    });
+    $('#songDirectorStyle').addEventListener('change', (event) => {
+      state.songDirectorStyle = songDirectorStyles[event.target.value] ? event.target.value : 'cinematic';
+      renderSongDirector();
+    });
+    $('#songDirectorBehavior').addEventListener('change', (event) => {
+      state.songDirectorBehavior = event.target.value === 'auto' || songDirectorBehaviors[event.target.value]
+        ? event.target.value
+        : 'auto';
+      renderSongDirector();
+      const resolved = songDirectorBehaviors[resolveSongDirectorBehavior(activeSongMap)];
+      showToast(`${resolved.label} musical behavior ${state.songDirectorBehavior === 'auto' ? 'selected automatically' : 'selected'}`);
+    });
+    const saveCueEditor = () => {
+      if (!activeSongDirectorPlan[selectedSongDirectorCueIndex]) return;
+      writeSongDirectorOverride(selectedSongDirectorCueIndex, {
+        strength: Number($('#songDirectorCueStrength').value),
+        emphasis: $('#songDirectorCueEmphasis').value
+      });
+      const edited = Boolean(songDirectorOverrideFor(selectedSongDirectorCueIndex));
+      document.querySelector(`.song-director-cue[data-cue-index="${selectedSongDirectorCueIndex}"]`)?.classList.toggle('edited', edited);
+      renderSongDirectorCueEditor();
+      updateSongDirector(state.offlineExporting ? (state.offlineCurrentTime || 0) : audio.currentTime);
+    };
+    $('#songDirectorCueStrength').addEventListener('input', (event) => {
+      $('#songDirectorCueStrengthValue').value = `${Math.round(Number(event.target.value) * 100)}%`;
+      saveCueEditor();
+    });
+    $('#songDirectorCueEmphasis').addEventListener('change', saveCueEditor);
+    $('#resetSongDirectorCue').addEventListener('click', () => {
+      if (selectedSongDirectorCueIndex < 0) return;
+      writeSongDirectorOverride(selectedSongDirectorCueIndex, null);
+      document.querySelector(`.song-director-cue[data-cue-index="${selectedSongDirectorCueIndex}"]`)?.classList.remove('edited');
+      renderSongDirectorCueEditor();
+      updateSongDirector(state.offlineExporting ? (state.offlineCurrentTime || 0) : audio.currentTime);
+      showToast('Section cue returned to its automatic plan');
+    });
+    renderSongDirector();
+  }
+
+  function hashSongMapText(text) {
+    let hash = 2166136261;
+    for (let index = 0; index < text.length; index++) {
+      hash ^= text.charCodeAt(index);
+      hash = Math.imul(hash, 16777619);
+    }
+    return (hash >>> 0).toString(16).padStart(8, '0');
+  }
+
+  function songMapProfileSignature() {
+    const bands = getActiveFrequencyBands();
+    return [
+      state.musicPersonality,
+      bands.floor, bands.lowMid, bands.midHigh, bands.ceiling,
+      state.analysisBassGain.toFixed(3), state.analysisMidGain.toFixed(3), state.analysisHighGain.toFixed(3),
+      state.analysisSmoothing.toFixed(3), state.beatSensitivity.toFixed(3), Math.round(state.beatCooldownMs)
+    ].join('|');
+  }
+
+  function songMapKey(item = currentPlaylistItem()) {
+    if (!item?.file) return '';
+    const source = [item.file.name, item.file.size, item.file.lastModified, item.filePath || '', songMapProfileSignature()].join('|');
+    return `map-${hashSongMapText(source)}`;
+  }
+
+  function validSongMap(map) {
+    const pointCount = map?.energy?.length;
+    return Boolean(map
+      && map.version === songMapCacheVersion
+      && typeof map.key === 'string'
+      && Number.isFinite(map.duration) && map.duration > 0
+      && Number.isFinite(map.interval) && map.interval > 0
+      && pointCount > 1
+      && ['bass', 'mids', 'highs'].every((key) => Array.isArray(map[key]) && map[key].length === pointCount)
+      && Array.isArray(map.beats)
+      && Array.isArray(map.sections));
+  }
+
+  function readSongMapCache() {
+    try {
+      const entries = JSON.parse(localStorage.getItem(songMapCacheStorageKey) || '[]');
+      return Array.isArray(entries) ? entries.filter(validSongMap) : [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function writeSongMapCache(entries) {
+    const ordered = entries.filter(validSongMap)
+      .sort((a, b) => Date.parse(b.updatedAt || 0) - Date.parse(a.updatedAt || 0))
+      .slice(0, songMapCacheLimit);
+    try {
+      localStorage.setItem(songMapCacheStorageKey, JSON.stringify(ordered));
+    } catch (_) {
+      try { localStorage.setItem(songMapCacheStorageKey, JSON.stringify(ordered.slice(0, 4))); }
+      catch (_) { /* Song maps remain usable for the current session. */ }
+    }
+  }
+
+  function cacheSongMap(map) {
+    const entries = readSongMapCache().filter((entry) => entry.key !== map.key);
+    entries.unshift(map);
+    writeSongMapCache(entries);
+  }
+
+  function percentile(values, amount) {
+    const sorted = Array.from(values || []).filter(Number.isFinite).sort((a, b) => a - b);
+    if (!sorted.length) return 0;
+    return sorted[Math.max(0, Math.min(sorted.length - 1, Math.round((sorted.length - 1) * amount)))];
+  }
+
+  function estimateSongMapBpm(beatTimes) {
+    if (beatTimes.length < 4) return { bpm: 0, confidence: 0 };
+    const candidates = [];
+    for (let index = 1; index < beatTimes.length; index++) {
+      const gap = beatTimes[index] - beatTimes[index - 1];
+      if (gap < .18 || gap > 2.2) continue;
+      let bpm = 60 / gap;
+      while (bpm < 72) bpm *= 2;
+      while (bpm > 180) bpm /= 2;
+      candidates.push(bpm);
+    }
+    if (candidates.length < 3) return { bpm: 0, confidence: 0 };
+    const histogram = new Float32Array(181);
+    for (const bpm of candidates) {
+      const center = Math.round(bpm);
+      for (let offset = -2; offset <= 2; offset++) {
+        const bin = center + offset;
+        if (bin >= 0 && bin < histogram.length) histogram[bin] += 1 - Math.abs(offset) * .17;
+      }
+    }
+    let bestBin = 0;
+    for (let bin = 1; bin < histogram.length; bin++) if (histogram[bin] > histogram[bestBin]) bestBin = bin;
+    const close = candidates.filter((bpm) => Math.abs(bpm - bestBin) <= 3);
+    const bpm = close.length ? close.reduce((sum, value) => sum + value, 0) / close.length : bestBin;
+    return { bpm: Math.round(bpm), confidence: clamp(close.length / candidates.length, 0, 1) };
+  }
+
+  function averageSongMapRange(values, from, to) {
+    let total = 0;
+    const end = Math.min(values.length, Math.max(from + 1, to));
+    for (let index = from; index < end; index++) total += values[index] || 0;
+    return total / Math.max(1, end - from) / 255;
+  }
+
+  function deriveSongMapSections(series, duration, interval) {
+    const pointCount = series.energy.length;
+    if (!pointCount) return [];
+    const chunkPoints = Math.max(2, Math.round(6 / interval));
+    const chunks = [];
+    for (let start = 0; start < pointCount; start += chunkPoints) {
+      const end = Math.min(pointCount, start + chunkPoints);
+      chunks.push({
+        time: start * interval,
+        energy: averageSongMapRange(series.energy, start, end),
+        bass: averageSongMapRange(series.bass, start, end),
+        mids: averageSongMapRange(series.mids, start, end),
+        highs: averageSongMapRange(series.highs, start, end)
+      });
+    }
+    if (chunks.length < 2) return [{ start: 0, end: duration, label: 'Full Track', kind: 'steady', energy: chunks[0]?.energy || 0 }];
+    const novelty = chunks.map((chunk, index) => {
+      if (!index) return 0;
+      const previous = chunks[index - 1];
+      return Math.abs(chunk.energy - previous.energy) * 1.25
+        + Math.abs(chunk.bass - previous.bass) * .75
+        + Math.abs(chunk.mids - previous.mids) * .62
+        + Math.abs(chunk.highs - previous.highs) * .68;
+    });
+    const threshold = percentile(novelty.slice(1), .68);
+    const candidates = [];
+    for (let index = 1; index < novelty.length - 1; index++) {
+      if (novelty[index] >= threshold && novelty[index] >= novelty[index - 1] && novelty[index] >= novelty[index + 1]) {
+        candidates.push({ time: chunks[index].time, strength: novelty[index] });
+      }
+    }
+    candidates.sort((a, b) => b.strength - a.strength);
+    const boundaries = [0, duration];
+    const minimumGap = Math.min(14, Math.max(8, duration / 16));
+    for (const candidate of candidates) {
+      if (boundaries.length >= 10) break;
+      if (candidate.time < minimumGap || duration - candidate.time < minimumGap) continue;
+      if (boundaries.every((time) => Math.abs(time - candidate.time) >= minimumGap)) boundaries.push(candidate.time);
+    }
+    if (boundaries.length < 4 && duration >= 60) {
+      for (const fraction of [1 / 3, 2 / 3]) {
+        const target = duration * fraction;
+        const nearby = candidates.filter((candidate) => Math.abs(candidate.time - target) <= duration * .14)
+          .sort((a, b) => Math.abs(a.time - target) - Math.abs(b.time - target))[0];
+        const time = nearby?.time || target;
+        if (boundaries.every((boundary) => Math.abs(boundary - time) >= minimumGap)) boundaries.push(time);
+      }
+    }
+    boundaries.sort((a, b) => a - b);
+    const sections = [];
+    for (let index = 0; index < boundaries.length - 1; index++) {
+      const start = boundaries[index];
+      const end = boundaries[index + 1];
+      const from = Math.max(0, Math.floor(start / interval));
+      const to = Math.min(pointCount, Math.ceil(end / interval));
+      sections.push({
+        start, end,
+        energy: averageSongMapRange(series.energy, from, to),
+        bass: averageSongMapRange(series.bass, from, to),
+        mids: averageSongMapRange(series.mids, from, to),
+        highs: averageSongMapRange(series.highs, from, to)
+      });
+    }
+    const globalEnergy = sections.reduce((sum, section) => sum + section.energy, 0) / Math.max(1, sections.length);
+    let peakIndex = 0;
+    for (let index = 1; index < sections.length; index++) if (sections[index].energy > sections[peakIndex].energy) peakIndex = index;
+    let movementNumber = 1;
+    sections.forEach((section, index) => {
+      const from = Math.max(0, Math.floor(section.start / interval));
+      const to = Math.min(pointCount, Math.ceil(section.end / interval));
+      const midpoint = Math.floor((from + to) / 2);
+      const early = averageSongMapRange(series.energy, from, midpoint);
+      const late = averageSongMapRange(series.energy, midpoint, to);
+      if (sections.length > 1 && index === 0) {
+        section.label = 'Intro'; section.kind = 'intro';
+      } else if (sections.length > 1 && index === sections.length - 1) {
+        section.label = 'Outro'; section.kind = 'outro';
+      } else if (index === peakIndex && section.energy >= globalEnergy * 1.04) {
+        section.label = 'Peak'; section.kind = 'peak';
+      } else if (section.energy < globalEnergy * .72) {
+        section.label = 'Breakdown'; section.kind = 'breakdown';
+      } else if (late - early > .11) {
+        section.label = 'Build'; section.kind = 'build';
+      } else if (section.bass > Math.max(section.mids, section.highs) * 1.16) {
+        section.label = 'Bass Drive'; section.kind = 'bass';
+      } else if (section.highs > Math.max(section.bass, section.mids) * 1.14) {
+        section.label = 'Lift'; section.kind = 'lift';
+      } else {
+        section.label = `Movement ${movementNumber++}`; section.kind = 'steady';
+      }
+    });
+    if (sections.length === 1) {
+      sections[0].label = 'Full Track';
+      sections[0].kind = 'steady';
+    }
+    return sections;
+  }
+
+  async function analyzeSongBuffer(audioBuffer, job, onProgress) {
+    const fftSize = 2048;
+    const sampleRate = audioBuffer.sampleRate;
+    const duration = audioBuffer.duration;
+    const interval = Math.max(.2, duration / 1400);
+    const pointCount = Math.max(2, Math.ceil(duration / interval));
+    const channels = Array.from({ length: audioBuffer.numberOfChannels }, (_, index) => audioBuffer.getChannelData(index));
+    const real = new Float64Array(fftSize);
+    const imaginary = new Float64Array(fftSize);
+    const magnitudes = new Float32Array(fftSize / 2);
+    const energyRaw = new Float32Array(pointCount);
+    const bassRaw = new Float32Array(pointCount);
+    const midsRaw = new Float32Array(pointCount);
+    const highsRaw = new Float32Array(pointCount);
+    const beatEnergy = new Float32Array(pointCount);
+    const bands = { ...getActiveFrequencyBands() };
+    const gains = [state.analysisBassGain, state.analysisMidGain, state.analysisHighGain];
+    const sampleAt = (sampleIndex) => {
+      if (sampleIndex < 0 || sampleIndex >= audioBuffer.length) return 0;
+      let value = 0;
+      for (const channel of channels) value += channel[sampleIndex] || 0;
+      return value / channels.length;
+    };
+    const averageHz = (lowHz, highHz) => {
+      const lowBin = clamp(Math.floor(lowHz * fftSize / sampleRate), 0, magnitudes.length - 1);
+      const highBin = clamp(Math.ceil(highHz * fftSize / sampleRate), lowBin + 1, magnitudes.length);
+      let total = 0;
+      for (let bin = lowBin; bin < highBin; bin++) total += magnitudes[bin];
+      return total / Math.max(1, highBin - lowBin);
+    };
+    for (let point = 0; point < pointCount; point++) {
+      if (job !== songMapAnalysisJob) throw new Error('SONG_MAP_CANCELLED');
+      const centerSample = Math.round(Math.min(duration, point * interval) * sampleRate);
+      let squareSum = 0;
+      for (let index = 0; index < fftSize; index++) {
+        const sample = sampleAt(centerSample - fftSize / 2 + index);
+        squareSum += sample * sample;
+        const windowValue = .5 - .5 * Math.cos(2 * Math.PI * index / (fftSize - 1));
+        real[index] = sample * windowValue;
+        imaginary[index] = 0;
+      }
+      fftInPlace(real, imaginary);
+      for (let bin = 0; bin < magnitudes.length; bin++) {
+        const amplitude = Math.hypot(real[bin], imaginary[bin]) / (fftSize * .5);
+        const decibels = 20 * Math.log10(Math.max(1e-8, amplitude));
+        magnitudes[bin] = clamp((decibels + 90) / 70, 0, 1);
+      }
+      bassRaw[point] = averageHz(bands.floor, bands.lowMid) * 1.6 * gains[0];
+      midsRaw[point] = averageHz(bands.lowMid, bands.midHigh) * 1.45 * gains[1];
+      highsRaw[point] = averageHz(bands.midHigh, bands.ceiling) * 1.8 * gains[2];
+      const rms = Math.sqrt(squareSum / fftSize) * 3.1;
+      energyRaw[point] = rms * .52 + bassRaw[point] * .2 + midsRaw[point] * .17 + highsRaw[point] * .11;
+      beatEnergy[point] = bassRaw[point] * .74 + midsRaw[point] * .26;
+      if (point % 18 === 0 || point === pointCount - 1) {
+        onProgress?.((point + 1) / pointCount);
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      }
+    }
+    const bandScale = Math.max(.05, percentile([...bassRaw, ...midsRaw, ...highsRaw], .96));
+    const energyScale = Math.max(.05, percentile(energyRaw, .96));
+    const quantize = (values, scale) => Array.from(values, (value) => Math.round(Math.pow(clamp(value / scale, 0, 1), .82) * 255));
+    const series = {
+      energy: quantize(energyRaw, energyScale),
+      bass: quantize(bassRaw, bandScale),
+      mids: quantize(midsRaw, bandScale),
+      highs: quantize(highsRaw, bandScale)
+    };
+    const onset = new Float32Array(pointCount);
+    let fast = 0;
+    let slow = 0;
+    for (let index = 0; index < pointCount; index++) {
+      fast += (beatEnergy[index] - fast) * (1 - Math.exp(-interval / .055));
+      slow += (beatEnergy[index] - slow) * (1 - Math.exp(-interval / .62));
+      onset[index] = Math.max(0, fast - slow);
+    }
+    const onsetThreshold = Math.max(.004, percentile(onset, .7) * (1.22 - state.beatSensitivity * .5));
+    const energyGate = percentile(beatEnergy, .34);
+    const cooldownPoints = Math.max(1, Math.round(state.beatCooldownMs / 1000 / interval));
+    const beats = [];
+    let lastBeatPoint = -cooldownPoints;
+    for (let index = 1; index < pointCount - 1; index++) {
+      if (index - lastBeatPoint < cooldownPoints) continue;
+      if (onset[index] >= onsetThreshold && onset[index] >= onset[index - 1] && onset[index] > onset[index + 1] && beatEnergy[index] >= energyGate) {
+        beats.push(Number((index * interval).toFixed(3)));
+        lastBeatPoint = index;
+      }
+    }
+    const tempo = estimateSongMapBpm(beats);
+    const sections = deriveSongMapSections(series, duration, interval);
+    return {
+      version: songMapCacheVersion,
+      duration,
+      interval,
+      ...series,
+      beats,
+      bpm: tempo.bpm,
+      bpmConfidence: tempo.confidence,
+      sections
+    };
+  }
+
+  function songMapStatus(message, tone = '') {
+    const status = $('#songMapStatus');
+    if (!status) return;
+    status.textContent = message;
+    status.dataset.tone = tone;
+  }
+
+  function updateSongMapProgress(progress, message) {
+    $('#songMapProgress').hidden = false;
+    $('#songMapProgressFill').style.width = `${clamp(progress, 0, 1) * 100}%`;
+    $('#songMapProgressText').textContent = message;
+  }
+
+  function drawSongMap() {
+    const canvasElement = $('#songMapCanvas');
+    const map = activeSongMap;
+    if (!canvasElement || !map || $('#songMapResults').hidden) return;
+    const rect = canvasElement.getBoundingClientRect();
+    const scale = Math.min(2, window.devicePixelRatio || 1);
+    const width = Math.max(2, Math.round(rect.width * scale));
+    const height = Math.max(2, Math.round(rect.height * scale));
+    if (canvasElement.width !== width || canvasElement.height !== height) {
+      canvasElement.width = width;
+      canvasElement.height = height;
+    }
+    const context = canvasElement.getContext('2d');
+    context.setTransform(scale, 0, 0, scale, 0, 0);
+    const w = rect.width;
+    const h = rect.height;
+    context.clearRect(0, 0, w, h);
+    context.fillStyle = '#05070d';
+    context.fillRect(0, 0, w, h);
+    map.sections.forEach((section, index) => {
+      const x = section.start / map.duration * w;
+      const sectionWidth = Math.max(1, (section.end - section.start) / map.duration * w);
+      const color = songMapSectionColors[index % songMapSectionColors.length];
+      context.globalAlpha = .055 + (index % 2) * .025;
+      context.fillStyle = color;
+      context.fillRect(x, 0, sectionWidth, h);
+      context.globalAlpha = .42;
+      context.fillRect(x, 0, 1, h);
+      if (sectionWidth > 58) {
+        context.globalAlpha = .56;
+        context.fillStyle = '#c3ccdc';
+        context.font = '700 7px Segoe UI';
+        context.fillText(section.label.toUpperCase(), x + 5, 11);
+      }
+    });
+    context.globalAlpha = 1;
+    context.strokeStyle = 'rgba(122,137,169,.11)';
+    context.lineWidth = 1;
+    for (let row = 1; row < 4; row++) {
+      context.beginPath();
+      context.moveTo(0, h * row / 4);
+      context.lineTo(w, h * row / 4);
+      context.stroke();
+    }
+    const linePath = (values, color, amplitude, offset = 0) => {
+      context.beginPath();
+      values.forEach((value, index) => {
+        const x = index / Math.max(1, values.length - 1) * w;
+        const y = h - 8 - (value / 255) * amplitude + offset;
+        if (!index) context.moveTo(x, y);
+        else context.lineTo(x, y);
+      });
+      context.strokeStyle = color;
+      context.lineWidth = 1.15;
+      context.stroke();
+    };
+    context.beginPath();
+    context.moveTo(0, h);
+    map.energy.forEach((value, index) => {
+      const x = index / Math.max(1, map.energy.length - 1) * w;
+      const y = h - (value / 255) * (h - 18);
+      context.lineTo(x, y);
+    });
+    context.lineTo(w, h);
+    context.closePath();
+    const energyGradient = context.createLinearGradient(0, 18, 0, h);
+    energyGradient.addColorStop(0, 'rgba(132,98,255,.42)');
+    energyGradient.addColorStop(1, 'rgba(56,37,115,.04)');
+    context.fillStyle = energyGradient;
+    context.fill();
+    linePath(map.bass, 'rgba(66,228,208,.92)', h * .42, h * .49);
+    linePath(map.mids, 'rgba(232,108,240,.88)', h * .35, h * .29);
+    linePath(map.highs, 'rgba(245,199,93,.88)', h * .28, h * .12);
+    context.strokeStyle = 'rgba(248,250,255,.42)';
+    context.lineWidth = 1;
+    for (const beat of map.beats) {
+      const x = beat / map.duration * w;
+      context.beginPath();
+      context.moveTo(x, 0);
+      context.lineTo(x, 6);
+      context.stroke();
+    }
+  }
+
+  function updateSongMapPlayhead(time = audio.currentTime) {
+    if (!songMapInitialized || !activeSongMap) return;
+    const progress = clamp((Number(time) || 0) / activeSongMap.duration, 0, 1);
+    $('#songMapPlayhead').style.left = `${progress * 100}%`;
+    $('#songMapCanvas').setAttribute('aria-valuemax', String(Math.round(activeSongMap.duration)));
+    $('#songMapCanvas').setAttribute('aria-valuenow', String(Math.round(progress * activeSongMap.duration)));
+    $('#songMapCanvas').setAttribute('aria-valuetext', `${formatTime(progress * activeSongMap.duration)} of ${formatTime(activeSongMap.duration)}`);
+  }
+
+  function renderSongMap() {
+    if (!songMapInitialized) return;
+    const item = currentPlaylistItem();
+    const map = activeSongMap;
+    $('#songMapEmpty').hidden = Boolean(map);
+    $('#songMapResults').hidden = !map;
+    $('#clearSongMapButton').disabled = !map || songMapAnalyzing;
+    $('#analyzeSongButton').disabled = !item?.file || state.exporting;
+    $('#analyzeSongButton').textContent = songMapAnalyzing ? 'CANCEL ANALYSIS' : (map ? 'REANALYZE SONG' : 'ANALYZE SONG');
+    if (!item?.file) songMapStatus('LOAD A SONG');
+    else if (!map && !songMapAnalyzing) songMapStatus('READY');
+    renderSongDirector();
+    if (composerInitialized) renderShowComposer();
+    if (!map) return;
+    const profile = musicPersonalityProfiles[map.personality]?.label || (map.personality === 'custom' ? 'Custom' : 'Analyzer');
+    songMapStatus(`CACHED · ${profile}`);
+    const bpmText = map.bpm ? `${map.bpm}` : '--';
+    $('#songMapStats').innerHTML = `
+      <div class="song-map-stat"><strong>${formatTime(map.duration)}</strong><small>DURATION</small></div>
+      <div class="song-map-stat"><strong>${bpmText}</strong><small>EST. BPM</small></div>
+      <div class="song-map-stat"><strong>${map.beats.length}</strong><small>BEATS</small></div>
+      <div class="song-map-stat"><strong>${map.sections.length}</strong><small>SECTIONS</small></div>`;
+    const sectionList = $('#songMapSections');
+    sectionList.replaceChildren(...map.sections.map((section, index) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'song-map-section';
+      button.style.setProperty('--section-color', songMapSectionColors[index % songMapSectionColors.length]);
+      button.innerHTML = `<i></i><span><strong>${section.label}</strong><small>${formatTime(section.start)}-${formatTime(section.end)}</small></span><time>${formatTime(section.start)}</time>`;
+      button.addEventListener('click', () => {
+        if (state.audioMode !== 'deck' || !Number.isFinite(audio.duration)) return;
+        audio.currentTime = Math.min(audio.duration, section.start);
+        updateSongMapPlayhead(audio.currentTime);
+      });
+      return button;
+    }));
+    requestAnimationFrame(() => {
+      drawSongMap();
+      updateSongMapPlayhead();
+    });
+  }
+
+  function loadSongMapForCurrentTrack() {
+    if (!songMapInitialized) return;
+    const key = songMapKey();
+    activeSongMap = key ? readSongMapCache().find((entry) => entry.key === key) || null : null;
+    if (!activeSongMap) tryRestorePendingPerformanceMap();
+    $('#songMapProgress').hidden = true;
+    renderSongMap();
+  }
+
+  function scheduleSongMapRefresh() {
+    if (!songMapInitialized) return;
+    if (songMapAnalyzing) {
+      songMapAnalysisJob += 1;
+      songMapAnalyzing = false;
+      $('#songMapProgress').hidden = true;
+    }
+    clearTimeout(songMapRefreshTimer);
+    songMapRefreshTimer = window.setTimeout(loadSongMapForCurrentTrack, 0);
+  }
+
+  async function analyzeCurrentSongMap() {
+    const item = currentPlaylistItem();
+    if (!item?.file) return showToast('Load a local song before creating a Song Map.', true);
+    if (songMapAnalyzing) {
+      songMapAnalysisJob += 1;
+      songMapAnalyzing = false;
+      songMapStatus('CANCELLED');
+      $('#songMapProgress').hidden = true;
+      loadSongMapForCurrentTrack();
+      return;
+    }
+    const key = songMapKey(item);
+    const job = ++songMapAnalysisJob;
+    songMapAnalyzing = true;
+    activeSongMap = null;
+    songMapStatus('ANALYZING', 'active');
+    updateSongMapProgress(0, 'DECODING AUDIO');
+    renderSongMap();
+    try {
+      createAudioGraph();
+      const audioBuffer = await audioContext.decodeAudioData((await item.file.arrayBuffer()).slice(0));
+      if (job !== songMapAnalysisJob) throw new Error('SONG_MAP_CANCELLED');
+      const map = await analyzeSongBuffer(audioBuffer, job, (progress) => {
+        updateSongMapProgress(progress, `ANALYZING ${Math.round(progress * 100)}%`);
+      });
+      map.key = key;
+      map.trackName = item.name;
+      map.personality = state.musicPersonality;
+      map.profileSignature = songMapProfileSignature();
+      map.updatedAt = new Date().toISOString();
+      cacheSongMap(map);
+      if (job === songMapAnalysisJob && songMapKey() === key) activeSongMap = map;
+      songMapStatus('MAP COMPLETE');
+      updateSongMapProgress(1, 'MAP COMPLETE');
+      showToast(`${item.name} Song Map created and cached`);
+      window.setTimeout(() => { if (job === songMapAnalysisJob) $('#songMapProgress').hidden = true; }, 900);
+    } catch (error) {
+      if (error.message !== 'SONG_MAP_CANCELLED') {
+        songMapStatus('ANALYSIS FAILED', 'error');
+        showToast(`Song analysis failed: ${error.message}`, true);
+      }
+      $('#songMapProgress').hidden = true;
+    } finally {
+      if (job === songMapAnalysisJob) songMapAnalyzing = false;
+      renderSongMap();
+    }
+  }
+
+  function clearCurrentSongMap() {
+    const key = songMapKey();
+    if (!key) return;
+    writeSongMapCache(readSongMapCache().filter((entry) => entry.key !== key));
+    activeSongMap = null;
+    renderSongMap();
+    showToast('Cached Song Map cleared');
+  }
+
+  function initializeSongMap() {
+    songMapInitialized = true;
+    $('#analyzeSongButton').addEventListener('click', () => analyzeCurrentSongMap().catch((error) => showToast(error.message, true)));
+    $('#clearSongMapButton').addEventListener('click', clearCurrentSongMap);
+    const timeline = $('#songMapCanvas');
+    let pointerId = null;
+    const seek = (event) => {
+      if (!activeSongMap || state.audioMode !== 'deck' || !Number.isFinite(audio.duration)) return;
+      const rect = timeline.getBoundingClientRect();
+      const progress = clamp((event.clientX - rect.left) / Math.max(1, rect.width), 0, 1);
+      audio.currentTime = Math.min(audio.duration, progress * activeSongMap.duration);
+      updateSongMapPlayhead(audio.currentTime);
+    };
+    timeline.addEventListener('pointerdown', (event) => {
+      if (event.pointerType === 'mouse' && event.button !== 0) return;
+      event.preventDefault();
+      pointerId = event.pointerId;
+      timeline.setPointerCapture(pointerId);
+      seek(event);
+    });
+    timeline.addEventListener('pointermove', (event) => { if (pointerId === event.pointerId) seek(event); });
+    const finish = (event) => {
+      if (pointerId !== event.pointerId) return;
+      if (event.type === 'pointerup') seek(event);
+      if (timeline.hasPointerCapture(pointerId)) timeline.releasePointerCapture(pointerId);
+      pointerId = null;
+    };
+    timeline.addEventListener('pointerup', finish);
+    timeline.addEventListener('pointercancel', finish);
+    timeline.addEventListener('keydown', (event) => {
+      if (!activeSongMap || state.audioMode !== 'deck' || !Number.isFinite(audio.duration)) return;
+      let target = audio.currentTime;
+      if (event.key === 'ArrowLeft' || event.key === 'ArrowDown') target -= event.shiftKey ? 15 : 5;
+      else if (event.key === 'ArrowRight' || event.key === 'ArrowUp') target += event.shiftKey ? 15 : 5;
+      else if (event.key === 'Home') target = 0;
+      else if (event.key === 'End') target = activeSongMap.duration;
+      else return;
+      event.preventDefault();
+      audio.currentTime = clamp(target, 0, Math.min(audio.duration, activeSongMap.duration));
+      updateSongMapPlayhead(audio.currentTime);
+    });
+    new ResizeObserver(() => drawSongMap()).observe($('#songMapTimeline'));
+    loadSongMapForCurrentTrack();
   }
 
   function offlineVideoBitrate(width, height, fps, detail = 1.6) {
@@ -6208,23 +8726,31 @@
     state.analysisSmoothing = Number(event.target.value);
     $('#analysisSmoothingValue').value = `${Math.round(state.analysisSmoothing * 100)}%`;
     if (analyser) analyser.smoothingTimeConstant = state.analysisSmoothing;
+    setMusicPersonalityCustom();
   });
   $('#beatSensitivity').addEventListener('input', (event) => {
     state.beatSensitivity = Number(event.target.value);
     $('#beatSensitivityValue').value = `${Math.round(state.beatSensitivity * 100)}%`;
     resetBeatDetector({ keepTotal: true });
+    setMusicPersonalityCustom();
   });
   $('#beatCooldown').addEventListener('input', (event) => {
     state.beatCooldownMs = Number(event.target.value);
     $('#beatCooldownValue').value = `${Math.round(state.beatCooldownMs)} ms`;
     state.beatCooldownRemaining = Math.min(state.beatCooldownRemaining, state.beatCooldownMs / 1000);
+    setMusicPersonalityCustom();
   });
+  $('#musicPersonality').addEventListener('change', (event) => applyMusicPersonality(event.target.value));
   $('#frequencyBandMode').addEventListener('change', (event) => {
     state.frequencyBandMode = event.target.value;
+    setMusicPersonalityCustom({ preserveProfileBands: false });
     updateFrequencyBandUi();
   });
   ['frequencyFloor', 'lowMidSplit', 'midHighSplit', 'frequencyCeiling'].forEach((id) => {
-    $(`#${id}`).addEventListener('input', (event) => setFrequencyBoundary(id, Number(event.target.value)));
+    $(`#${id}`).addEventListener('input', (event) => {
+      setMusicPersonalityCustom();
+      setFrequencyBoundary(id, Number(event.target.value));
+    });
   });
   $('#autoReactivity').addEventListener('change', (event) => {
     state.autoReactivity = event.target.checked;
@@ -6245,10 +8771,58 @@
     showToast('The local audio file could not be decoded.', true);
   });
 
-  $('#timeline').addEventListener('pointerdown', (event) => {
-    if (!Number.isFinite(audio.duration) || state.exporting) return;
-    const rect = event.currentTarget.getBoundingClientRect();
-    audio.currentTime = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width)) * audio.duration;
+  const trackTimeline = $('#timeline');
+  let timelinePointerId = null;
+
+  function seekTrackFromPointer(event) {
+    if (!Number.isFinite(audio.duration) || audio.duration <= 0 || state.exporting) return;
+    const rect = trackTimeline.getBoundingClientRect();
+    if (rect.width <= 0) return;
+    const progress = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+    audio.currentTime = progress * audio.duration;
+    $('#timelineFill').style.width = `${progress * 100}%`;
+    $('#timeReadout').textContent = `${formatTime(audio.currentTime)} / ${formatTime(audio.duration)}`;
+  }
+
+  function finishTimelineScrub(event) {
+    if (timelinePointerId !== event.pointerId) return;
+    if (event.type === 'pointerup') seekTrackFromPointer(event);
+    if (trackTimeline.hasPointerCapture(event.pointerId)) trackTimeline.releasePointerCapture(event.pointerId);
+    timelinePointerId = null;
+    trackTimeline.classList.remove('scrubbing');
+  }
+
+  trackTimeline.addEventListener('pointerdown', (event) => {
+    if ((event.pointerType === 'mouse' && event.button !== 0)
+      || !Number.isFinite(audio.duration) || audio.duration <= 0 || state.exporting) return;
+    event.preventDefault();
+    timelinePointerId = event.pointerId;
+    trackTimeline.setPointerCapture(event.pointerId);
+    trackTimeline.classList.add('scrubbing');
+    seekTrackFromPointer(event);
+  });
+  trackTimeline.addEventListener('pointermove', (event) => {
+    if (timelinePointerId === event.pointerId) seekTrackFromPointer(event);
+  });
+  trackTimeline.addEventListener('pointerup', finishTimelineScrub);
+  trackTimeline.addEventListener('pointercancel', finishTimelineScrub);
+  trackTimeline.addEventListener('lostpointercapture', (event) => {
+    if (timelinePointerId !== event.pointerId) return;
+    timelinePointerId = null;
+    trackTimeline.classList.remove('scrubbing');
+  });
+  trackTimeline.addEventListener('keydown', (event) => {
+    if (!Number.isFinite(audio.duration) || audio.duration <= 0 || state.exporting) return;
+    const seekAmount = event.shiftKey ? 15 : 5;
+    let target = audio.currentTime;
+    if (event.key === 'ArrowLeft' || event.key === 'ArrowDown') target -= seekAmount;
+    else if (event.key === 'ArrowRight' || event.key === 'ArrowUp') target += seekAmount;
+    else if (event.key === 'Home') target = 0;
+    else if (event.key === 'End') target = audio.duration;
+    else return;
+    event.preventDefault();
+    audio.currentTime = Math.max(0, Math.min(audio.duration, target));
+    updateUiMeters();
   });
 
   $('#iterations').addEventListener('input', (event) => {
@@ -6258,7 +8832,7 @@
   $('#visualStyle').addEventListener('change', (event) => {
     state.visualStyle = Number(event.target.value);
     document.body.dataset.visualStyle = String(state.visualStyle);
-    const names = ['Fractal', 'Spectrum Bars', 'Radial Spectrum', 'Pulse Rings', 'Waveform Field', '3D Mandelbulb'];
+    const names = ['Fractal', 'Spectrum Bars', 'Radial Spectrum', 'Pulse Rings', 'Waveform Field', '3D Mandelbulb', 'Mainframe Room'];
     updateVisualStyleOptions();
     showToast(`${names[state.visualStyle] || names[0]} selected`);
   });
@@ -6410,6 +8984,10 @@
     const button = event.target.closest('.live-subtab');
     if (button) activateTab(button.dataset.liveTab);
   });
+  document.querySelector('.system-subtabs').addEventListener('click', (event) => {
+    const button = event.target.closest('.system-subtab');
+    if (button) activateTab(button.dataset.systemTab);
+  });
   $('#showExportPreview').addEventListener('change', (event) => {
     if (state.exporting) document.body.classList.toggle('hide-export-preview', !event.target.checked);
   });
@@ -6437,7 +9015,7 @@
   });
 
   function currentFractalDragTransform() {
-    const modulation = state.modulationValues || {};
+    const modulation = combinedRenderModulation(state.modulationValues || {}, state.songDirectorValues || {});
     const motion = clamp(state.motion + (modulation.motion || 0), 0, 4);
     const zoom = Math.max(.15, 1 + (modulation.zoom || 0));
     const cameraMotion = cameraPresetTransform();
@@ -6455,10 +9033,11 @@
     return {
       rotation: state.visualTime * state.spin * motion
         + Math.sin(state.visualTime * .63) * .035 * state.mids * motion
-        + state.modulationRotationPhase,
+        + state.modulationRotationPhase
+        + modulation.rotationOffset,
       worldScale: 3.15 * pulse / (state.zoom * zoom * cameraMotion.zoom),
-      centerOffsetX: Math.cos(orbitAngle) * orbitRadius + cameraMotion.x,
-      centerOffsetY: Math.sin(orbitAngle * 1.17) * orbitRadius + cameraMotion.y,
+      centerOffsetX: Math.cos(orbitAngle) * orbitRadius + cameraMotion.x + modulation.panX,
+      centerOffsetY: Math.sin(orbitAngle * 1.17) * orbitRadius + cameraMotion.y + modulation.panY,
       dimensional: state.fractalDimensional,
       tilt: clamp(state.fractalTilt + (modulation.fractalTilt || 0), 0, 2) * depthAudio,
       perspective: state.fractalPerspective,
@@ -6498,40 +9077,112 @@
     return { x, y };
   }
 
+  function setBulbCameraDistance(value) {
+    state.bulbCamera = clamp(value, 2.25, 5.25);
+    $('#bulbCamera').value = String(state.bulbCamera);
+    $('#bulbCamera').dispatchEvent(new Event('input', { bubbles: true }));
+    $('#bulbCamera')._syncNumericValue?.();
+  }
+
   canvas.addEventListener('wheel', (event) => {
     event.preventDefault();
     const factor = Math.exp(-event.deltaY * .001);
     if (state.visualStyle === 5) {
-      state.bulbCamera = clamp(state.bulbCamera / factor, 2.25, 5.25);
-      $('#bulbCamera').value = String(state.bulbCamera);
-      $('#bulbCamera').dispatchEvent(new Event('input', { bubbles: true }));
-      $('#bulbCamera')._syncNumericValue?.();
+      setBulbCameraDistance(state.bulbCamera / factor);
       return;
     }
     state.zoom = Math.max(.4, Math.min(12000, state.zoom * factor));
     updateZoomControls();
   }, { passive: false });
-  canvas.addEventListener('pointerdown', (event) => {
-    if (event.button !== 0) return;
-    canvas.setPointerCapture(event.pointerId);
-    state.cameraPath = null;
+
+  const canvasPointers = new Map();
+  let canvasPinch = null;
+
+  function beginSingleCanvasDrag(pointer) {
+    canvasPinch = null;
     if (state.visualStyle === 5) {
       state.drag = {
-        mode: 'bulb', pointerId: event.pointerId,
-        startX: event.clientX, startY: event.clientY,
+        mode: 'bulb', pointerId: pointer.id,
+        startX: pointer.x, startY: pointer.y,
         yaw: state.bulbYaw, pitch: state.bulbPitch
       };
       return;
     }
     const transform = currentFractalDragTransform();
-    const plane = pointerToFractalPlane(event.clientX, event.clientY, transform);
+    const plane = pointerToFractalPlane(pointer.x, pointer.y, transform);
     state.drag = {
-      pointerId: event.pointerId,
+      pointerId: pointer.id,
       anchorX: state.center.x + transform.centerOffsetX + plane.x * transform.worldScale,
       anchorY: state.center.y + transform.centerOffsetY + plane.y * transform.worldScale
     };
+  }
+
+  function beginCanvasPinch() {
+    const pointers = [...canvasPointers.values()].slice(0, 2);
+    if (pointers.length < 2) return;
+    const [first, second] = pointers;
+    const midpointX = (first.x + second.x) * .5;
+    const midpointY = (first.y + second.y) * .5;
+    const distance = Math.max(12, Math.hypot(second.x - first.x, second.y - first.y));
+    canvasPinch = {
+      pointerIds: [first.id, second.id],
+      startDistance: distance,
+      startMidpointX: midpointX,
+      startMidpointY: midpointY,
+      startZoom: state.zoom,
+      startBulbCamera: state.bulbCamera,
+      startYaw: state.bulbYaw,
+      startPitch: state.bulbPitch
+    };
+    if (state.visualStyle !== 5) {
+      const transform = currentFractalDragTransform();
+      const plane = pointerToFractalPlane(midpointX, midpointY, transform);
+      canvasPinch.anchorX = state.center.x + transform.centerOffsetX + plane.x * transform.worldScale;
+      canvasPinch.anchorY = state.center.y + transform.centerOffsetY + plane.y * transform.worldScale;
+    }
+    state.drag = null;
+  }
+
+  function updateCanvasPinch() {
+    if (!canvasPinch) return;
+    const first = canvasPointers.get(canvasPinch.pointerIds[0]);
+    const second = canvasPointers.get(canvasPinch.pointerIds[1]);
+    if (!first || !second) return;
+    const midpointX = (first.x + second.x) * .5;
+    const midpointY = (first.y + second.y) * .5;
+    const distance = Math.max(12, Math.hypot(second.x - first.x, second.y - first.y));
+    const ratio = distance / canvasPinch.startDistance;
+    if (state.visualStyle === 5) {
+      setBulbCameraDistance(canvasPinch.startBulbCamera / ratio);
+      state.bulbYaw = canvasPinch.startYaw - (midpointX - canvasPinch.startMidpointX) * .0032;
+      state.bulbPitch = clamp(canvasPinch.startPitch + (midpointY - canvasPinch.startMidpointY) * .0028, -1.2, 1.2);
+      return;
+    }
+    state.zoom = Math.max(.4, Math.min(12000, canvasPinch.startZoom * ratio));
+    const transform = currentFractalDragTransform();
+    const plane = pointerToFractalPlane(midpointX, midpointY, transform);
+    state.center.x = canvasPinch.anchorX - transform.centerOffsetX - plane.x * transform.worldScale;
+    state.center.y = canvasPinch.anchorY - transform.centerOffsetY - plane.y * transform.worldScale;
+    updateZoomControls();
+  }
+
+  canvas.addEventListener('pointerdown', (event) => {
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    event.preventDefault();
+    canvas.setPointerCapture(event.pointerId);
+    state.cameraPath = null;
+    canvasPointers.set(event.pointerId, { id: event.pointerId, x: event.clientX, y: event.clientY });
+    if (canvasPointers.size === 1) beginSingleCanvasDrag(canvasPointers.get(event.pointerId));
+    else if (canvasPointers.size === 2) beginCanvasPinch();
   });
   canvas.addEventListener('pointermove', (event) => {
+    if (canvasPointers.has(event.pointerId)) {
+      canvasPointers.set(event.pointerId, { id: event.pointerId, x: event.clientX, y: event.clientY });
+      if (canvasPinch) {
+        updateCanvasPinch();
+        return;
+      }
+    }
     if (!state.drag || event.pointerId !== state.drag.pointerId) return;
     if (state.drag.mode === 'bulb') {
       state.bulbYaw = state.drag.yaw - (event.clientX - state.drag.startX) * .0065;
@@ -6543,13 +9194,19 @@
     state.center.x = state.drag.anchorX - transform.centerOffsetX - plane.x * transform.worldScale;
     state.center.y = state.drag.anchorY - transform.centerOffsetY - plane.y * transform.worldScale;
   });
-  const endCanvasDrag = (event) => {
-    if (!state.drag || event.pointerId !== state.drag.pointerId) return;
+  const endCanvasPointer = (event) => {
+    if (!canvasPointers.has(event.pointerId)) return;
+    canvasPointers.delete(event.pointerId);
     if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
-    state.drag = null;
+    if (canvasPointers.size >= 2) beginCanvasPinch();
+    else if (canvasPointers.size === 1) beginSingleCanvasDrag([...canvasPointers.values()][0]);
+    else {
+      canvasPinch = null;
+      state.drag = null;
+    }
   };
-  canvas.addEventListener('pointerup', endCanvasDrag);
-  canvas.addEventListener('pointercancel', endCanvasDrag);
+  canvas.addEventListener('pointerup', endCanvasPointer);
+  canvas.addEventListener('pointercancel', endCanvasPointer);
 
   let dragDepth = 0;
   window.addEventListener('dragenter', (event) => {
@@ -6610,7 +9267,35 @@
   });
 
   window.addEventListener('keydown', (event) => {
-    if (event.code === 'Space' && !['INPUT','SELECT','BUTTON'].includes(document.activeElement.tagName)) {
+    const focusedControl = ['INPUT', 'SELECT', 'TEXTAREA', 'BUTTON'].includes(document.activeElement?.tagName);
+    if (state.operatorMode && !focusedControl && !event.repeat) {
+      if (event.code === 'Escape') {
+        event.preventDefault();
+        setPerformanceMode(false);
+        return;
+      }
+      if (event.code === 'ArrowLeft') {
+        event.preventDefault();
+        advanceShow(-1);
+        return;
+      }
+      if (event.code === 'ArrowRight') {
+        event.preventDefault();
+        advanceShow(1);
+        return;
+      }
+      if (event.code === 'KeyB') {
+        event.preventDefault();
+        setPerformanceBlackout(!state.performanceBlackout);
+        return;
+      }
+      if (event.code === 'Space') {
+        event.preventDefault();
+        $('#showPlayButton').click();
+        return;
+      }
+    }
+    if (event.code === 'Space' && !focusedControl) {
       event.preventDefault();
       togglePlayback().catch((error) => showToast(error.message, true));
     }
@@ -6661,6 +9346,9 @@
   initializeSettingTools();
   initializePaletteTools();
   initializeInterfaceMode();
+  initializeMusicPersonality();
+  initializeSongMap();
+  initializeSongDirector();
   updateFrequencyBandUi();
   updateVisualStyleOptions();
   updateFractalDimensionalUi();
@@ -6688,12 +9376,16 @@
     initializeModulationMatrix();
     initializeProfileManager();
     initializeShowSequencer();
+    initializeShowComposer();
+    initializePerformanceMode();
+    initializePerformancePackages();
     initializeObsAutomation();
     initializeAdvancedOutput();
     initializeLiveControls();
     initializeCameraTools();
     initializeCreativeTools();
     initializePerformanceAssistant();
+    initializeReportCenter();
     initializeSessionAutosave();
     refreshAudioInputs({ requestPermission: false, silent: true }).catch(() => {});
     refreshWindowsOutputs({ silent: true }).catch(() => {});

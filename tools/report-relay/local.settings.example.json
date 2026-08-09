@@ -1,0 +1,10 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "",
+    "FUNCTIONS_WORKER_RUNTIME": "node",
+    "DISCORD_WEBHOOK_URL": "PASTE_THE_ROTATED_WEBHOOK_ONLY_IN_YOUR_PRIVATE_LOCAL_SETTINGS",
+    "REPORT_RATE_LIMIT": "3",
+    "REPORT_RATE_WINDOW_SECONDS": "60"
+  }
+}

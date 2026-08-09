@@ -1,6 +1,6 @@
 {
   "name": "quartic-pulse",
-  "version": "0.28.3",
+  "version": "0.29.1",
   "description": "A Windows 11 audio-reactive fractal visualizer and music-to-video exporter.",
   "main": "src/main/main.js",
   "author": "Tempest Mainframe",
@@ -34,6 +34,7 @@
       "!assets/bin/**/*",
       "package.json",
       "LICENSE",
+      "THIRD_PARTY_NOTICES.md",
       "BRAND_ASSETS.md"
     ],
     "extraResources": [
@@ -41,6 +42,18 @@
         "from": "assets/bin",
         "to": "bin",
         "filter": ["**/*"]
+      },
+      {
+        "from": "LICENSE",
+        "to": "LICENSE.txt"
+      },
+      {
+        "from": "THIRD_PARTY_NOTICES.md",
+        "to": "THIRD_PARTY_NOTICES.md"
+      },
+      {
+        "from": "BRAND_ASSETS.md",
+        "to": "BRAND_ASSETS.md"
       }
     ],
     "win": {

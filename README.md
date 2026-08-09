@@ -2,6 +2,8 @@
 
 See [CHANGELOG.md](CHANGELOG.md) for release-by-release additions, changes, fixes, and packaging notes.
 
+Crash-report privacy and secure relay deployment are documented in [REPORTING.md](REPORTING.md).
+
 Quartic Pulse is a Windows 11 music visualizer and music-to-video exporter built around an audio-reactive family of escape-time fractals. Its signature mode is the power-4 Mandelbrot set:
 
 ```text
@@ -21,7 +23,21 @@ It uses WebGL2 for GPU rendering, the Web Audio API for live frequency analysis,
 
 ![Quartic Pulse interface](quartic-pulse-preview.png)
 
-## v0.28.3 live-production refinements
+## v0.29 performance intelligence and reporting
+
+- Music Personality profiles and deterministic Song Maps analyze a complete local track and provide genre-aware frequency boundaries, smoothing, beat recognition, tempo, energy, and musical sections.
+- The Mathematical Song Director converts those sections into smoothly blended camera, equation, palette, dimensional, fold/warp, Mandelbulb, and pulse-shape direction while preserving user presets.
+- Performance Packages, Performance Mode, emergency blackout, the Show Sequencer, and the expanded Show Composer form a portable live-show workflow with editable cues and automation lanes.
+- System → Reports captures sanitized local incidents and creates reports that can be copied, saved, printed to PDF, opened in GitHub, or submitted through the separately deployed secure relay.
+- The public Azure Functions relay reference lives in `tools/report-relay`; Discord credentials remain private server-side settings and never enter Quartic Pulse source or packaged applications.
+
+## v0.28.6 touch, transport, and visual refinements
+
+- Windows touchscreen systems now support one-finger canvas manipulation, two-finger pinch zoom and pan/orbit gestures, smooth one/two-finger handoff, touch-sized controls, and a wider sidebar resize target.
+- The deck timeline supports continuous mouse, pen, and touch scrubbing with pointer capture, plus keyboard seeking with Arrow, Shift+Arrow, Home, and End.
+- Selecting a new song immediately resets the centered transport to its Play state.
+- The 3D Mandelbulb keeps recurrence powers on seamless whole numbers while music drives continuous Cartesian recurrence warping and localized surface motion.
+- Mainframe Room contour response now favors architectural detail and compresses intense highlights so energetic passages retain depth.
 
 - Export preflight now verifies the final encoder, estimates output and temporary-master storage, checks free disk space again at the chosen destination, and offers a five-second test render before committing to a full song.
 - Final H.264 encoding automatically prefers a verified NVIDIA NVENC path, then Intel Quick Sync or AMD AMF when available. CPU x264 remains the universal quality fallback and is retried automatically if a hardware encoder fails.
@@ -52,7 +68,7 @@ It uses WebGL2 for GPU rendering, the Web Audio API for live frequency analysis,
    npm install
    ```
 
-   Release packaging also requires a 64-bit Windows FFmpeg build on PATH. `npm run dist` automatically runs `npm run bundle:ffmpeg`, copies FFmpeg and its license notice into the packaged application, and keeps the large executable out of the Git repository.
+   Release packaging also requires a GPL-enabled 64-bit Windows FFmpeg 8.1.2 or newer build on PATH. `npm run dist` automatically runs `npm run bundle:ffmpeg`, verifies the security and licensing baseline, copies FFmpeg and its notices into the packaged application, and keeps the large executable out of the Git repository.
 
 4. Start the app:
 
@@ -67,15 +83,24 @@ You can also press `F5` and choose **Run Quartic Pulse**. The included `.vscode/
 - Click **Load Audio** or drag an audio file onto the visualizer.
 - Under **Windows Audio Source**, choose any Windows playback endpoint captured directly through WASAPI loopback, including separate SteelSeries Sonar Gaming, Chat, Media, Stream, and Aux channels. Microphones, line-in, and virtual recording inputs remain available in their own group. **Refresh Devices** rescans both kinds of endpoint and requests permission for friendly input names. Live sources drive the analyzer without being played back through the app, preventing echo and microphone feedback.
 - Open **Music → Playlist** to add multiple local files, import a local music folder, reorder the queue, or move between songs.
-- Press **Space** to play or pause.
+- Open **Music → Analysis** to choose a Music Personality and create a cached **Song Map** for the selected local track. The map shows energy, low/mid/high balance, detected beats, estimated BPM, and labeled structural sections. Drag or tap the map to seek, use its keyboard arrows for five-second steps, or select a section card to jump directly to it. Maps are stored per track and analyzer profile, and analysis work is capped to roughly 1,400 FFT windows even for long recordings.
+- After a Song Map is ready, enable the **Mathematical Song Director** to turn its Intro, Build, Peak, Breakdown, Bass Drive, Lift, Movement, and Outro sections into a smooth visual performance. Subtle, Cinematic, Mathematical, and Storm styles emphasize different combinations of camera travel, equation pressure, color, depth, and folding. The Director is non-destructive, never rewrites the selected preset, and follows the same deterministic cue plan during playback, OBS output, and offline export. Dimensional and fold/warp cues only participate when those optional systems are already enabled.
+- **Musical Behavior** changes how the Director reads that structure. Auto follows the Music Personality stored when the Song Map was analyzed; Balanced, Electronic / EDM, Hip-Hop, Rock / Metal, Pop, and Ambient / Classical can also be selected manually. These are transparent behavior curves rather than automatic genre claims: they adjust transition speed and the relative emphasis on bass, mids, highs, camera movement, equation pressure, color, depth, folding, and pulse shape.
+- Select any Director section cue to edit just that part of the song. **Section Strength** can reduce an automatically generated cue from 100% down to stillness, while **Emphasis** can favor Camera, Equation, Color, Dimension, or Fold / Warp behavior. Edited cues are marked on the timeline, cached locally for that Song Map, smoothly blended into neighboring sections, and can be returned to Auto with one button.
+- Open **Perform → Show → Performance Package** to archive or share a complete reproducible show as `.quartic-performance.json`. The package contains the current visual, modulation matrix, Mathematical Song Director settings, deterministic Song Map, section cue edits, beat-grid configuration, show sequence, and only the saved profiles referenced by that sequence. A content fingerprint detects damaged or modified packages during import.
+- Performance packages never contain song bytes, source URLs, or local file paths. They store only a portable track fingerprint made from the audio file name, size, and analyzed duration. When the matching local song is loaded on another PC, Quartic Pulse attaches the packaged Song Map and cue edits automatically; otherwise the imported visuals and show remain usable without audio.
+- **Performance Mode** turns the main window into a distraction-free operator view by hiding the setup sidebar and expanding the visual across the entire stage. Fullscreen and music-HUD visibility are optional. A compact dock keeps the current and next show profiles, cue progress, Previous, Start/Pause, Next, Blackout, and Exit controls available over the visual.
+- While Performance Mode is active, Space starts or pauses the show, Left/Right changes cues, B toggles blackout, and Escape exits. Blackout is synchronized to the separate OBS Output window and is available as a MIDI, keyboard, or OSC mapping for a hardware panic button.
+- Outside Performance Mode, press **Space** to play or pause the music deck.
 - Use the Music tab to skip by ten seconds, restart, mute the monitor, change listening volume or playback speed, and loop a track.
 - Enable **Color by frequency** to move through the selected preset or custom palette according to the dominant bass, mid, or high-frequency energy.
 - Every numerical slider includes an editable number box, a **?** tip button, and a **↺** reset button. Dropdowns, switches, palettes, and custom colors also include reset controls.
 - Drag the fractal to pan and use the mouse wheel to zoom.
 - Press **R** to reset the view.
 - Choose from 20 named 2D equations in the Fractal Equation menu, including Mandelbrot and Multibrot powers, Julia, Burning Ship variants, Phoenix, Magnet, Lambda, Newton, Nova, and Pickover Biomorph. The power-4 Mandelbulb remains available as the separate true-3D visual.
-- Choose **Fractal**, the true ray-marched **3D Mandelbulb**, or a conventional **Spectrum Bars**, **Radial Spectrum**, **Pulse Rings**, or **Waveform Field** presentation from the Visuals menu. Appearance shows only the controls and presets that apply to the selected style. Conventional modes skip fractal iteration for lower GPU cost; every style uses the active palette and music analysis and is rendered into exported videos.
-- **3D Mandelbulb** uses a distance-estimated power-4 recurrence and GPU ray marching to produce genuine surface depth, perspective, lighting, and camera orbit. Drag the canvas to orbit, use the mouse wheel for camera distance, and start from Quartic Core, Deep Orbit, Storm Fold, or Neon Shell. Bass and beats alter power and camera breathing, mids drive folding and orbit, and highs sharpen surface light. Adaptive mode scales live resolution and ray steps; offline export and Unleashed mode use a higher step budget.
+- Choose **Fractal**, the true ray-marched **3D Mandelbulb**, the pseudo-3D **Tempest Mainframe Room**, or a conventional **Spectrum Bars**, **Radial Spectrum**, **Pulse Rings**, or **Waveform Field** presentation from the Visuals menu. Appearance shows only the controls and presets that apply to the selected style. Conventional and scene modes skip fractal iteration for lower GPU cost; every style uses the active palette and music analysis and is rendered into exported videos.
+- **Tempest Mainframe Room** preserves the original chamber artwork while adding slow depth parallax, bass-routed floor conduits, high-frequency data packets across the server walls, music-lit reactor rings, expanding beat waves, and storm-energy flashes. A live texture-gradient pass confines the strongest energy to machinery edges, floor seams, server details, and existing illuminated architecture.
+- **3D Mandelbulb** uses a distance-estimated whole-number recurrence and GPU ray marching to produce genuine surface depth, perspective, lighting, and camera orbit. Drag the canvas to orbit, use the mouse wheel for camera distance, and start from Quartic Core, Deep Orbit, Storm Fold, or Neon Shell. Whole-number powers keep the spherical recurrence seamless while bass, mids, highs, beats, and mapped power modulation drive continuous Cartesian recurrence warping, localized surface motion, camera breathing, orbit, and light. Adaptive mode scales live resolution and ray steps; offline export and Unleashed mode use a higher step budget.
 - Fractal equations use a separate compressed audio envelope with adjustable **Equation Smoothing**. The 90% default slows topology changes and suppresses beat-to-beat strobing without making Spectrum Bars, Pulse Rings, or the music meters less responsive. Equation Modulation now defaults to 6% and remains adjustable in Advanced Reactivity.
 - **Basic mode** now leads with visual preview cards, Low Flash/Balanced/Expressive response presets, equation-aware starting points, four ready-made palettes, and larger quick controls. **Advanced mode** retains the complete equation, modulation, custom-palette, profile, dimensional, folding, and performance toolset.
 - A first-run visual-safety notice explains possible flashing, contrast, and motion effects. **Low Flash** disables beat scaling and GPU-intensive folding/depth features while substantially reducing color movement, camera motion, pulse density, and equation deformation.
@@ -98,15 +123,13 @@ You can also press `F5` and choose **Run Quartic Pulse**. The included `.vscode/
 - Use **Equation Modulation** to control how strongly the music changes the fractal geometry itself. Set it to zero for the original equation.
 - Choose a resolution from 480p through 4K and a frame rate from 30 through 120 FPS, then click **Export Video**. Offline mode is the default: it decodes the song, calculates audio data at every exact frame timestamp, waits for each GPU frame to finish, encodes it, and combines the original audio afterward. Slower computers take longer instead of silently dropping requested frames.
 
-Settings are organized into seven top-level tabs:
+Settings are organized into five scalable workspaces:
 
-- **Music** contains **Deck**, **Playlist**, and **Frequency Color** subtabs. Together they provide local audio import and playback controls, endpoint-specific Windows WASAPI output capture, recording-input capture, multi-file and folder queues, and frequency-driven palette controls. Network audio links and radio streams are intentionally unsupported. Live Windows sources visualize in real time but cannot use the song-to-video exporter because they have no fixed duration.
-- **Appearance** contains **Overview**, **Reactivity**, **Dimension**, **Folding**, and **Mapping** subtabs. Together they provide visual presets, palettes, the four-stop custom palette editor, core-equation controls, music response, dimensional sampling, equation-level folding, and the audio modulation matrix.
-- **Live** contains **Show**, **Controls**, **Camera**, and **Tools** subtabs. It provides beat-synchronized profile sequencing, MIDI Learn, focused keyboard mappings, OSC control, saved camera paths, reversible visual randomization, quick capture, now-playing presentation, and the Performance Assistant.
-- **Stream** creates and configures the visual-only OBS output window, including its resolution, synchronization rate, always-on-top behavior, optional chroma-key background, and OBS WebSocket automation.
-- **Export** contains base iterations, resolution, frame rate, video format, export detail, performance guidance, and recording controls.
-- **System** contains hardware detection, adaptive quality, performance presets, live frame protection, and the optional Unleashed mode.
-- **About** contains project, Tempest Mainframe, licensing, and branding information.
+- **Music** contains **Deck**, **Playlist**, **Analysis**, and **Color**. It provides local audio import and playback, endpoint-specific Windows WASAPI capture, local queues, frequency-driven color, Music Personality profiles, cached Song Maps, and the Mathematical Song Director. The profiles give a basic user musical starting point while advanced users can still edit continuous frequency boundaries, smoothing, and beat detection. Network audio links and radio streams are intentionally unsupported. Live Windows sources visualize in real time but cannot use whole-song mapping or the song-to-video exporter because they have no fixed duration.
+- **Visuals** contains the visual browser, palettes, reactivity, dimensional controls, fold/warp, and music mapping. Basic mode keeps the visual choices and practical presets in view; Advanced mode opens the complete equation and modulation system.
+- **Perform** contains **Show**, **Controls**, **Camera**, **Tools**, and **Stream**. It groups beat-synchronized sequencing, MIDI, OSC, keyboard control, camera paths, randomization, capture, now-playing presentation, OBS output, and OBS WebSocket automation in the same live-performance workspace.
+- **Export** contains base iterations, resolution, frame rate, format, export detail, encoder guidance, preflight, recovery, and recording controls.
+- **System** contains **Performance**, **Reports**, and **About**. It groups hardware detection, adaptive quality, performance presets, live frame protection, optional Unleashed mode, privacy-conscious crash and bug reports, project information, licensing, and branding.
 
 The custom palette editor accepts a native color picker, six-digit HEX values, or individual 0–255 RGB values. All three input formats stay synchronized.
 
@@ -131,6 +154,9 @@ The export tab disables the onscreen preview by default while recording. The Web
 ## Live performance and stream control
 
 - The **Show Sequencer** arranges saved profiles into a performance. Entries can advance after a chosen number of beats or seconds, cut immediately, or fade through black. Automatic BPM detection, tap tempo, manual BPM, beat offset, looping, and shuffle are included.
+- **Show Composer** turns that sequence into a full-window timeline. Use **Build from Song Map** to create precisely timed cues from analyzed song sections, or add cues manually. Each cue can choose a saved profile, transition, camera path, and optional Director, motion, equation, and color-flow automation; blank automation fields continue to inherit the profile.
+- Composer cue cards can be selected to apply their visual and seek the loaded song to the matching show time, dragged to reorder, moved with accessible buttons, or snapped back to the corresponding Song Map section. The global playhead and automation lanes remain synchronized with the normal Show transport and Performance Mode.
+- **Record Automation** writes supported live control changes into the selected cue without altering its saved visual profile. Composer data is stored with the Show Sequencer and is included in portable Performance Packages.
 - **OBS Automation** connects only to OBS WebSocket on `127.0.0.1`. Its password remains in memory and is never saved. It can switch scenes, show or hide scene sources, create a Window Capture input, and apply a linked Quartic Pulse profile whenever the OBS program scene changes.
 - **Live Controls** stores up to 40 mappings. MIDI Note and Control Change messages support learn mode and continuous visual values. Keyboard mappings work while Quartic Pulse is focused. The OSC UDP server listens only on localhost by default; LAN listening requires the explicit **Allow LAN controllers** switch.
 - **Camera Paths** save exact center and zoom bookmarks, interpolate between two views with Linear, Smooth, or Cinematic easing, and can loop back and forth. Slow Orbit, Deep Drift, and Zoom Breath provide bookmark-free motion.
@@ -140,6 +166,8 @@ The export tab disables the onscreen preview by default while recording. The Web
 - The **Performance Assistant** measures an eight-second frame-time sample, reports typical FPS and 95th-percentile frame time, recommends a safe live iteration count, and can disable simultaneous heavy equation effects when necessary. Average PC, Balanced, and Showcase presets are also available. Adaptive protection changes only live render scale; export detail remains independent.
 - Quartic Pulse reads local CPU thread count, installed RAM, active GPU information, driver feature status, and reported video memory where the driver exposes it. Automatic mode combines those facts with the optional live benchmark to recommend Efficient, Balanced, or Performance settings. Hardware discovery is advisory and never locks the user out of a visual.
 - **Unleashed mode** is an explicit Advanced Performance switch. It raises the live base-iteration limit from 500 to 800, raises the shader/export ceiling from 1,200 to 2,400, unlocks 3.5× export detail, and enables the legacy wall-clock Live export engine. Absolute limits remain in place.
+- **System → Reports** captures up to 20 sanitized incidents locally and creates a paste-ready Markdown report. Users can Copy, Save Text, Print/PDF, or open a new GitHub issue. Nothing is sent automatically, and diagnostics are optional.
+- Online report submission uses an independently hosted HTTPS relay. Direct Discord webhook hosts are rejected so the webhook bearer token is never embedded in the public source or EXE. See `REPORTING.md` for the Azure relay contract and security checklist.
 
 ## Advanced GPU output boundary
 
@@ -190,7 +218,11 @@ The normal Windows installer uses a branded Quartic Pulse assisted setup flow. I
 
 Quartic Pulse is free software licensed under the [GNU General Public License, version 3 or later](LICENSE). You may use, study, modify, and share it. If you distribute Quartic Pulse or a modified version, you must preserve the same freedoms, license the complete covered work under GPL-3.0-or-later, and provide the corresponding source as required by the license.
 
-The Storm Horizon Media name, logo, and associated branding are not licensed under the GPL; see [BRAND_ASSETS.md](BRAND_ASSETS.md). Modified releases may use replacement branding. Copies previously received under the MIT License remain available under those existing terms; this license change governs this revision and future releases.
+The Tempest Mainframe, Storm Horizon Media, Storm Horizon Radio, and Quartic Pulse names and official branding are not licensed under the GPL; see [BRAND_ASSETS.md](BRAND_ASSETS.md). Modified releases may use replacement branding. Copies previously received under the MIT License remain available under those existing terms; this license change governs this revision and future releases.
+
+Third-party components and their original source and license links are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Packaged copies also include the Electron and Chromium notices, the NAudio MIT license, and the exact FFmpeg build README, GPL text, and corresponding-source instructions. Public releases containing FFmpeg must keep durable access to the complete source corresponding to that exact static binary beside the application downloads.
+
+Contributions and future dependencies must follow the public-distribution checks in [CONTRIBUTING.md](CONTRIBUTING.md). In particular, code, assets, native tools, and machine-learning models are reviewed separately; a permissive runtime license does not automatically grant redistribution rights for a model or its training/output terms.
 
 ## Project layout
 
