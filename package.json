@@ -8,6 +8,7 @@
   "scripts": {
     "start": "electron .",
     "dev": "electron . --dev",
+    "test:controllers": "set ELECTRON_RUN_AS_NODE=1&& electron tools/controller-smoke.js",
     "icon": "electron tools/render-icon.js",
     "bundle:ffmpeg": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/prepare-ffmpeg.ps1",
     "pack": "npm run bundle:ffmpeg && electron-builder --dir",

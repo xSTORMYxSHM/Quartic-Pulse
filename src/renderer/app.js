@@ -30,6 +30,12 @@
   if (!workspaceShell) throw new Error('Quartic workspace shell failed to load.');
   const visualCatalog = window.QuarticVisualCatalog;
   if (!visualCatalog) throw new Error('Quartic visual catalog failed to load.');
+  const audioControllerFactory = window.QuarticAudioController;
+  if (!audioControllerFactory) throw new Error('Quartic audio controller failed to load.');
+  const performanceControllerFactory = window.QuarticPerformanceController;
+  if (!performanceControllerFactory) throw new Error('Quartic performance controller failed to load.');
+  const exportControllerFactory = window.QuarticExportController;
+  if (!exportControllerFactory) throw new Error('Quartic export controller failed to load.');
   const canvas = $('#fractalCanvas');
   const stage = $('#stage');
   const audio = $('#audio');
@@ -1820,6 +1826,55 @@
   const applyingEffectPreset = { fractal: false, fold: false, spectrum: false, radial: false, bulb: false };
   let applyingPulsePreset = false;
 
+  const performanceController = performanceControllerFactory.create({
+    query: $,
+    onPrevious: () => advanceShow(-1),
+    onPlayPause: () => $('#showPlayButton').click(),
+    onNext: () => advanceShow(1),
+    onToggleBlackout: () => setPerformanceBlackout(!state.performanceBlackout)
+  });
+  const exportController = exportControllerFactory.create({
+    query: $,
+    onEnd: endAndFinishExport,
+    onCancel: cancelExport,
+    onPause: togglePauseExport
+  });
+  const audioController = audioControllerFactory.create({
+    query: $,
+    audio,
+    formatTime,
+    getState: () => state,
+    reportError: (error) => showToast(error?.message || String(error), true),
+    onTogglePlayback: togglePlayback,
+    onRestart: () => {
+      audio.currentTime = 0;
+      resetPulseEvents();
+    },
+    onSkip: (seconds) => {
+      if (Number.isFinite(audio.duration) && !state.exporting) {
+        audio.currentTime = Math.max(0, Math.min(audio.duration, audio.currentTime + seconds));
+      }
+    },
+    onSeek: (time) => updateSongMapPlayhead(time),
+    onVolume: (value) => {
+      state.monitorVolume = value;
+      $('#volumeValue').value = `${Math.round(state.monitorVolume * 100)}%`;
+      updateMonitorGain();
+    },
+    onMute: () => {
+      state.monitorMuted = !state.monitorMuted;
+      $('#muteButton').setAttribute('aria-pressed', String(state.monitorMuted));
+      $('#muteButton').textContent = state.monitorMuted ? 'UNMUTE MONITOR' : 'MUTE MONITOR';
+      updateMonitorGain();
+    },
+    onPlaybackRate: (value) => {
+      audio.playbackRate = value;
+      audio.defaultPlaybackRate = value;
+    },
+    onLoop: (enabled) => { audio.loop = enabled; }
+  });
+  window.__quarticControllers = Object.freeze({ audio: audioController, performance: performanceController, export: exportController });
+
   function createAudioGraph() {
     if (audioContext) return;
     audioContext = new AudioContext({ latencyHint: 'interactive', sampleRate: 48000 });
@@ -2794,22 +2849,22 @@
   }
 
   function updatePerformanceDock() {
-    const dock = $('#performanceDock');
-    if (!dock) return;
     const entry = state.showSequence[state.showIndex];
     const profile = showProfileForEntry(entry);
-    $('#performanceDockState').textContent = state.performanceBlackout
+    const stateLabel = state.performanceBlackout
       ? 'BLACKOUT ACTIVE'
       : (state.showPlaying ? 'SHOW PLAYING' : (state.showIndex >= 0 ? 'SHOW PAUSED' : 'PERFORMANCE MODE'));
-    $('#performanceDockCurrent').textContent = profile
+    const currentLabel = profile
       ? `${state.showIndex + 1}/${state.showSequence.length} · ${profile.name}`
       : (state.audioName || 'Manual visual');
-    $('#performanceDockNext').textContent = nextShowProfileLabel();
-    $('#performancePlayButton').textContent = state.showPlaying ? 'PAUSE' : (state.showIndex >= 0 ? 'RESUME' : 'START');
-    $('#performancePlayButton').disabled = state.showSequence.length === 0;
-    $('#performancePreviousButton').disabled = state.showSequence.length === 0;
-    $('#performanceNextButton').disabled = state.showSequence.length === 0;
-    $('#performanceBlackoutButton').textContent = state.performanceBlackout ? 'RESTORE' : 'BLACKOUT';
+    performanceController.renderDock({
+      stateLabel,
+      currentLabel,
+      nextLabel: nextShowProfileLabel(),
+      playLabel: state.showPlaying ? 'PAUSE' : (state.showIndex >= 0 ? 'RESUME' : 'START'),
+      hasEntries: state.showSequence.length > 0,
+      blackout: state.performanceBlackout
+    });
   }
 
   function setPerformanceBlackout(enabled) {
@@ -2825,7 +2880,7 @@
     const keepHud = $('#performanceShowHud').checked;
     document.body.classList.toggle('performance-mode', state.operatorMode);
     document.body.classList.toggle('performance-hide-hud', state.operatorMode && !keepHud);
-    $('#performanceDock').hidden = !state.operatorMode;
+    performanceController.setVisible(state.operatorMode);
     try {
       localStorage.setItem(performanceModeStorageKey, JSON.stringify({
         fullscreen: $('#performanceFullscreen').checked,
@@ -2856,10 +2911,7 @@
     $('#performanceShowHud').addEventListener('change', (event) => {
       if (state.operatorMode) document.body.classList.toggle('performance-hide-hud', !event.target.checked);
     });
-    $('#performancePreviousButton').addEventListener('click', () => advanceShow(-1));
-    $('#performancePlayButton').addEventListener('click', () => $('#showPlayButton').click());
-    $('#performanceNextButton').addEventListener('click', () => advanceShow(1));
-    $('#performanceBlackoutButton').addEventListener('click', () => setPerformanceBlackout(!state.performanceBlackout));
+    performanceController.bind();
     document.addEventListener('fullscreenchange', () => {
       if (state.operatorMode && $('#performanceFullscreen').checked && !document.fullscreenElement) {
         setPerformanceMode(false);
@@ -2926,7 +2978,7 @@
     if (entry.advance === 'time') progress = (beatClock() - state.showEntryStartTime) / entry.value;
     else progress = (state.beatGridIndex - state.showEntryStartBeat + state.beatGridPhase) / entry.value;
     $('#showProgressFill').style.width = `${clamp(progress * 100, 0, 100)}%`;
-    $('#performanceDockProgress').style.width = `${clamp(progress * 100, 0, 100)}%`;
+    performanceController.setProgress(progress);
     updateComposerPlayhead(progress);
     if (progress >= 1 && (entry.advance === 'time' || beatChanged)) advanceShow(1);
   }
@@ -3213,21 +3265,12 @@
     if (state.audioMode === 'deck' && Number.isFinite(audio.duration)) {
       const offlineSessionActive = state.exporting && exportSession?.mode === 'offline';
       const displayTime = offlineSessionActive ? (state.offlineCurrentTime || 0) : audio.currentTime;
-      const progress = audio.duration ? displayTime / audio.duration : 0;
-      $('#timelineFill').style.width = `${Math.min(100, progress * 100)}%`;
-      $('#timeReadout').textContent = `${formatTime(displayTime)} / ${formatTime(audio.duration)}`;
-      $('#timeline').setAttribute('aria-valuemax', String(Math.round(audio.duration)));
-      $('#timeline').setAttribute('aria-valuenow', String(Math.round(displayTime)));
-      $('#timeline').setAttribute('aria-valuetext', `${formatTime(displayTime)} of ${formatTime(audio.duration)}`);
+      const progress = audioController.renderTimeline(displayTime, audio.duration);
       updateSongMapPlayhead(displayTime);
       const liveRecordingActive = state.exporting
         && exportSession?.mode === 'live'
         && mediaRecorder?.state === 'recording';
       if (liveRecordingActive) {
-        $('#exportProgressFill').style.width = `${progress * 100}%`;
-        $('#exportProgressText').textContent = `Rendering ${Math.round(progress * 100)}% · ${formatTime(audio.currentTime)} / ${formatTime(audio.duration)}`;
-        $('#stageRenderFill').style.width = `${progress * 100}%`;
-        $('#stageRenderText').textContent = `Rendering ${Math.round(progress * 100)}%`;
         const overall = progress * .80;
         setExportProgress(
           overall,
@@ -3331,21 +3374,18 @@
 
   function setExportProgress(overall, panelText, stageText = panelText) {
     exportProgressOverall = clamp(Number(overall) || 0, 0, 1);
-    const percent = exportProgressOverall >= 1 ? 100 : Math.min(99, Math.floor(exportProgressOverall * 100));
-    $('#exportProgressFill').style.width = `${exportProgressOverall * 100}%`;
-    $('#exportProgressText').textContent = panelText;
-    $('#stageRenderFill').style.width = `${exportProgressOverall * 100}%`;
-    $('#stageRenderText').textContent = stageText || `Exporting ${percent}%`;
+    let metaText;
     if (exportStartedAt) {
       const now = performance.now();
       const paused = exportPausedDuration + (exportPauseStartedAt ? now - exportPauseStartedAt : 0);
       const elapsedSeconds = Math.max(0, (now - exportStartedAt - paused) / 1000);
-      if (offlineExportPaused) $('#stageRenderMeta').textContent = `Paused · elapsed ${formatTime(elapsedSeconds)}`;
+      if (offlineExportPaused) metaText = `Paused · elapsed ${formatTime(elapsedSeconds)}`;
       else if (exportProgressOverall > .01 && exportProgressOverall < .995) {
         const remainingSeconds = elapsedSeconds * (1 - exportProgressOverall) / exportProgressOverall;
-        $('#stageRenderMeta').textContent = `Elapsed ${formatTime(elapsedSeconds)} · estimated remaining ${formatTime(remainingSeconds)}`;
-      } else $('#stageRenderMeta').textContent = `Elapsed ${formatTime(elapsedSeconds)}`;
+        metaText = `Elapsed ${formatTime(elapsedSeconds)} · estimated remaining ${formatTime(remainingSeconds)}`;
+      } else metaText = `Elapsed ${formatTime(elapsedSeconds)}`;
     }
+    exportController.renderProgress({ overall: exportProgressOverall, panelText, stageText, metaText });
   }
 
   function beginExportProgress(panelText, stageText = panelText) {
@@ -3353,38 +3393,34 @@
     exportStartedAt = performance.now();
     exportPauseStartedAt = 0;
     exportPausedDuration = 0;
-    $('#exportProgress').hidden = false;
+    exportController.begin();
     setExportProgress(0, panelText, stageText);
   }
 
   function setStageExportMode(mode) {
-    const offline = mode === 'offline';
-    $('#stageRenderMode').textContent = offline ? 'OFFLINE MASTER EXPORT' : 'LIVE VIDEO EXPORT';
-    $('#stageRenderNote').textContent = offline
-      ? 'Every frame is being completed independently for maximum detail and consistency.'
-      : 'Quartic Pulse is recording in real time. Keep the visualizer running until the track finishes.';
-    $('#pauseExportButton').hidden = !offline;
-    $('#pauseExportButton').disabled = !offline;
-    $('#pauseExportButton').textContent = 'PAUSE';
+    exportController.setMode(mode);
     setExportActionButtons(true, true);
   }
 
   function setExportActionButtons(endEnabled, cancelEnabled) {
-    $('#endExportButton').disabled = !endEnabled;
-    $('#cancelExportButton').disabled = !cancelEnabled;
-    if (!$('#pauseExportButton').hidden) $('#pauseExportButton').disabled = !endEnabled;
+    exportController.setActions(endEnabled, cancelEnabled);
   }
 
   function completeExportProgress(outputPath) {
     setExportProgress(1, `Saved 100% | ${exportedFileName(outputPath)}`, 'Export saved 100%');
-    $('#stageRenderNote').textContent = 'The finished video has been saved successfully.';
+    exportController.setNote('The finished video has been saved successfully.');
     const elapsedSeconds = exportStartedAt ? Math.max(0, (performance.now() - exportStartedAt - exportPausedDuration) / 1000) : 0;
-    $('#stageRenderMeta').textContent = `Completed in ${formatTime(elapsedSeconds)}`;
+    exportController.renderProgress({
+      overall: 1,
+      panelText: `Saved 100% | ${exportedFileName(outputPath)}`,
+      stageText: 'Export saved 100%',
+      metaText: `Completed in ${formatTime(elapsedSeconds)}`
+    });
     setExportActionButtons(false, false);
     playExportCompleteStinger();
     clearTimeout(exportProgressHideTimer);
     exportProgressHideTimer = setTimeout(() => {
-      if (!state.exporting) $('#exportProgress').hidden = true;
+      if (!state.exporting) exportController.hide();
     }, 2200);
   }
 
@@ -3415,9 +3451,9 @@
     }
     const overallPercent = overall >= 1 ? 100 : Math.min(99, Math.floor(overall * 100));
     const detail = String(update.message || phaseLabel).replace(/\.{3}$/, '');
-    $('#stageRenderNote').textContent = update.stage === 'saving'
+    exportController.setNote(update.stage === 'saving'
       ? 'The completed video is being written to the selected destination.'
-      : 'All visual frames are complete; audio and the final video container are being finished.';
+      : 'All visual frames are complete; audio and the final video container are being finished.');
     setExportProgress(overall, `${phaseLabel} | overall ${overallPercent}% | ${detail}`, `${phaseLabel} | overall ${overallPercent}%`);
   });
 
@@ -3798,7 +3834,7 @@
     setStageExportMode('offline');
     setExportActionButtons(false, false);
     beginExportProgress('Recovering interrupted export | overall 0%', 'Inspecting saved frames…');
-    $('#stageRenderNote').textContent = 'Quartic Pulse is validating the saved master and finishing the interrupted video.';
+    exportController.setNote('Quartic Pulse is validating the saved master and finishing the interrupted video.');
     try {
       const result = await window.quarticDesktop.recoverExport(id);
       recordExportResult(result, { mode: 'recovered' });
@@ -6642,7 +6678,7 @@
       state.showPlaying = false;
       state.showIndex = -1;
       $('#showProgressFill').style.width = '0%';
-      $('#performanceDockProgress').style.width = '0%';
+      performanceController.setProgress(0);
       updateShowUi();
     });
     $('#showLoop').addEventListener('change', (event) => { state.showLoop = event.target.checked; persistShowSequence(); });
@@ -6671,9 +6707,7 @@
       $('#trackName').textContent = 'No audio loaded';
       $('#trackMeta').textContent = 'Drop songs anywhere, choose files, or choose a local folder';
     }
-    $('#timeReadout').textContent = Number.isFinite(audio.duration)
-      ? `${formatTime(audio.currentTime)} / ${formatTime(audio.duration)}`
-      : '00:00 / 00:00';
+    audioController.renderTimeline(audio.currentTime, audio.duration);
   }
 
   function stopLiveAudio({ restoreDeck = true } = {}) {
@@ -6724,8 +6758,7 @@
     resetPulseEvents();
     $('#trackName').textContent = state.liveAudioLabel;
     $('#trackMeta').textContent = 'LIVE WINDOWS AUDIO · visualization only';
-    $('#timelineFill').style.width = '100%';
-    $('#timeReadout').textContent = 'LIVE';
+    audioController.renderLiveTimeline();
     setAudioSourceStatus('LISTENING', true);
     updateTrackControls();
     setPlayState();
@@ -6754,8 +6787,7 @@
     resetPulseEvents();
     $('#trackName').textContent = label;
     $('#trackMeta').textContent = 'WASAPI OUTPUT LOOPBACK · visualization only';
-    $('#timelineFill').style.width = '100%';
-    $('#timeReadout').textContent = 'LIVE';
+    audioController.renderLiveTimeline();
     setAudioSourceStatus('WASAPI LIVE', true);
     updateTrackControls();
     setPlayState();
@@ -6889,10 +6921,7 @@
   function updateTrackControls() {
     const hasTrack = Boolean(currentPlaylistItem());
     const deckAvailable = hasTrack && state.audioMode === 'deck';
-    $('#playButton').disabled = !deckAvailable;
-    $('#restartButton').disabled = !deckAvailable;
-    $('#skipBackButton').disabled = !deckAvailable;
-    $('#skipForwardButton').disabled = !deckAvailable;
+    audioController.setAvailability(deckAvailable);
     $('#exportButton').disabled = !hasTrack;
     updateNowPlayingOverlay();
     updatePerformanceDock();
@@ -6964,8 +6993,7 @@
     setPlayState();
     $('#trackName').textContent = item.name;
     $('#trackMeta').textContent = item.meta;
-    $('#timelineFill').style.width = '0%';
-    $('#timeReadout').textContent = '00:00 / 00:00';
+    audioController.renderTimeline(0, 0);
     $('#revealButton').hidden = true;
     updateTrackControls();
     renderPlaylist();
@@ -7042,8 +7070,7 @@
     activeSongMap = null;
     $('#trackName').textContent = 'No audio loaded';
     $('#trackMeta').textContent = 'Drop songs anywhere, choose files, or choose a local folder';
-    $('#timelineFill').style.width = '0%';
-    $('#timeReadout').textContent = '00:00 / 00:00';
+    audioController.renderTimeline(0, 0);
     updateTrackControls();
     setPlayState();
     if (songMapInitialized) renderSongMap();
@@ -7084,13 +7111,7 @@
     const liveInput = state.audioMode !== 'deck' && audioIsActive();
     const deckPlaying = state.audioMode === 'deck' && !audio.paused;
     const playing = liveInput || deckPlaying;
-    document.body.classList.toggle('playing', playing);
-    $('#playIcon').textContent = deckPlaying ? 'Ⅱ' : '▶';
-    $('#playButton').setAttribute('aria-label', deckPlaying ? 'Pause' : 'Play');
-    if (!state.exporting) {
-      $('#liveDot').className = `live-dot${playing ? ' playing' : ''}`;
-      $('#liveLabel').textContent = liveInput ? 'LISTENING' : (playing ? 'LIVE' : 'IDLE');
-    }
+    audioController.renderTransport({ liveInput, deckPlaying, playing, exporting: state.exporting });
   }
 
   function chooseRecorderType() {
@@ -8258,8 +8279,7 @@
       for (const id of ['resolution', 'fps', 'videoFormat', 'exportDetail', 'exportMode']) $(`#${id}`).disabled = true;
       $('#unleashedMode').disabled = true;
       $('#performanceMode').disabled = true;
-      $('#liveDot').className = 'live-dot recording';
-      $('#liveLabel').textContent = 'OFFLINE RENDER';
+      audioController.renderLiveStatus('OFFLINE RENDER', true);
       setCanvasSize();
       const analyzeFrame = createOfflineAudioAnalyzer(audioBuffer, fps);
       encoder = new VideoEncoder({
@@ -8305,10 +8325,6 @@
         }
         const progress = (frameIndex + 1) / frameCount;
         if (frameIndex % Math.max(1, Math.floor(fps / 5)) === 0 || frameIndex + 1 === frameCount) {
-          $('#exportProgressFill').style.width = `${progress * 100}%`;
-          $('#exportProgressText').textContent = `Offline frame ${frameIndex + 1} / ${frameCount} · ${Math.round(progress * 100)}%`;
-          $('#stageRenderFill').style.width = `${progress * 100}%`;
-          $('#stageRenderText').textContent = `Offline rendering ${Math.round(progress * 100)}%`;
           const overall = progress * .80;
           setExportProgress(
             overall,
@@ -8367,9 +8383,8 @@
       $('#unleashedMode').disabled = false;
       $('#performanceMode').disabled = false;
       updateUnleashedMode(state.unleashedMode);
-      if (!exportCompleted) $('#exportProgress').hidden = true;
-      $('#liveDot').className = 'live-dot';
-      $('#liveLabel').textContent = 'IDLE';
+      if (!exportCompleted) exportController.hide();
+      audioController.renderLiveStatus('IDLE');
       updateTrackControls();
       renderPlaylist();
       setCanvasSize();
@@ -8473,8 +8488,7 @@
       $('#exportMode').disabled = true;
       $('#unleashedMode').disabled = true;
       $('#performanceMode').disabled = true;
-      $('#liveDot').className = 'live-dot recording';
-      $('#liveLabel').textContent = 'RECORDING';
+      audioController.renderLiveStatus('RECORDING', true);
       showToast(`Recording ${width}×${height} at ${fps} FPS for ${format.toUpperCase()} export`);
     } catch (error) {
       if (exportSession?.id) await window.quarticDesktop.abortExport(exportSession.id).catch(() => {});
@@ -8484,7 +8498,7 @@
       audio.loop = state.loopBeforeExport;
       $('#loopPlayback').disabled = false;
       document.body.classList.remove('exporting', 'hide-export-preview');
-      $('#exportProgress').hidden = true;
+      exportController.hide();
       setCanvasSize();
       showToast(error.message, true);
     }
@@ -8494,22 +8508,23 @@
     if (exportPauseStartedAt) exportPausedDuration += performance.now() - exportPauseStartedAt;
     exportPauseStartedAt = 0;
     offlineExportPaused = false;
-    $('#pauseExportButton').textContent = 'PAUSE';
+    exportController.setPaused(false);
   }
 
   function togglePauseExport() {
     if (exportSession?.mode !== 'offline' || !state.offlineExporting || offlineExportCancelled) return;
     if (offlineExportPaused) {
       resumeOfflineExportClock();
-      $('#stageRenderNote').textContent = 'Offline rendering resumed from the next exact frame.';
-      setExportProgress(exportProgressOverall, $('#exportProgressText').textContent, `Rendering resumed · overall ${Math.floor(exportProgressOverall * 100)}%`);
+      exportController.setNote('Offline rendering resumed from the next exact frame.');
+      setExportProgress(exportProgressOverall, exportController.getPanelText(), `Rendering resumed · overall ${Math.floor(exportProgressOverall * 100)}%`);
     } else {
       offlineExportPaused = true;
       exportPauseStartedAt = performance.now();
-      $('#pauseExportButton').textContent = 'RESUME';
-      $('#stageRenderNote').textContent = 'Offline rendering is paused safely between frames.';
-      $('#stageRenderText').textContent = `Paused at ${Math.floor(exportProgressOverall * 100)}%`;
-      $('#stageRenderMeta').textContent = `Paused · elapsed ${formatTime((performance.now() - exportStartedAt - exportPausedDuration) / 1000)}`;
+      exportController.setPaused(true, {
+        note: 'Offline rendering is paused safely between frames.',
+        stageText: `Paused at ${Math.floor(exportProgressOverall * 100)}%`,
+        metaText: `Paused · elapsed ${formatTime((performance.now() - exportStartedAt - exportPausedDuration) / 1000)}`
+      });
     }
   }
 
@@ -8518,7 +8533,7 @@
       if (!state.offlineExporting) return;
       resumeOfflineExportClock();
       offlineExportFinishRequested = true;
-      $('#stageRenderNote').textContent = 'Stopping after the current frame, then finishing and saving the shortened video.';
+      exportController.setNote('Stopping after the current frame, then finishing and saving the shortened video.');
       $('#exportLabel').textContent = 'ENDING & FINISHING…';
       $('#exportButton').disabled = true;
       setExportActionButtons(false, true);
@@ -8533,7 +8548,7 @@
   function cancelExport() {
     if (!state.exporting || !exportSession) return;
     if (!window.confirm('Cancel this export and permanently discard its temporary output?')) return;
-    $('#stageRenderNote').textContent = 'Cancelling the export and discarding its temporary output.';
+    exportController.setNote('Cancelling the export and discarding its temporary output.');
     $('#exportLabel').textContent = 'CANCELLING…';
     $('#exportButton').disabled = true;
     setExportActionButtons(false, false);
@@ -8594,10 +8609,9 @@
       $('#unleashedMode').disabled = false;
       $('#performanceMode').disabled = false;
       updateUnleashedMode(state.unleashedMode);
-      if (!liveExportCompleted) $('#exportProgress').hidden = true;
+      if (!liveExportCompleted) exportController.hide();
       liveExportCancelled = false;
-      $('#liveDot').className = 'live-dot';
-      $('#liveLabel').textContent = 'IDLE';
+      audioController.renderLiveStatus('IDLE');
       setCanvasSize();
       setPlayState();
     }
@@ -8633,33 +8647,7 @@
   $('#playlistMoveDownButton').addEventListener('click', () => movePlaylistItem(1));
   $('#playlistRemoveButton').addEventListener('click', () => removeCurrentPlaylistItem().catch((error) => showToast(error.message, true)));
   $('#playlistClearButton').addEventListener('click', clearPlaylist);
-  $('#playButton').addEventListener('click', () => togglePlayback().catch((error) => showToast(error.message, true)));
-  $('#restartButton').addEventListener('click', () => {
-    audio.currentTime = 0;
-    resetPulseEvents();
-  });
-  $('#skipBackButton').addEventListener('click', () => {
-    if (Number.isFinite(audio.duration) && !state.exporting) audio.currentTime = Math.max(0, audio.currentTime - 10);
-  });
-  $('#skipForwardButton').addEventListener('click', () => {
-    if (Number.isFinite(audio.duration) && !state.exporting) audio.currentTime = Math.min(audio.duration, audio.currentTime + 10);
-  });
-  $('#volume').addEventListener('input', (event) => {
-    state.monitorVolume = Number(event.target.value);
-    $('#volumeValue').value = `${Math.round(state.monitorVolume * 100)}%`;
-    updateMonitorGain();
-  });
-  $('#muteButton').addEventListener('click', () => {
-    state.monitorMuted = !state.monitorMuted;
-    $('#muteButton').setAttribute('aria-pressed', String(state.monitorMuted));
-    $('#muteButton').textContent = state.monitorMuted ? 'UNMUTE MONITOR' : 'MUTE MONITOR';
-    updateMonitorGain();
-  });
-  $('#playbackRate').addEventListener('change', (event) => {
-    audio.playbackRate = Number(event.target.value);
-    audio.defaultPlaybackRate = audio.playbackRate;
-  });
-  $('#loopPlayback').addEventListener('change', (event) => { audio.loop = event.target.checked; });
+  audioController.bind();
   $('#frequencyColor').addEventListener('change', (event) => { state.frequencyColorEnabled = event.target.checked; });
   $('#frequencyColorAmount').addEventListener('input', (event) => {
     state.frequencyColorAmount = Number(event.target.value);
@@ -8712,60 +8700,6 @@
   });
   audio.addEventListener('error', () => {
     showToast('The local audio file could not be decoded.', true);
-  });
-
-  const trackTimeline = $('#timeline');
-  let timelinePointerId = null;
-
-  function seekTrackFromPointer(event) {
-    if (!Number.isFinite(audio.duration) || audio.duration <= 0 || state.exporting) return;
-    const rect = trackTimeline.getBoundingClientRect();
-    if (rect.width <= 0) return;
-    const progress = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
-    audio.currentTime = progress * audio.duration;
-    $('#timelineFill').style.width = `${progress * 100}%`;
-    $('#timeReadout').textContent = `${formatTime(audio.currentTime)} / ${formatTime(audio.duration)}`;
-  }
-
-  function finishTimelineScrub(event) {
-    if (timelinePointerId !== event.pointerId) return;
-    if (event.type === 'pointerup') seekTrackFromPointer(event);
-    if (trackTimeline.hasPointerCapture(event.pointerId)) trackTimeline.releasePointerCapture(event.pointerId);
-    timelinePointerId = null;
-    trackTimeline.classList.remove('scrubbing');
-  }
-
-  trackTimeline.addEventListener('pointerdown', (event) => {
-    if ((event.pointerType === 'mouse' && event.button !== 0)
-      || !Number.isFinite(audio.duration) || audio.duration <= 0 || state.exporting) return;
-    event.preventDefault();
-    timelinePointerId = event.pointerId;
-    trackTimeline.setPointerCapture(event.pointerId);
-    trackTimeline.classList.add('scrubbing');
-    seekTrackFromPointer(event);
-  });
-  trackTimeline.addEventListener('pointermove', (event) => {
-    if (timelinePointerId === event.pointerId) seekTrackFromPointer(event);
-  });
-  trackTimeline.addEventListener('pointerup', finishTimelineScrub);
-  trackTimeline.addEventListener('pointercancel', finishTimelineScrub);
-  trackTimeline.addEventListener('lostpointercapture', (event) => {
-    if (timelinePointerId !== event.pointerId) return;
-    timelinePointerId = null;
-    trackTimeline.classList.remove('scrubbing');
-  });
-  trackTimeline.addEventListener('keydown', (event) => {
-    if (!Number.isFinite(audio.duration) || audio.duration <= 0 || state.exporting) return;
-    const seekAmount = event.shiftKey ? 15 : 5;
-    let target = audio.currentTime;
-    if (event.key === 'ArrowLeft' || event.key === 'ArrowDown') target -= seekAmount;
-    else if (event.key === 'ArrowRight' || event.key === 'ArrowUp') target += seekAmount;
-    else if (event.key === 'Home') target = 0;
-    else if (event.key === 'End') target = audio.duration;
-    else return;
-    event.preventDefault();
-    audio.currentTime = Math.max(0, Math.min(audio.duration, target));
-    updateUiMeters();
   });
 
   $('#iterations').addEventListener('input', (event) => {
@@ -9154,9 +9088,7 @@
     if (state.exporting) endAndFinishExport();
     else startExport().catch((error) => showToast(error.message, true));
   });
-  $('#endExportButton').addEventListener('click', endAndFinishExport);
-  $('#cancelExportButton').addEventListener('click', cancelExport);
-  $('#pauseExportButton').addEventListener('click', togglePauseExport);
+  exportController.bind();
   $('#clearExportHistoryButton').addEventListener('click', () => {
     if (!exportHistory.length || !window.confirm('Clear the recent export history? Exported video files will not be deleted.')) return;
     exportHistory = [];
