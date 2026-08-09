@@ -867,6 +867,14 @@ function createWindow() {
               && typeof window.__quarticEngines.performancePackage.remapImportedShow === 'function'
               && typeof window.__quarticEngines.performancePackage.trackMatches === 'function'
             );
+            const songMapDataEngineReady = Boolean(
+              window.QuarticSongMapDataEngine
+              && window.__quarticEngines?.songMapData?.diagnostics?.ready
+              && typeof window.__quarticEngines.songMapData.mapKey === 'function'
+              && typeof window.__quarticEngines.songMapData.isValidMap === 'function'
+              && typeof window.__quarticEngines.songMapData.updateOverride === 'function'
+              && typeof window.__quarticEngines.songMapData.sectionEnergy === 'function'
+            );
             const exportEncoderEngineReady = Boolean(
               window.QuarticExportEncoderEngine
               && window.__quarticEngines?.exportEncoder?.diagnostics?.ready
@@ -1015,6 +1023,7 @@ function createWindow() {
               audioAnalysisEngineReady,
               performanceSequencerEngineReady,
               performanceShowDataEngineReady,
+              songMapDataEngineReady,
               performancePackageEngineReady,
               exportSessionEngineReady,
               exportEncoderEngineReady,
@@ -1319,7 +1328,7 @@ function createWindow() {
           }
           console.log(`SMOKE_TEST ${JSON.stringify(result)}`);
           fs.writeFileSync(path.join(os.tmpdir(), 'quartic-pulse-smoke-result.json'), JSON.stringify(result, null, 2));
-          process.exitCode = result.ready && result.webgl2 && result.frequencyBands && result.visualStyles && result.playlistReady && result.obsOutputReady && result.profilesReady && result.windowsAudioReady && result.outputCaptureReady && result.audioHudReady && result.hudTransportReady && result.stageGeometryReady && result.exportStatusReady && result.sidebarLayoutReady && result.quickControlsLayoutReady && result.mainTabsFit && result.workspaceShellReady && result.visualCatalogReady && result.controllerModulesReady && result.showComposerControllerReady && result.profileManagerControllerReady && result.audioAnalysisEngineReady && result.performanceSequencerEngineReady && result.performanceShowDataEngineReady && result.performancePackageEngineReady && result.exportSessionEngineReady && result.exportEncoderEngineReady && result.basicWorkflowReady && result.advancedWorkflowReady && result.unleashedLayoutReady && result.aboutContentReady && result.musicPersonalityReady && result.songMapReady && result.songMapAnalysisReady && result.songDirectorReady && result.songDirectorAnalysisReady && result.appearanceNavigationReady && result.modulationMatrixReady && result.showSequencerReady && result.showComposerReady && result.showComposerWorkspaceReady && result.showComposerGenerationReady && result.liveControlsReady && result.creativeToolsReady && result.performanceAssistantReady && result.reportCenterReady && result.reportGenerationReady && result.performanceAutomationStandbyReady && result.offlineExportReady && result.exportQolReady && result.nativeExportEncoderReady && result.obsAutomationReady && result.coreEquationReady && result.coreEquationInputReady && result.percentageScalesReady && result.pulseControls && result.customColorRolesReady && result.beatDetectorControls && result.bulbControls && result.pulsePresetsReady && result.visualEffectControls && result.effectPresetsReady && result.visualOptionsReady && result.syntheticPulseReady && result.adaptiveBeatReady && result.obsWindowMovable && result.obsDragStripReady && result.obsChromaSafe && result.rotationVelocityReady && result.activeTab === requestedSmokeTab && result.activeVisualStyle === String(requestedSmokeStyle) && result.canvasWidth > 0 ? 0 : 1;
+          process.exitCode = result.ready && result.webgl2 && result.frequencyBands && result.visualStyles && result.playlistReady && result.obsOutputReady && result.profilesReady && result.windowsAudioReady && result.outputCaptureReady && result.audioHudReady && result.hudTransportReady && result.stageGeometryReady && result.exportStatusReady && result.sidebarLayoutReady && result.quickControlsLayoutReady && result.mainTabsFit && result.workspaceShellReady && result.visualCatalogReady && result.controllerModulesReady && result.showComposerControllerReady && result.profileManagerControllerReady && result.audioAnalysisEngineReady && result.performanceSequencerEngineReady && result.performanceShowDataEngineReady && result.songMapDataEngineReady && result.performancePackageEngineReady && result.exportSessionEngineReady && result.exportEncoderEngineReady && result.basicWorkflowReady && result.advancedWorkflowReady && result.unleashedLayoutReady && result.aboutContentReady && result.musicPersonalityReady && result.songMapReady && result.songMapAnalysisReady && result.songDirectorReady && result.songDirectorAnalysisReady && result.appearanceNavigationReady && result.modulationMatrixReady && result.showSequencerReady && result.showComposerReady && result.showComposerWorkspaceReady && result.showComposerGenerationReady && result.liveControlsReady && result.creativeToolsReady && result.performanceAssistantReady && result.reportCenterReady && result.reportGenerationReady && result.performanceAutomationStandbyReady && result.offlineExportReady && result.exportQolReady && result.nativeExportEncoderReady && result.obsAutomationReady && result.coreEquationReady && result.coreEquationInputReady && result.percentageScalesReady && result.pulseControls && result.customColorRolesReady && result.beatDetectorControls && result.bulbControls && result.pulsePresetsReady && result.visualEffectControls && result.effectPresetsReady && result.visualOptionsReady && result.syntheticPulseReady && result.adaptiveBeatReady && result.obsWindowMovable && result.obsDragStripReady && result.obsChromaSafe && result.rotationVelocityReady && result.activeTab === requestedSmokeTab && result.activeVisualStyle === String(requestedSmokeStyle) && result.canvasWidth > 0 ? 0 : 1;
         } catch (error) {
           console.error('SMOKE_TEST_FAILED', error);
           try {

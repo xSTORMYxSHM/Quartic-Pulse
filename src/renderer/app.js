@@ -44,6 +44,8 @@
   if (!performanceShowComposerControllerFactory) throw new Error('Quartic performance show composer controller failed to load.');
   const profileManagerControllerFactory = window.QuarticProfileManagerController;
   if (!profileManagerControllerFactory) throw new Error('Quartic profile manager controller failed to load.');
+  const songMapDataEngineFactory = window.QuarticSongMapDataEngine;
+  if (!songMapDataEngineFactory) throw new Error('Quartic Song Map data engine failed to load.');
   const performancePackageEngineFactory = window.QuarticPerformancePackageEngine;
   if (!performancePackageEngineFactory) throw new Error('Quartic performance package engine failed to load.');
   const exportControllerFactory = window.QuarticExportController;
@@ -1930,9 +1932,10 @@
     },
     onError: (message) => showToast(message, true)
   });
+  const songMapDataEngine = songMapDataEngineFactory.create();
   const performancePackageEngine = performancePackageEngineFactory.create({
     appVersion: '0.30.0-dev.1',
-    hashText: hashSongMapText,
+    hashText: songMapDataEngine.hashText,
     sanitizeEntry: serializeShowEntry,
     isValidProfile: validProfile,
     isValidSongMap: validSongMap,
@@ -1945,6 +1948,7 @@
     audioAnalysis: audioAnalysisEngine,
     performanceSequencer: performanceSequencerEngine,
     performanceShowData: performanceShowDataEngine,
+    songMapData: songMapDataEngine,
     performancePackage: performancePackageEngine,
     exportSession: exportSessionEngine,
     exportEncoder: exportEncoderEngine
@@ -2368,12 +2372,7 @@
   }
 
   function songMapSectionEnergy(map, section) {
-    if (!map?.energy?.length || !map.duration) return .45;
-    const startIndex = clamp(Math.floor(section.start / map.duration * map.energy.length), 0, map.energy.length - 1);
-    const endIndex = clamp(Math.ceil(section.end / map.duration * map.energy.length), startIndex + 1, map.energy.length);
-    let sum = 0;
-    for (let index = startIndex; index < endIndex; index += 1) sum += Number(map.energy[index]) || 0;
-    return clamp(sum / Math.max(1, endIndex - startIndex) / 255, 0, 1);
+    return songMapDataEngine.sectionEnergy(map, section);
   }
 
   function composerCameraForSection(section, energy) {
@@ -5762,9 +5761,8 @@
     activeSongMap = map;
     const cues = performance.director.cueOverrides && typeof performance.director.cueOverrides === 'object'
       ? jsonSafeClone(performance.director.cueOverrides) : {};
-    const overrides = readSongDirectorOverrides().filter((entry) => entry.mapKey !== key);
-    if (Object.keys(cues).length) overrides.unshift({ mapKey: key, updatedAt: new Date().toISOString(), cues });
-    try { localStorage.setItem(songDirectorOverridesStorageKey, JSON.stringify(overrides.slice(0, 20))); }
+    const overrides = songMapDataEngine.replaceOverrideSet(readSongDirectorOverrides(), key, cues);
+    try { localStorage.setItem(songDirectorOverridesStorageKey, JSON.stringify(overrides)); }
     catch (_) { /* Cue restoration is optional if local storage is unavailable. */ }
     try { localStorage.removeItem(pendingPerformanceMapStorageKey); } catch (_) { /* Optional cleanup. */ }
     renderSongMap();
@@ -6847,8 +6845,7 @@
   }
 
   const songMapCacheStorageKey = 'quarticPulseSongMapsV1';
-  const songMapCacheVersion = 1;
-  const songMapCacheLimit = 10;
+  const songMapCacheVersion = songMapDataEngine.diagnostics.cacheVersion;
   const songMapSectionColors = ['#45ddcf', '#826dff', '#ed68df', '#f2bd59', '#55a8ff', '#78df78'];
   let activeSongMap = null;
   let songMapAnalyzing = false;
@@ -6896,36 +6893,17 @@
   }
 
   function readSongDirectorOverrides() {
-    try {
-      const entries = JSON.parse(localStorage.getItem(songDirectorOverridesStorageKey) || '[]');
-      return Array.isArray(entries) ? entries.filter((entry) => entry && typeof entry.mapKey === 'string' && entry.cues && typeof entry.cues === 'object') : [];
-    } catch (_) {
-      return [];
-    }
+    return songMapDataEngine.parseOverrides(localStorage.getItem(songDirectorOverridesStorageKey) || '[]');
   }
 
   function songDirectorOverrideFor(index) {
-    if (!activeSongMap?.key) return null;
-    const set = readSongDirectorOverrides().find((entry) => entry.mapKey === activeSongMap.key);
-    const override = set?.cues?.[index];
-    if (!override) return null;
-    return {
-      strength: clamp(Number(override.strength), 0, 1),
-      emphasis: ['auto', 'camera', 'equation', 'color', 'dimension', 'fold'].includes(override.emphasis) ? override.emphasis : 'auto'
-    };
+    return songMapDataEngine.overrideFor(readSongDirectorOverrides(), activeSongMap?.key, index);
   }
 
   function writeSongDirectorOverride(index, override) {
     if (!activeSongMap?.key || index < 0) return;
-    const entries = readSongDirectorOverrides().filter((entry) => entry.mapKey !== activeSongMap.key);
-    const existing = readSongDirectorOverrides().find((entry) => entry.mapKey === activeSongMap.key) || { mapKey: activeSongMap.key, cues: {} };
-    const cues = { ...existing.cues };
-    const strength = clamp(Number(override?.strength), 0, 1);
-    const emphasis = ['camera', 'equation', 'color', 'dimension', 'fold'].includes(override?.emphasis) ? override.emphasis : 'auto';
-    if (!override || (Math.abs(strength - 1) < .0001 && emphasis === 'auto')) delete cues[index];
-    else cues[index] = { strength, emphasis };
-    if (Object.keys(cues).length) entries.unshift({ mapKey: activeSongMap.key, updatedAt: new Date().toISOString(), cues });
-    try { localStorage.setItem(songDirectorOverridesStorageKey, JSON.stringify(entries.slice(0, 20))); }
+    const entries = songMapDataEngine.updateOverride(readSongDirectorOverrides(), activeSongMap.key, index, override);
+    try { localStorage.setItem(songDirectorOverridesStorageKey, JSON.stringify(entries)); }
     catch (_) { /* Cue edits remain optional if local storage is unavailable. */ }
   }
 
@@ -7206,56 +7184,37 @@
   }
 
   function hashSongMapText(text) {
-    let hash = 2166136261;
-    for (let index = 0; index < text.length; index++) {
-      hash ^= text.charCodeAt(index);
-      hash = Math.imul(hash, 16777619);
-    }
-    return (hash >>> 0).toString(16).padStart(8, '0');
+    return songMapDataEngine.hashText(text);
   }
 
   function songMapProfileSignature() {
     const bands = getActiveFrequencyBands();
-    return [
-      state.musicPersonality,
-      bands.floor, bands.lowMid, bands.midHigh, bands.ceiling,
-      state.analysisBassGain.toFixed(3), state.analysisMidGain.toFixed(3), state.analysisHighGain.toFixed(3),
-      state.analysisSmoothing.toFixed(3), state.beatSensitivity.toFixed(3), Math.round(state.beatCooldownMs)
-    ].join('|');
+    return songMapDataEngine.profileSignature({
+      personality: state.musicPersonality,
+      bands,
+      bassGain: state.analysisBassGain,
+      midGain: state.analysisMidGain,
+      highGain: state.analysisHighGain,
+      smoothing: state.analysisSmoothing,
+      beatSensitivity: state.beatSensitivity,
+      beatCooldownMs: state.beatCooldownMs
+    });
   }
 
   function songMapKey(item = currentPlaylistItem()) {
-    if (!item?.file) return '';
-    const source = [item.file.name, item.file.size, item.file.lastModified, item.filePath || '', songMapProfileSignature()].join('|');
-    return `map-${hashSongMapText(source)}`;
+    return songMapDataEngine.mapKey(item, songMapProfileSignature());
   }
 
   function validSongMap(map) {
-    const pointCount = map?.energy?.length;
-    return Boolean(map
-      && map.version === songMapCacheVersion
-      && typeof map.key === 'string'
-      && Number.isFinite(map.duration) && map.duration > 0
-      && Number.isFinite(map.interval) && map.interval > 0
-      && pointCount > 1
-      && ['bass', 'mids', 'highs'].every((key) => Array.isArray(map[key]) && map[key].length === pointCount)
-      && Array.isArray(map.beats)
-      && Array.isArray(map.sections));
+    return songMapDataEngine.isValidMap(map);
   }
 
   function readSongMapCache() {
-    try {
-      const entries = JSON.parse(localStorage.getItem(songMapCacheStorageKey) || '[]');
-      return Array.isArray(entries) ? entries.filter(validSongMap) : [];
-    } catch (_) {
-      return [];
-    }
+    return songMapDataEngine.parseCache(localStorage.getItem(songMapCacheStorageKey) || '[]');
   }
 
   function writeSongMapCache(entries) {
-    const ordered = entries.filter(validSongMap)
-      .sort((a, b) => Date.parse(b.updatedAt || 0) - Date.parse(a.updatedAt || 0))
-      .slice(0, songMapCacheLimit);
+    const ordered = songMapDataEngine.prepareCache(entries);
     try {
       localStorage.setItem(songMapCacheStorageKey, JSON.stringify(ordered));
     } catch (_) {
@@ -7265,9 +7224,7 @@
   }
 
   function cacheSongMap(map) {
-    const entries = readSongMapCache().filter((entry) => entry.key !== map.key);
-    entries.unshift(map);
-    writeSongMapCache(entries);
+    writeSongMapCache(songMapDataEngine.upsertCache(readSongMapCache(), map));
   }
 
   function percentile(values, amount) {

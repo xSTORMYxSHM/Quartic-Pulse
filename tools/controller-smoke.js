@@ -92,7 +92,7 @@ global.document = {
   }
 };
 
-for (const file of ['audio-controller.js', 'audio-analysis-engine.js', 'performance-controller.js', 'performance-sequencer-engine.js', 'performance-show-data-engine.js', 'performance-show-composer-controller.js', 'profile-manager-controller.js', 'performance-package-engine.js', 'export-controller.js', 'export-session-engine.js', 'export-encoder-engine.js']) {
+for (const file of ['audio-controller.js', 'audio-analysis-engine.js', 'performance-controller.js', 'performance-sequencer-engine.js', 'performance-show-data-engine.js', 'performance-show-composer-controller.js', 'profile-manager-controller.js', 'song-map-data-engine.js', 'performance-package-engine.js', 'export-controller.js', 'export-session-engine.js', 'export-encoder-engine.js']) {
   const source = fs.readFileSync(path.join(__dirname, '..', 'src', 'renderer', 'modules', file), 'utf8');
   vm.runInThisContext(source, { filename: file });
 }
@@ -314,6 +314,49 @@ const parsedProfiles = showDataEngine.parseProfiles(JSON.stringify([validProfile
 assert(parsedProfiles.length === 1 && showDataEngine.findProfile(parsedProfiles, 'profile-1')?.name === validProfile.name, 'Saved profile validation or lookup failed.');
 assert(JSON.parse(showDataEngine.serializeProfiles(parsedProfiles)).length === 1, 'Saved profile serialization failed.');
 assert(showDataEngine.diagnostics.ready, 'Performance show data diagnostics failed.');
+
+const songMapEngine = window.QuarticSongMapDataEngine.create({
+  cacheLimit: 2,
+  now: () => new Date('2026-08-09T12:00:00.000Z')
+});
+assert(songMapEngine.hashText('') === '811c9dc5', 'Song Map hash compatibility changed.');
+const mapSignature = songMapEngine.profileSignature({
+  personality: 'rock',
+  bands: { floor: 20, lowMid: 250, midHigh: 4000, ceiling: 16000 },
+  bassGain: 1,
+  midGain: .9,
+  highGain: 1.1,
+  smoothing: .55,
+  beatSensitivity: .65,
+  beatCooldownMs: 150
+});
+const mapItem = { file: { name: 'Song.wav', size: 1234, lastModified: 99 }, filePath: 'C:/Music/Song.wav' };
+assert(songMapEngine.mapKey(mapItem, mapSignature).startsWith('map-'), 'Song Map cache identity was not created.');
+const validSongMap = {
+  version: 1,
+  key: 'map-a',
+  duration: 4,
+  interval: 1,
+  energy: [0, 64, 128, 255],
+  bass: [0, 1, 2, 3],
+  mids: [0, 1, 2, 3],
+  highs: [0, 1, 2, 3],
+  beats: [1, 2, 3],
+  sections: [{ start: 2, end: 4 }],
+  updatedAt: '2026-08-09T00:00:00.000Z'
+};
+assert(songMapEngine.isValidMap(validSongMap) && !songMapEngine.isValidMap({ ...validSongMap, highs: [1] }), 'Song Map validation failed.');
+assert(songMapEngine.parseCache('{bad-json').length === 0, 'Malformed Song Map cache did not recover safely.');
+const olderMap = { ...validSongMap, key: 'map-old', updatedAt: '2025-01-01T00:00:00.000Z' };
+const newestMap = { ...validSongMap, key: 'map-new', updatedAt: '2026-08-10T00:00:00.000Z' };
+const orderedMaps = songMapEngine.prepareCache([olderMap, validSongMap, newestMap]);
+assert(orderedMaps.length === 2 && orderedMaps[0].key === 'map-new', 'Song Map cache ordering or limit failed.');
+assert(Math.abs(songMapEngine.sectionEnergy(validSongMap, { start: 2, end: 4 }) - (383 / 2 / 255)) < .0001, 'Song Map section energy was incorrect.');
+let directorOverrides = songMapEngine.updateOverride([], 'map-a', 2, { strength: .7, emphasis: 'camera' });
+assert(songMapEngine.overrideFor(directorOverrides, 'map-a', 2)?.emphasis === 'camera', 'Song Director override was not stored.');
+directorOverrides = songMapEngine.updateOverride(directorOverrides, 'map-a', 2, null);
+assert(!songMapEngine.overrideFor(directorOverrides, 'map-a', 2), 'Song Director override was not removed.');
+assert(songMapEngine.diagnostics.ready, 'Song Map data engine diagnostics failed.');
 
 let packageId = 0;
 const packageEngine = window.QuarticPerformancePackageEngine.create({
