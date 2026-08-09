@@ -38,6 +38,8 @@
   if (!performanceControllerFactory) throw new Error('Quartic performance controller failed to load.');
   const performanceSequencerEngineFactory = window.QuarticPerformanceSequencerEngine;
   if (!performanceSequencerEngineFactory) throw new Error('Quartic performance sequencer engine failed to load.');
+  const performanceShowDataEngineFactory = window.QuarticPerformanceShowDataEngine;
+  if (!performanceShowDataEngineFactory) throw new Error('Quartic performance show data engine failed to load.');
   const exportControllerFactory = window.QuarticExportController;
   if (!exportControllerFactory) throw new Error('Quartic export controller failed to load.');
   const exportSessionEngineFactory = window.QuarticExportSessionEngine;
@@ -1869,12 +1871,16 @@
   });
   const audioAnalysisEngine = audioAnalysisEngineFactory.create();
   const performanceSequencerEngine = performanceSequencerEngineFactory.create();
+  const performanceShowDataEngine = performanceShowDataEngineFactory.create({
+    createId: () => crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`
+  });
   const exportSessionEngine = exportSessionEngineFactory.create();
   const exportEncoderEngine = exportEncoderEngineFactory.create();
   window.__quarticControllers = Object.freeze({ audio: audioController, performance: performanceController, export: exportController });
   window.__quarticEngines = Object.freeze({
     audioAnalysis: audioAnalysisEngine,
     performanceSequencer: performanceSequencerEngine,
+    performanceShowData: performanceShowDataEngine,
     exportSession: exportSessionEngine,
     exportEncoder: exportEncoderEngine
   });
@@ -2247,20 +2253,7 @@
   }
 
   function serializeShowAutomation(automation) {
-    const source = automation && typeof automation === 'object' ? automation : {};
-    const result = {};
-    const numericRanges = {
-      director: [0, 1],
-      motion: [0, 2.5],
-      equation: [0, 1.5],
-      flow: [0, 1]
-    };
-    for (const [key, range] of Object.entries(numericRanges)) {
-      const value = Number(source[key]);
-      if (Number.isFinite(value)) result[key] = clamp(value, range[0], range[1]);
-    }
-    if (['off', 'orbit', 'drift', 'zoom'].includes(source.camera)) result.camera = source.camera;
-    return result;
+    return performanceShowDataEngine.sanitizeAutomation(automation);
   }
 
   function escapeShowMarkup(value) {
@@ -2270,17 +2263,7 @@
   }
 
   function serializeShowEntry(entry) {
-    const advance = entry.advance === 'time' ? 'time' : 'beats';
-    const numericValue = Number(entry.value) || 1;
-    return {
-      id: entry.id,
-      profileId: entry.profileId,
-      label: String(entry.label || '').replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, 50),
-      advance,
-      value: advance === 'time' ? clamp(Math.round(numericValue * 100) / 100, .1, 3600) : clamp(Math.round(numericValue), 1, 3600),
-      transition: entry.transition === 'cut' ? 'cut' : 'black',
-      automation: serializeShowAutomation(entry.automation)
-    };
+    return performanceShowDataEngine.sanitizeEntry(entry);
   }
 
   let composerSelectedCueId = '';
@@ -2669,34 +2652,29 @@
   }
 
   function applyShowCueAutomation(entry) {
-    const automation = serializeShowAutomation(entry?.automation);
-    const controlValues = {};
-    if (Number.isFinite(automation.director)) controlValues.songDirectorIntensity = automation.director;
-    if (Number.isFinite(automation.motion)) controlValues.motion = automation.motion;
-    if (Number.isFinite(automation.equation)) controlValues.equationMod = automation.equation;
-    if (Number.isFinite(automation.flow)) controlValues.flow = automation.flow;
-    applyControlValues(controlValues, fullProfileControlIds);
-    if (automation.camera) {
-      state.cameraMotionPreset = automation.camera;
-      document.querySelectorAll('[data-camera-preset]').forEach((button) => button.classList.toggle('active', button.dataset.cameraPreset === automation.camera));
+    const application = performanceShowDataEngine.automationApplication(entry);
+    applyControlValues(application.controls, fullProfileControlIds);
+    if (application.camera) {
+      state.cameraMotionPreset = application.camera;
+      document.querySelectorAll('[data-camera-preset]').forEach((button) => button.classList.toggle('active', button.dataset.cameraPreset === application.camera));
     }
   }
 
   function persistShowSequence() {
     try {
-      localStorage.setItem('quarticPulseShowSequenceV1', JSON.stringify({
+      localStorage.setItem('quarticPulseShowSequenceV1', JSON.stringify(performanceShowDataEngine.createShowDocument({
         entries: state.showSequence.map(serializeShowEntry),
         loop: state.showLoop,
         shuffle: state.showShuffle,
         autoBpm: state.autoBpm,
         manualBpm: state.manualBpm,
         beatOffsetMs: state.beatOffsetMs
-      }));
+      })));
     } catch (_) { /* Show persistence is optional. */ }
   }
 
   function showProfileForEntry(entry) {
-    return savedProfiles.find((profile) => profile.id === entry?.profileId) || null;
+    return performanceShowDataEngine.findProfile(savedProfiles, entry?.profileId);
   }
 
   function resetShowEntryClock() {
@@ -5608,25 +5586,15 @@
   }
 
   function validProfile(profile) {
-    return Boolean(profile
-      && typeof profile === 'object'
-      && typeof profile.name === 'string'
-      && ['colors', 'settings'].includes(profile.kind)
-      && profile.data
-      && typeof profile.data === 'object');
+    return performanceShowDataEngine.isValidProfile(profile);
   }
 
   function loadSavedProfiles() {
-    try {
-      const parsed = JSON.parse(localStorage.getItem(profileStorageKey) || '[]');
-      savedProfiles = Array.isArray(parsed) ? parsed.filter(validProfile).slice(0, 100) : [];
-    } catch (_) {
-      savedProfiles = [];
-    }
+    savedProfiles = performanceShowDataEngine.parseProfiles(localStorage.getItem(profileStorageKey) || '[]');
   }
 
   function persistSavedProfiles() {
-    localStorage.setItem(profileStorageKey, JSON.stringify(savedProfiles));
+    localStorage.setItem(profileStorageKey, performanceShowDataEngine.serializeProfiles(savedProfiles));
   }
 
   function setProfileStatus(message) {
@@ -5635,7 +5603,7 @@
 
   function selectedSavedProfile() {
     const id = $('#savedProfileSelect').value;
-    return savedProfiles.find((profile) => profile.id === id) || null;
+    return performanceShowDataEngine.findProfile(savedProfiles, id);
   }
 
   function renderSavedProfiles(preferredId = '') {
@@ -6458,21 +6426,13 @@
   }
 
   function initializeShowSequencer() {
-    try {
-      const stored = JSON.parse(localStorage.getItem('quarticPulseShowSequenceV1') || 'null');
-      if (stored && typeof stored === 'object') {
-        state.showSequence = Array.isArray(stored.entries)
-          ? stored.entries.slice(0, 100).map((entry) => ({ ...serializeShowEntry(entry), id: String(entry.id || crypto.randomUUID?.() || Date.now()) }))
-          : [];
-        state.showLoop = stored.loop !== false;
-        state.showShuffle = Boolean(stored.shuffle);
-        state.autoBpm = stored.autoBpm !== false;
-        state.manualBpm = clamp(Number(stored.manualBpm) || 120, 60, 200);
-        state.beatOffsetMs = clamp(Math.round(Number(stored.beatOffsetMs) || 0), -500, 500);
-      }
-    } catch (_) {
-      state.showSequence = [];
-    }
+    const stored = performanceShowDataEngine.parseShowDocument(localStorage.getItem('quarticPulseShowSequenceV1') || 'null');
+    state.showSequence = stored.entries;
+    state.showLoop = stored.loop;
+    state.showShuffle = stored.shuffle;
+    state.autoBpm = stored.autoBpm;
+    state.manualBpm = stored.manualBpm;
+    state.beatOffsetMs = stored.beatOffsetMs;
     $('#showLoop').checked = state.showLoop;
     $('#showShuffle').checked = state.showShuffle;
     $('#autoBpm').checked = state.autoBpm;

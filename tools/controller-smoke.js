@@ -62,7 +62,7 @@ global.document = {
   querySelector: (selector) => elements.get(selector) || null
 };
 
-for (const file of ['audio-controller.js', 'audio-analysis-engine.js', 'performance-controller.js', 'performance-sequencer-engine.js', 'export-controller.js', 'export-session-engine.js', 'export-encoder-engine.js']) {
+for (const file of ['audio-controller.js', 'audio-analysis-engine.js', 'performance-controller.js', 'performance-sequencer-engine.js', 'performance-show-data-engine.js', 'export-controller.js', 'export-session-engine.js', 'export-encoder-engine.js']) {
   const source = fs.readFileSync(path.join(__dirname, '..', 'src', 'renderer', 'modules', file), 'utf8');
   vm.runInThisContext(source, { filename: file });
 }
@@ -196,6 +196,33 @@ const beatProgress = straightSequencer.calculateProgress({ entry: beatEntry, sta
 assert(beatProgress === .5, 'Beat cue progression was incorrect.');
 assert(!straightSequencer.shouldAdvance(beatEntry, 1, false) && straightSequencer.shouldAdvance(beatEntry, 1, true), 'Beat cue boundary did not wait for a detected beat change.');
 assert(straightSequencer.diagnostics.ready, 'Performance sequencer diagnostics failed.');
+
+let generatedShowId = 0;
+const showDataEngine = window.QuarticPerformanceShowDataEngine.create({ createId: () => `cue-${++generatedShowId}` });
+const sanitizedAutomation = showDataEngine.sanitizeAutomation({ director: 4, motion: -2, equation: .75, flow: '0.5', camera: 'orbit', ignored: true });
+assert(sanitizedAutomation.director === 1 && sanitizedAutomation.motion === 0 && sanitizedAutomation.equation === .75, 'Cue automation ranges were not normalized.');
+assert(sanitizedAutomation.flow === .5 && sanitizedAutomation.camera === 'orbit' && !Object.hasOwn(sanitizedAutomation, 'ignored'), 'Cue automation fields were not filtered.');
+const sanitizedEntry = showDataEngine.sanitizeEntry({ label: '  Cue\u0000 Name  ', advance: 'time', value: 1.237, transition: 'cut', automation: sanitizedAutomation });
+assert(sanitizedEntry.label === 'Cue  Name' && sanitizedEntry.value === 1.24 && sanitizedEntry.transition === 'cut', 'Show entry normalization failed.');
+const restoredShow = showDataEngine.parseShowDocument(JSON.stringify({
+  entries: [{ profileId: 'profile-1', advance: 'beats', value: 16 }],
+  loop: false,
+  shuffle: true,
+  autoBpm: false,
+  manualBpm: 500,
+  beatOffsetMs: -900
+}));
+assert(restoredShow.entries[0].id === 'cue-1' && restoredShow.entries[0].value === 16, 'Stored show entries were not restored with stable IDs.');
+assert(!restoredShow.loop && restoredShow.shuffle && !restoredShow.autoBpm && restoredShow.manualBpm === 200 && restoredShow.beatOffsetMs === -500, 'Stored show preferences were not bounded.');
+const malformedShow = showDataEngine.parseShowDocument('{bad-json');
+assert(malformedShow.entries.length === 0 && malformedShow.loop && malformedShow.manualBpm === 120, 'Malformed show storage did not use safe defaults.');
+const automationApplication = showDataEngine.automationApplication({ automation: { director: .4, motion: 1.2, camera: 'drift' } });
+assert(automationApplication.controls.songDirectorIntensity === .4 && automationApplication.controls.motion === 1.2 && automationApplication.camera === 'drift', 'Cue automation application mapping failed.');
+const validProfile = { id: 'profile-1', name: 'Smoke Profile', kind: 'settings', data: { controls: {} } };
+const parsedProfiles = showDataEngine.parseProfiles(JSON.stringify([validProfile, { name: 'Broken' }]));
+assert(parsedProfiles.length === 1 && showDataEngine.findProfile(parsedProfiles, 'profile-1')?.name === validProfile.name, 'Saved profile validation or lookup failed.');
+assert(JSON.parse(showDataEngine.serializeProfiles(parsedProfiles)).length === 1, 'Saved profile serialization failed.');
+assert(showDataEngine.diagnostics.ready, 'Performance show data diagnostics failed.');
 
 let exportActions = 0;
 const exportController = window.QuarticExportController.create({
