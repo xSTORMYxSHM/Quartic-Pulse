@@ -44,6 +44,8 @@
   if (!performanceShowComposerControllerFactory) throw new Error('Quartic performance show composer controller failed to load.');
   const profileManagerControllerFactory = window.QuarticProfileManagerController;
   if (!profileManagerControllerFactory) throw new Error('Quartic profile manager controller failed to load.');
+  const performancePackageEngineFactory = window.QuarticPerformancePackageEngine;
+  if (!performancePackageEngineFactory) throw new Error('Quartic performance package engine failed to load.');
   const exportControllerFactory = window.QuarticExportController;
   if (!exportControllerFactory) throw new Error('Quartic export controller failed to load.');
   const exportSessionEngineFactory = window.QuarticExportSessionEngine;
@@ -1928,6 +1930,14 @@
     },
     onError: (message) => showToast(message, true)
   });
+  const performancePackageEngine = performancePackageEngineFactory.create({
+    appVersion: '0.30.0-dev.1',
+    hashText: hashSongMapText,
+    sanitizeEntry: serializeShowEntry,
+    isValidProfile: validProfile,
+    isValidSongMap: validSongMap,
+    createId: () => crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`
+  });
   const exportSessionEngine = exportSessionEngineFactory.create();
   const exportEncoderEngine = exportEncoderEngineFactory.create();
   window.__quarticControllers = Object.freeze({ audio: audioController, performance: performanceController, showComposer: showComposerController, profileManager: profileManagerController, export: exportController });
@@ -1935,6 +1945,7 @@
     audioAnalysis: audioAnalysisEngine,
     performanceSequencer: performanceSequencerEngine,
     performanceShowData: performanceShowDataEngine,
+    performancePackage: performancePackageEngine,
     exportSession: exportSessionEngine,
     exportEncoder: exportEncoderEngine
   });
@@ -5648,49 +5659,22 @@
     profileManagerController.initialize();
   }
 
-  const performancePackageApplication = 'quartic-pulse-performance';
-  const performancePackageSchemaVersion = 1;
-  const performancePackageAppVersion = '0.30.0-dev.1';
   const pendingPerformanceMapStorageKey = 'quarticPulsePendingPerformanceMapV1';
 
-  function stableStringify(value) {
-    if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
-    if (value && typeof value === 'object') {
-      return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${stableStringify(value[key])}`).join(',')}}`;
-    }
-    return JSON.stringify(value);
-  }
-
   function jsonSafeClone(value) {
-    return JSON.parse(JSON.stringify(value));
+    return performancePackageEngine.clone(value);
   }
 
   function cleanPackageText(value, maximum, fallback = '') {
-    return String(value ?? '').replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, maximum) || fallback;
+    return performancePackageEngine.cleanText(value, maximum, fallback);
   }
 
   function performanceTrackIdentity(item = currentPlaylistItem(), map = activeSongMap) {
-    if (!item?.file) return null;
-    const fileName = cleanPackageText(item.file.name, 240, 'Unknown audio file');
-    const duration = Number.isFinite(Number(map?.duration)) ? Number(Number(map.duration).toFixed(3)) : 0;
-    const portableSource = [fileName.toLowerCase(), Number(item.file.size) || 0, duration.toFixed(3)].join('|');
-    return {
-      displayName: cleanPackageText(item.name, 160, fileName.replace(/\.[^.]+$/, '')),
-      fileName,
-      size: Math.max(0, Number(item.file.size) || 0),
-      lastModified: Math.max(0, Number(item.file.lastModified) || 0),
-      duration,
-      fingerprint: `TRACK-${hashSongMapText(portableSource).toUpperCase()}`
-    };
+    return performancePackageEngine.trackIdentity(item, map);
   }
 
   function performanceTrackMatches(identity, item = currentPlaylistItem()) {
-    if (!identity || !item?.file) return false;
-    const nameMatches = String(identity.fileName || '').toLowerCase() === String(item.file.name || '').toLowerCase();
-    const sizeMatches = Number(identity.size) > 0 && Number(identity.size) === Number(item.file.size);
-    const duration = Number(identity.duration) || 0;
-    const durationMatches = !duration || !Number.isFinite(audio.duration) || Math.abs(duration - audio.duration) <= 1.25;
-    return nameMatches && sizeMatches && durationMatches;
+    return performancePackageEngine.trackMatches(identity, item, audio.duration);
   }
 
   function currentDirectorCuePackage() {
@@ -5700,10 +5684,7 @@
   }
 
   function portableSongMap() {
-    if (!activeSongMap || !validSongMap(activeSongMap)) return null;
-    const map = jsonSafeClone(activeSongMap);
-    delete map.key;
-    return map;
+    return performancePackageEngine.portableSongMap(activeSongMap);
   }
 
   function createPerformancePackage() {
@@ -5711,8 +5692,7 @@
       state.audioName ? `${state.audioName} Performance` : 'Quartic Pulse Performance');
     const creator = cleanPackageText($('#performancePackageCreator').value, 80, 'Quartic Pulse Creator');
     const notes = cleanPackageText($('#performancePackageNotes').value, 500);
-    const referencedIds = new Set(state.showSequence.map((entry) => entry.profileId));
-    const showProfiles = savedProfiles.filter((profile) => referencedIds.has(profile.id)).map(jsonSafeClone);
+    const showProfiles = performancePackageEngine.referencedProfiles(state.showSequence, savedProfiles);
     const currentVisual = {
       id: 'performance-current-visual',
       name: title,
@@ -5743,14 +5723,7 @@
         cueOverrides: currentDirectorCuePackage()
       }
     };
-    return {
-      application: performancePackageApplication,
-      schemaVersion: performancePackageSchemaVersion,
-      appVersion: performancePackageAppVersion,
-      exportedAt: new Date().toISOString(),
-      fingerprint: `QP-${hashSongMapText(stableStringify(packageData)).toUpperCase()}`,
-      performance: packageData
-    };
+    return performancePackageEngine.createDocument(packageData);
   }
 
   function setPerformancePackageStatus(message) {
@@ -5760,7 +5733,7 @@
 
   async function exportPerformancePackage() {
     const documentData = createPerformancePackage();
-    const suggestedName = documentData.performance.metadata.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'quartic-pulse-performance';
+    const suggestedName = performancePackageEngine.suggestedFilename(documentData.performance.metadata.title);
     const outputPath = await window.quarticDesktop.exportPerformancePackage(suggestedName, JSON.stringify(documentData, null, 2));
     if (!outputPath) return;
     setPerformancePackageStatus(`${documentData.fingerprint} · Package exported without audio.`);
@@ -5813,37 +5786,19 @@
   }
 
   function importPerformanceProfiles(performance) {
-    const imported = Array.isArray(performance?.show?.profiles) ? performance.show.profiles.filter(validProfile).slice(0, 100) : [];
-    const idMap = new Map();
-    const now = new Date().toISOString();
-    const profiles = imported.map((profile, index) => {
-      const id = crypto.randomUUID?.() || `${Date.now()}-${index}-${Math.random()}`;
-      idMap.set(profile.id, id);
-      return {
-        id,
-        name: cleanPackageText(profile.name, 60, `Imported Show Profile ${index + 1}`),
-        kind: profile.kind,
-        createdAt: now,
-        updatedAt: now,
-        data: jsonSafeClone(profile.data)
-      };
-    });
-    savedProfiles = [...profiles, ...savedProfiles].slice(0, 100);
+    const imported = performancePackageEngine.remapImportedShow(performance, savedProfiles);
+    savedProfiles = imported.profiles;
     persistSavedProfiles();
-    const entries = Array.isArray(performance?.show?.entries) ? performance.show.entries : [];
-    state.showSequence = entries.slice(0, 100).map((entry, index) => ({
-      ...serializeShowEntry({ ...entry, profileId: idMap.get(entry.profileId) || '' }),
-      id: crypto.randomUUID?.() || `${Date.now()}-show-${index}`
-    })).filter((entry) => savedProfiles.some((profile) => profile.id === entry.profileId));
-    state.showLoop = performance.show?.loop !== false;
-    state.showShuffle = Boolean(performance.show?.shuffle);
-    state.autoBpm = performance.show?.autoBpm !== false;
-    state.manualBpm = clamp(Number(performance.show?.manualBpm) || 120, 60, 200);
-    state.beatOffsetMs = clamp(Math.round(Number(performance.show?.beatOffsetMs) || 0), -500, 500);
+    state.showSequence = imported.entries;
+    state.showLoop = imported.loop;
+    state.showShuffle = imported.shuffle;
+    state.autoBpm = imported.autoBpm;
+    state.manualBpm = imported.manualBpm;
+    state.beatOffsetMs = imported.beatOffsetMs;
     state.showPlaying = false;
     state.showIndex = -1;
     persistShowSequence();
-    renderSavedProfiles(profiles[0]?.id || '');
+    renderSavedProfiles(imported.importedProfiles[0]?.id || '');
     renderShowSequence();
     $('#showLoop').checked = state.showLoop;
     $('#showShuffle').checked = state.showShuffle;
@@ -5859,15 +5814,7 @@
     if (!file) return;
     if (file.size > 10 * 1024 * 1024) throw new Error('Performance packages must be smaller than 10 MB.');
     const parsed = JSON.parse(await file.text());
-    if (parsed?.application !== performancePackageApplication || Number(parsed?.schemaVersion) !== performancePackageSchemaVersion) {
-      throw new Error('This is not a compatible Quartic Pulse performance package.');
-    }
-    const performance = parsed.performance;
-    if (!performance || typeof performance !== 'object' || !validProfile(performance.currentVisual)) {
-      throw new Error('The performance package is incomplete or damaged.');
-    }
-    const expectedFingerprint = `QP-${hashSongMapText(stableStringify(performance)).toUpperCase()}`;
-    if (parsed.fingerprint !== expectedFingerprint) throw new Error('The package fingerprint does not match its contents.');
+    const { performance, fingerprint: expectedFingerprint } = performancePackageEngine.validateDocument(parsed);
     try { localStorage.removeItem(pendingPerformanceMapStorageKey); } catch (_) { /* Optional cleanup. */ }
     applySavedProfile(performance.currentVisual, { quiet: true });
     importPerformanceProfiles(performance);

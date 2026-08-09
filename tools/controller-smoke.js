@@ -92,7 +92,7 @@ global.document = {
   }
 };
 
-for (const file of ['audio-controller.js', 'audio-analysis-engine.js', 'performance-controller.js', 'performance-sequencer-engine.js', 'performance-show-data-engine.js', 'performance-show-composer-controller.js', 'profile-manager-controller.js', 'export-controller.js', 'export-session-engine.js', 'export-encoder-engine.js']) {
+for (const file of ['audio-controller.js', 'audio-analysis-engine.js', 'performance-controller.js', 'performance-sequencer-engine.js', 'performance-show-data-engine.js', 'performance-show-composer-controller.js', 'profile-manager-controller.js', 'performance-package-engine.js', 'export-controller.js', 'export-session-engine.js', 'export-encoder-engine.js']) {
   const source = fs.readFileSync(path.join(__dirname, '..', 'src', 'renderer', 'modules', file), 'utf8');
   vm.runInThisContext(source, { filename: file });
 }
@@ -314,6 +314,48 @@ const parsedProfiles = showDataEngine.parseProfiles(JSON.stringify([validProfile
 assert(parsedProfiles.length === 1 && showDataEngine.findProfile(parsedProfiles, 'profile-1')?.name === validProfile.name, 'Saved profile validation or lookup failed.');
 assert(JSON.parse(showDataEngine.serializeProfiles(parsedProfiles)).length === 1, 'Saved profile serialization failed.');
 assert(showDataEngine.diagnostics.ready, 'Performance show data diagnostics failed.');
+
+let packageId = 0;
+const packageEngine = window.QuarticPerformancePackageEngine.create({
+  appVersion: 'smoke',
+  hashText: (value) => `H${value.length}`,
+  sanitizeEntry: showDataEngine.sanitizeEntry,
+  isValidProfile: showDataEngine.isValidProfile,
+  isValidSongMap: (map) => Array.isArray(map?.sections),
+  createId: () => `import-${++packageId}`,
+  now: () => new Date('2026-08-09T12:00:00.000Z')
+});
+const packageTrack = { name: 'Smoke Song', file: { name: 'Smoke.wav', size: 4096, lastModified: 123 } };
+const trackIdentity = packageEngine.trackIdentity(packageTrack, { duration: 12.3456 });
+assert(trackIdentity.fileName === 'Smoke.wav' && trackIdentity.duration === 12.346, 'Performance track identity was not normalized.');
+assert(packageEngine.trackMatches(trackIdentity, packageTrack, 13.5), 'Performance track identity did not match within duration tolerance.');
+assert(!packageEngine.trackMatches(trackIdentity, { file: { name: 'Other.wav', size: 4096 } }, 13.5), 'Performance track identity accepted a different file.');
+const portableMap = packageEngine.portableSongMap({ key: 'local-key', sections: [], duration: 12 });
+assert(portableMap && !Object.hasOwn(portableMap, 'key'), 'Portable Song Map retained its local cache key.');
+const packagedPerformance = {
+  metadata: { title: 'Smoke Performance' },
+  currentVisual: validProfile,
+  show: {
+    profiles: [validProfile],
+    entries: [{ id: 'old-cue', profileId: 'profile-1', advance: 'beats', value: 8 }],
+    loop: false,
+    manualBpm: 220,
+    beatOffsetMs: 900
+  },
+  director: { map: portableMap }
+};
+const performanceDocument = packageEngine.createDocument(packagedPerformance);
+const validatedPackage = packageEngine.validateDocument(performanceDocument);
+assert(validatedPackage.performance.metadata.title === 'Smoke Performance' && performanceDocument.appVersion === 'smoke', 'Performance package round trip failed.');
+const remappedShow = packageEngine.remapImportedShow(validatedPackage.performance, []);
+assert(remappedShow.importedProfiles[0].id === 'import-1' && remappedShow.entries[0].id === 'import-2', 'Imported package IDs were not remapped.');
+assert(remappedShow.entries[0].profileId === 'import-1' && remappedShow.manualBpm === 200 && remappedShow.beatOffsetMs === 500, 'Imported show references or limits were incorrect.');
+let tamperRejected = false;
+try { packageEngine.validateDocument({ ...performanceDocument, performance: { ...performanceDocument.performance, metadata: { title: 'Tampered' } } }); }
+catch (_) { tamperRejected = true; }
+assert(tamperRejected, 'Performance package fingerprint did not reject modified contents.');
+assert(packageEngine.suggestedFilename(' My Live Show! ') === 'my-live-show', 'Performance package filename was not normalized.');
+assert(packageEngine.diagnostics.ready, 'Performance package engine diagnostics failed.');
 
 let exportActions = 0;
 const exportController = window.QuarticExportController.create({
