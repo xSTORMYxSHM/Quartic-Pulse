@@ -800,6 +800,27 @@ function createWindow() {
               && document.querySelector('#inspectorWorkspaceTitle')?.textContent
               && document.querySelectorAll('.interface-mode-switch [data-interface-mode]').length === 2
             );
+            const visualCatalogReady = Boolean(
+              window.QuarticVisualCatalog?.styles?.length === 7
+              && window.QuarticVisualCatalog.validate()
+              && window.QuarticVisualCatalog.get(5)?.key === 'mandelbulb'
+            );
+            const workflowButtons = [...document.querySelectorAll('[data-workflow-tab]')];
+            const workflowWorkspace = document.body.dataset.workspace;
+            const workflowDisplay = getComputedStyle(document.querySelector('.basic-workflow-nav')).display;
+            const basicWorkflowReady = !${process.argv.includes('--smoke-basic')} || Boolean(
+              workflowButtons.length === 4
+              && workflowDisplay === 'grid'
+              && workflowButtons.filter((button) => button.classList.contains('active')).length === 1
+              && workflowButtons.find((button) => button.classList.contains('active'))?.dataset.workflowTab === workflowWorkspace
+              && getComputedStyle(document.querySelector('[data-music-tab="frequency-color"]')).display === 'none'
+              && getComputedStyle(document.querySelector('[data-live-tab="composer"]')).display === 'none'
+            );
+            const advancedWorkflowReady = !${process.argv.includes('--smoke-interface-advanced')} || Boolean(
+              workflowDisplay === 'none'
+              && getComputedStyle(document.querySelector('[data-music-tab="frequency-color"]')).display !== 'none'
+              && getComputedStyle(document.querySelector('[data-live-tab="composer"]')).display !== 'none'
+            );
             const unleashedToggle = document.querySelector('.unleashed-toggle');
             const unleashedRect = unleashedToggle?.getBoundingClientRect();
             const unleashedTextRect = unleashedToggle?.querySelector(':scope > span')?.getBoundingClientRect();
@@ -918,6 +939,9 @@ function createWindow() {
               quickControlsLayoutReady,
               mainTabsFit,
               workspaceShellReady,
+              visualCatalogReady,
+              basicWorkflowReady,
+              advancedWorkflowReady,
               unleashedLayoutReady,
               unleashedMetrics: unleashedRect ? {
                 rowWidth: Math.round(unleashedRect.width),
@@ -1217,7 +1241,7 @@ function createWindow() {
           }
           console.log(`SMOKE_TEST ${JSON.stringify(result)}`);
           fs.writeFileSync(path.join(os.tmpdir(), 'quartic-pulse-smoke-result.json'), JSON.stringify(result, null, 2));
-          process.exitCode = result.ready && result.webgl2 && result.frequencyBands && result.visualStyles && result.playlistReady && result.obsOutputReady && result.profilesReady && result.windowsAudioReady && result.outputCaptureReady && result.audioHudReady && result.hudTransportReady && result.stageGeometryReady && result.exportStatusReady && result.sidebarLayoutReady && result.quickControlsLayoutReady && result.mainTabsFit && result.workspaceShellReady && result.unleashedLayoutReady && result.aboutContentReady && result.musicPersonalityReady && result.songMapReady && result.songMapAnalysisReady && result.songDirectorReady && result.songDirectorAnalysisReady && result.appearanceNavigationReady && result.modulationMatrixReady && result.showSequencerReady && result.showComposerReady && result.showComposerWorkspaceReady && result.showComposerGenerationReady && result.liveControlsReady && result.creativeToolsReady && result.performanceAssistantReady && result.reportCenterReady && result.reportGenerationReady && result.performanceAutomationStandbyReady && result.offlineExportReady && result.exportQolReady && result.nativeExportEncoderReady && result.obsAutomationReady && result.coreEquationReady && result.coreEquationInputReady && result.percentageScalesReady && result.pulseControls && result.customColorRolesReady && result.beatDetectorControls && result.bulbControls && result.pulsePresetsReady && result.visualEffectControls && result.effectPresetsReady && result.visualOptionsReady && result.syntheticPulseReady && result.adaptiveBeatReady && result.obsWindowMovable && result.obsDragStripReady && result.obsChromaSafe && result.rotationVelocityReady && result.activeTab === requestedSmokeTab && result.activeVisualStyle === String(requestedSmokeStyle) && result.canvasWidth > 0 ? 0 : 1;
+          process.exitCode = result.ready && result.webgl2 && result.frequencyBands && result.visualStyles && result.playlistReady && result.obsOutputReady && result.profilesReady && result.windowsAudioReady && result.outputCaptureReady && result.audioHudReady && result.hudTransportReady && result.stageGeometryReady && result.exportStatusReady && result.sidebarLayoutReady && result.quickControlsLayoutReady && result.mainTabsFit && result.workspaceShellReady && result.visualCatalogReady && result.basicWorkflowReady && result.advancedWorkflowReady && result.unleashedLayoutReady && result.aboutContentReady && result.musicPersonalityReady && result.songMapReady && result.songMapAnalysisReady && result.songDirectorReady && result.songDirectorAnalysisReady && result.appearanceNavigationReady && result.modulationMatrixReady && result.showSequencerReady && result.showComposerReady && result.showComposerWorkspaceReady && result.showComposerGenerationReady && result.liveControlsReady && result.creativeToolsReady && result.performanceAssistantReady && result.reportCenterReady && result.reportGenerationReady && result.performanceAutomationStandbyReady && result.offlineExportReady && result.exportQolReady && result.nativeExportEncoderReady && result.obsAutomationReady && result.coreEquationReady && result.coreEquationInputReady && result.percentageScalesReady && result.pulseControls && result.customColorRolesReady && result.beatDetectorControls && result.bulbControls && result.pulsePresetsReady && result.visualEffectControls && result.effectPresetsReady && result.visualOptionsReady && result.syntheticPulseReady && result.adaptiveBeatReady && result.obsWindowMovable && result.obsDragStripReady && result.obsChromaSafe && result.rotationVelocityReady && result.activeTab === requestedSmokeTab && result.activeVisualStyle === String(requestedSmokeStyle) && result.canvasWidth > 0 ? 0 : 1;
         } catch (error) {
           console.error('SMOKE_TEST_FAILED', error);
           try {

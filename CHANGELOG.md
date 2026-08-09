@@ -9,11 +9,15 @@ All notable Quartic Pulse changes are documented here. Quartic Pulse follows sem
 - Began the v0.30 workspace redesign with a Photoshop-style left rail for Music, Visuals, Perform, Export, and System while retaining the scalable contextual inspector on the right.
 - Added an always-visible Basic / Advanced control in the inspector header with workspace-specific guidance for each mode.
 - Added a standalone renderer workspace-shell module that owns workspace definitions, navigation groups, active-state synchronization, and interface-mode routing as the first step toward breaking up the monolithic renderer.
+- Added a four-step Audio, Visual, Perform, and Export workflow navigator to Basic mode so new users can move through the creation process without learning every advanced subtab first.
+- Added a standalone visual-catalog module with stable IDs, names, categories, descriptions, DOM decoration, and integrity validation for all seven visual families.
 
 ### Changed
 
 - Replaced the crowded five-item inspector tab row with the dedicated workspace rail, leaving the right panel focused on only the controls and subtabs relevant to the selected workspace.
 - Added responsive compact and touchscreen layouts for the workspace rail without changing canvas camera state while navigating.
+- Basic mode now presents Deck, Playlist, Analysis, Show, Stream, Performance, Reports, and About as its essential tools. Frequency Color, Show Composer, external controls, camera paths, and creative utilities remain available in Advanced mode.
+- Switching from Advanced to Basic now redirects any advanced-only panel to the nearest essential panel in the same workspace instead of leaving a hidden or empty inspector.
 
 ## 0.29.1 - 2026-08-08
 

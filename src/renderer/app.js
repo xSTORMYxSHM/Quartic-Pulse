@@ -28,6 +28,8 @@
   const $ = (selector) => document.querySelector(selector);
   const workspaceShell = window.QuarticWorkspaceShell;
   if (!workspaceShell) throw new Error('Quartic workspace shell failed to load.');
+  const visualCatalog = window.QuarticVisualCatalog;
+  if (!visualCatalog) throw new Error('Quartic visual catalog failed to load.');
   const canvas = $('#fractalCanvas');
   const stage = $('#stage');
   const audio = $('#audio');
@@ -5190,8 +5192,8 @@
   }
 
   function updateVisualStyleOptions() {
-    const names = ['Fractal', 'Spectrum Bars', 'Radial Spectrum', 'Pulse Rings', 'Waveform Field', '3D Mandelbulb', 'Mainframe Room'];
-    document.querySelectorAll('[data-visual-style]').forEach((button) => {
+    const activeStyle = visualCatalog.get(state.visualStyle);
+    document.querySelectorAll('#visualStylePicker [data-visual-style]').forEach((button) => {
       const active = Number(button.dataset.visualStyle) === state.visualStyle;
       button.classList.toggle('active', active);
       button.setAttribute('aria-checked', String(active));
@@ -5203,7 +5205,7 @@
     $('#fractalType').disabled = conventional;
     $('#fractalEquationControl').classList.toggle('control-disabled', conventional);
     const preset = fractalPresets[state.fractalType] || fractalPresets[0];
-    $('#formulaLabel').textContent = state.visualStyle === 5 ? 'POWER-4 · 3D DE' : (conventional ? names[state.visualStyle].toUpperCase() : preset.formula);
+    $('#formulaLabel').textContent = activeStyle.formulaLabel || (conventional ? activeStyle.name.toUpperCase() : preset.formula);
   }
 
   const interfaceModeStorageKey = 'quarticPulseInterfaceModeV1';
@@ -5218,10 +5220,8 @@
       element.hidden = basic;
       if (basic && element.matches('details')) element.open = false;
     });
-    if (basic && document.querySelector('.tab-panel.active')?.dataset.tabPanel !== 'appearance'
-      && ['reactivity', 'dimensional', 'folding', 'mapping'].includes(document.querySelector('.tab-panel.active')?.dataset.tabPanel)) {
-      activateTab('appearance');
-    }
+    const activeTab = document.querySelector('.tab-panel.active')?.dataset.tabPanel || 'music';
+    activateTab(workspaceShell.normalizeTab(activeTab, mode));
     if (persist) {
       try { localStorage.setItem(interfaceModeStorageKey, mode); } catch (_) { /* Storage is optional. */ }
     }
@@ -8775,9 +8775,8 @@
   $('#visualStyle').addEventListener('change', (event) => {
     state.visualStyle = Number(event.target.value);
     document.body.dataset.visualStyle = String(state.visualStyle);
-    const names = ['Fractal', 'Spectrum Bars', 'Radial Spectrum', 'Pulse Rings', 'Waveform Field', '3D Mandelbulb', 'Mainframe Room'];
     updateVisualStyleOptions();
-    showToast(`${names[state.visualStyle] || names[0]} selected`);
+    showToast(`${visualCatalog.get(state.visualStyle).name} selected`);
   });
   $('#experiencePresetGrid').addEventListener('click', (event) => {
     const button = event.target.closest('[data-experience-preset]');
@@ -9265,6 +9264,7 @@
   loadExportHistory();
   if (!isObsOutput) refreshRecoverableExports();
   initializeVisualEffectControls();
+  visualCatalog.decorate();
   initializeFractalLibrary();
   initializeNumericSliders();
   initializeSettingTools();

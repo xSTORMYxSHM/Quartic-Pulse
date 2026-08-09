@@ -6,31 +6,36 @@
       title: 'MUSIC',
       basic: 'Sources, playback, playlists, and song analysis',
       advanced: 'Audio sources, analysis, frequency color, and deck routing',
-      tabs: Object.freeze(['music', 'playlist', 'analysis', 'frequency-color'])
+      tabs: Object.freeze(['music', 'playlist', 'analysis', 'frequency-color']),
+      basicTabs: Object.freeze(['music', 'playlist', 'analysis'])
     }),
     appearance: Object.freeze({
       title: 'VISUALS',
       basic: 'Choose a visual, starting look, palette, and intensity',
       advanced: 'Visual design, equation response, dimensions, folding, and mapping',
-      tabs: Object.freeze(['appearance', 'reactivity', 'dimensional', 'folding', 'mapping'])
+      tabs: Object.freeze(['appearance', 'reactivity', 'dimensional', 'folding', 'mapping']),
+      basicTabs: Object.freeze(['appearance'])
     }),
     live: Object.freeze({
       title: 'PERFORM',
       basic: 'Build a show, enter Performance Mode, or open stream output',
       advanced: 'Composer, live control routing, camera paths, tools, and OBS',
-      tabs: Object.freeze(['show', 'composer', 'controls', 'camera', 'tools', 'stream'])
+      tabs: Object.freeze(['show', 'composer', 'controls', 'camera', 'tools', 'stream']),
+      basicTabs: Object.freeze(['show', 'stream'])
     }),
     export: Object.freeze({
       title: 'EXPORT',
       basic: 'Create a high-quality video with guided export settings',
       advanced: 'Offline rendering, encoding, formats, recovery, and history',
-      tabs: Object.freeze(['export'])
+      tabs: Object.freeze(['export']),
+      basicTabs: Object.freeze(['export'])
     }),
     system: Object.freeze({
       title: 'SYSTEM',
       basic: 'Performance recommendations, reports, and project information',
       advanced: 'Hardware limits, advanced features, diagnostics, and licenses',
-      tabs: Object.freeze(['system', 'reports', 'about'])
+      tabs: Object.freeze(['system', 'reports', 'about']),
+      basicTabs: Object.freeze(['system', 'reports', 'about'])
     })
   });
 
@@ -43,8 +48,10 @@
 
   function normalizeTab(requestedTab, interfaceMode) {
     let tabName = requestedTab === 'live' ? 'show' : requestedTab;
-    if (interfaceMode === 'basic' && ['reactivity', 'dimensional', 'folding', 'mapping'].includes(tabName)) {
-      tabName = 'appearance';
+    if (interfaceMode === 'basic') {
+      const workspace = workspaceForTab(tabName);
+      const definition = workspaceDefinitions[workspace];
+      if (!definition.basicTabs.includes(tabName)) tabName = definition.basicTabs[0];
     }
     return tabName;
   }
@@ -78,6 +85,12 @@
       button.classList.toggle('active', active);
       button.setAttribute('aria-selected', String(active));
     });
+    document.querySelectorAll('[data-workflow-tab]').forEach((button) => {
+      const active = button.dataset.workflowTab === workspace;
+      button.classList.toggle('active', active);
+      if (active) button.setAttribute('aria-current', 'step');
+      else button.removeAttribute('aria-current');
+    });
 
     Object.entries(navigationGroups).forEach(([groupName, group]) => {
       const navigation = document.querySelector(group.nav);
@@ -103,6 +116,10 @@
     document.querySelector('.workspace-rail')?.addEventListener('click', (event) => {
       const button = event.target.closest('.workspace-button');
       if (button) onActivate(button.dataset.workspace);
+    });
+    document.querySelector('.basic-workflow-nav')?.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-workflow-tab]');
+      if (button) onActivate(button.dataset.workflowTab);
     });
     document.querySelector('.settings-tabs')?.addEventListener('click', (event) => {
       const button = event.target.closest('.settings-tab');

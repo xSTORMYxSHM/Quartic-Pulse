@@ -10,7 +10,7 @@
     <title>Quartic Pulse</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
-  <body>
+  <body data-interface-mode="basic" data-workspace="music">
     <div class="app-shell">
       <nav class="workspace-rail" aria-label="Quartic Pulse workspaces">
         <div class="workspace-rail-brand" aria-hidden="true">QP</div>
@@ -174,6 +174,12 @@
             <button class="active" type="button" data-interface-mode="basic" aria-pressed="true">BASIC</button>
             <button type="button" data-interface-mode="advanced" aria-pressed="false">ADVANCED</button>
           </div>
+          <nav class="basic-workflow-nav" aria-label="Basic creation workflow">
+            <button class="active" type="button" data-workflow-tab="music" aria-current="step"><span>1</span><strong>AUDIO</strong></button>
+            <button type="button" data-workflow-tab="appearance"><span>2</span><strong>VISUAL</strong></button>
+            <button type="button" data-workflow-tab="live"><span>3</span><strong>PERFORM</strong></button>
+            <button type="button" data-workflow-tab="export"><span>4</span><strong>EXPORT</strong></button>
+          </nav>
         </header>
         <nav class="settings-tabs" aria-label="Visualizer settings">
           <button class="settings-tab active" type="button" data-tab="music" aria-selected="true">MUSIC</button>
@@ -185,10 +191,10 @@
 
         <nav class="live-subtabs" aria-label="Live performance settings" hidden>
           <button class="live-subtab active" type="button" data-live-tab="show" aria-selected="true"><strong>SHOW</strong><small>Sequence profiles</small></button>
-          <button class="live-subtab" type="button" data-live-tab="composer" aria-selected="false"><strong>COMPOSER</strong><small>Build cue timeline</small></button>
-          <button class="live-subtab" type="button" data-live-tab="controls" aria-selected="false"><strong>CONTROLS</strong><small>MIDI, OSC &amp; keys</small></button>
-          <button class="live-subtab" type="button" data-live-tab="camera" aria-selected="false"><strong>CAMERA</strong><small>Paths &amp; bookmarks</small></button>
-          <button class="live-subtab" type="button" data-live-tab="tools" aria-selected="false"><strong>TOOLS</strong><small>Capture &amp; randomize</small></button>
+          <button class="live-subtab advanced-ui-only" type="button" data-live-tab="composer" aria-selected="false"><strong>COMPOSER</strong><small>Build cue timeline</small></button>
+          <button class="live-subtab advanced-ui-only" type="button" data-live-tab="controls" aria-selected="false"><strong>CONTROLS</strong><small>MIDI, OSC &amp; keys</small></button>
+          <button class="live-subtab advanced-ui-only" type="button" data-live-tab="camera" aria-selected="false"><strong>CAMERA</strong><small>Paths &amp; bookmarks</small></button>
+          <button class="live-subtab advanced-ui-only" type="button" data-live-tab="tools" aria-selected="false"><strong>TOOLS</strong><small>Capture &amp; randomize</small></button>
           <button class="live-subtab" type="button" data-live-tab="stream" aria-selected="false"><strong>STREAM</strong><small>OBS output &amp; automation</small></button>
         </nav>
 
@@ -196,7 +202,7 @@
           <button class="music-subtab active" type="button" data-music-tab="music" aria-selected="true"><strong>DECK</strong><small>Source &amp; playback</small></button>
           <button class="music-subtab" type="button" data-music-tab="playlist" aria-selected="false"><strong>PLAYLIST</strong><small>Queue local songs</small></button>
           <button class="music-subtab" type="button" data-music-tab="analysis" aria-selected="false"><strong>ANALYSIS</strong><small>Personality &amp; song map</small></button>
-          <button class="music-subtab" type="button" data-music-tab="frequency-color" aria-selected="false"><strong>COLOR</strong><small>Frequency palette</small></button>
+          <button class="music-subtab advanced-ui-only" type="button" data-music-tab="frequency-color" aria-selected="false"><strong>COLOR</strong><small>Frequency palette</small></button>
         </nav>
 
         <nav class="system-subtabs" aria-label="System settings" hidden>
@@ -1598,6 +1604,7 @@
     <audio id="audio" preload="metadata" crossorigin="anonymous"></audio>
     <audio id="exportCompleteStinger" preload="auto" src="../../assets/audio/export-complete-stinger.wav"></audio>
     <script src="modules/workspace-shell.js"></script>
+    <script src="modules/visual-catalog.js"></script>
     <script src="app.js"></script>
   </body>
 </html>
