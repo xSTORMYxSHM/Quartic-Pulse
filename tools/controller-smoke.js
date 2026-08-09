@@ -62,7 +62,7 @@ global.document = {
   querySelector: (selector) => elements.get(selector) || null
 };
 
-for (const file of ['audio-controller.js', 'audio-analysis-engine.js', 'performance-controller.js', 'export-controller.js', 'export-session-engine.js', 'export-encoder-engine.js']) {
+for (const file of ['audio-controller.js', 'audio-analysis-engine.js', 'performance-controller.js', 'performance-sequencer-engine.js', 'export-controller.js', 'export-session-engine.js', 'export-encoder-engine.js']) {
   const source = fs.readFileSync(path.join(__dirname, '..', 'src', 'renderer', 'modules', file), 'utf8');
   vm.runInThisContext(source, { filename: file });
 }
@@ -170,6 +170,32 @@ performanceController.setProgress(.42);
 assert(performanceActions === 4, 'Performance controller callbacks were not bound.');
 assert(elements.get('#performanceDockProgress').style.width === '42%', 'Performance progress did not render.');
 assert(performanceController.diagnostics.ready && performanceController.diagnostics.bound, 'Performance controller diagnostics failed.');
+
+const straightSequencer = window.QuarticPerformanceSequencerEngine.create();
+assert(straightSequencer.entryDurationSeconds({ advance: 'beats', value: 16 }, 120) === 8, 'Beat cue duration was incorrect.');
+assert(straightSequencer.sequenceDurationSeconds([
+  { advance: 'time', value: 5 },
+  { advance: 'beats', value: 8 }
+], 120) === 9, 'Show duration was incorrect.');
+assert(straightSequencer.entryStartSeconds([
+  { advance: 'time', value: 3 },
+  { advance: 'time', value: 4 }
+], 1, 120) === 3, 'Cue start time was incorrect.');
+assert(straightSequencer.previewNextIndex({ length: 3, index: 2, loop: true }) === 0, 'Loop preview did not wrap.');
+assert(straightSequencer.previewNextIndex({ length: 3, index: 2, loop: false }) === -1, 'Non-loop preview did not report the end.');
+assert(straightSequencer.decideAdvance({ length: 3, index: 1 }).index === 2, 'Straight cue advance was incorrect.');
+assert(straightSequencer.decideAdvance({ length: 3, index: 2, loop: true }).index === 0, 'Loop cue advance did not wrap.');
+assert(straightSequencer.decideAdvance({ length: 3, index: 2, loop: false }).stop, 'Non-loop cue advance did not stop.');
+const shuffledSequencer = window.QuarticPerformanceSequencerEngine.create({ random: () => 0 });
+assert(shuffledSequencer.decideAdvance({ length: 4, index: 0, shuffle: true }).index === 1, 'Shuffle repeated the current cue.');
+const timeEntry = { advance: 'time', value: 4 };
+const timeProgress = straightSequencer.calculateProgress({ entry: timeEntry, startTime: 10, currentTime: 12 });
+assert(timeProgress === .5 && straightSequencer.shouldAdvance(timeEntry, 1, false), 'Time cue progression was incorrect.');
+const beatEntry = { advance: 'beats', value: 8 };
+const beatProgress = straightSequencer.calculateProgress({ entry: beatEntry, startBeat: 4, beatIndex: 8, beatPhase: 0 });
+assert(beatProgress === .5, 'Beat cue progression was incorrect.');
+assert(!straightSequencer.shouldAdvance(beatEntry, 1, false) && straightSequencer.shouldAdvance(beatEntry, 1, true), 'Beat cue boundary did not wait for a detected beat change.');
+assert(straightSequencer.diagnostics.ready, 'Performance sequencer diagnostics failed.');
 
 let exportActions = 0;
 const exportController = window.QuarticExportController.create({

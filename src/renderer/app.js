@@ -36,6 +36,8 @@
   if (!audioAnalysisEngineFactory) throw new Error('Quartic audio analysis engine failed to load.');
   const performanceControllerFactory = window.QuarticPerformanceController;
   if (!performanceControllerFactory) throw new Error('Quartic performance controller failed to load.');
+  const performanceSequencerEngineFactory = window.QuarticPerformanceSequencerEngine;
+  if (!performanceSequencerEngineFactory) throw new Error('Quartic performance sequencer engine failed to load.');
   const exportControllerFactory = window.QuarticExportController;
   if (!exportControllerFactory) throw new Error('Quartic export controller failed to load.');
   const exportSessionEngineFactory = window.QuarticExportSessionEngine;
@@ -1866,11 +1868,13 @@
     onLoop: (enabled) => { audio.loop = enabled; }
   });
   const audioAnalysisEngine = audioAnalysisEngineFactory.create();
+  const performanceSequencerEngine = performanceSequencerEngineFactory.create();
   const exportSessionEngine = exportSessionEngineFactory.create();
   const exportEncoderEngine = exportEncoderEngineFactory.create();
   window.__quarticControllers = Object.freeze({ audio: audioController, performance: performanceController, export: exportController });
   window.__quarticEngines = Object.freeze({
     audioAnalysis: audioAnalysisEngine,
+    performanceSequencer: performanceSequencerEngine,
     exportSession: exportSessionEngine,
     exportEncoder: exportEncoderEngine
   });
@@ -2286,16 +2290,15 @@
   let composerInitialized = false;
 
   function showEntrySeconds(entry) {
-    const value = clamp(Number(entry?.value) || 1, 1, 3600);
-    return entry?.advance === 'time' ? value : value * 60 / Math.max(1, effectiveBpm());
+    return performanceSequencerEngine.entryDurationSeconds(entry, effectiveBpm());
   }
 
   function showSequenceDuration() {
-    return state.showSequence.reduce((total, entry) => total + showEntrySeconds(entry), 0);
+    return performanceSequencerEngine.sequenceDurationSeconds(state.showSequence, effectiveBpm());
   }
 
   function showEntryStartSeconds(index) {
-    return state.showSequence.slice(0, Math.max(0, index)).reduce((total, entry) => total + showEntrySeconds(entry), 0);
+    return performanceSequencerEngine.entryStartSeconds(state.showSequence, index, effectiveBpm());
   }
 
   function selectedComposerIndex() {
@@ -2697,8 +2700,9 @@
   }
 
   function resetShowEntryClock() {
-    state.showEntryStartTime = beatClock();
-    state.showEntryStartBeat = state.beatGridIndex;
+    const snapshot = performanceSequencerEngine.clockSnapshot({ time: beatClock(), beat: state.beatGridIndex });
+    state.showEntryStartTime = snapshot.time;
+    state.showEntryStartBeat = snapshot.beat;
   }
 
   function updateShowUi() {
@@ -2730,9 +2734,13 @@
   function nextShowProfileLabel() {
     if (!state.showSequence.length) return 'No show sequence queued';
     if (state.showShuffle && state.showPlaying) return 'Next: shuffled entry';
-    const nextIndex = state.showIndex < 0 ? 0 : state.showIndex + 1;
-    if (nextIndex >= state.showSequence.length && !state.showLoop) return 'Next: end of show';
-    const entry = state.showSequence[((nextIndex % state.showSequence.length) + state.showSequence.length) % state.showSequence.length];
+    const nextIndex = performanceSequencerEngine.previewNextIndex({
+      length: state.showSequence.length,
+      index: state.showIndex,
+      loop: state.showLoop
+    });
+    if (nextIndex < 0) return 'Next: end of show';
+    const entry = state.showSequence[nextIndex];
     return `Next: ${showProfileForEntry(entry)?.name || 'Missing profile'}`;
   }
 
@@ -2812,7 +2820,7 @@
 
   function applyShowEntry(index, forceCut = false) {
     if (!state.showSequence.length || state.showTransitioning) return;
-    const safeIndex = ((index % state.showSequence.length) + state.showSequence.length) % state.showSequence.length;
+    const safeIndex = performanceSequencerEngine.wrapIndex(index, state.showSequence.length);
     const entry = state.showSequence[safeIndex];
     const profile = showProfileForEntry(entry);
     if (!profile) return;
@@ -2840,19 +2848,19 @@
 
   function advanceShow(direction = 1) {
     if (!state.showSequence.length) return;
-    if (state.showShuffle && state.showSequence.length > 1 && direction > 0) {
-      let next = state.showIndex;
-      while (next === state.showIndex) next = Math.floor(Math.random() * state.showSequence.length);
-      applyShowEntry(next);
-      return;
-    }
-    const next = state.showIndex + direction;
-    if (next >= state.showSequence.length && !state.showLoop) {
+    const decision = performanceSequencerEngine.decideAdvance({
+      length: state.showSequence.length,
+      index: state.showIndex,
+      direction,
+      loop: state.showLoop,
+      shuffle: state.showShuffle
+    });
+    if (decision.stop) {
       state.showPlaying = false;
       updateShowUi();
       return;
     }
-    applyShowEntry(next);
+    applyShowEntry(decision.index);
   }
 
   function updateShowSequencer(beatChanged) {
@@ -2862,13 +2870,18 @@
     }
     const entry = state.showSequence[state.showIndex];
     if (!entry) return;
-    let progress = 0;
-    if (entry.advance === 'time') progress = (beatClock() - state.showEntryStartTime) / entry.value;
-    else progress = (state.beatGridIndex - state.showEntryStartBeat + state.beatGridPhase) / entry.value;
+    const progress = performanceSequencerEngine.calculateProgress({
+      entry,
+      startTime: state.showEntryStartTime,
+      startBeat: state.showEntryStartBeat,
+      currentTime: beatClock(),
+      beatIndex: state.beatGridIndex,
+      beatPhase: state.beatGridPhase
+    });
     $('#showProgressFill').style.width = `${clamp(progress * 100, 0, 100)}%`;
     performanceController.setProgress(progress);
     updateComposerPlayhead(progress);
-    if (progress >= 1 && (entry.advance === 'time' || beatChanged)) advanceShow(1);
+    if (performanceSequencerEngine.shouldAdvance(entry, progress, beatChanged)) advanceShow(1);
   }
 
   function setCanvasSize() {
