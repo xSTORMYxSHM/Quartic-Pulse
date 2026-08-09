@@ -15,6 +15,7 @@
       <main class="stage" id="stage">
         <canvas id="fractalCanvas" aria-label="Audio-reactive fractal visualization"></canvas>
         <div class="show-transition-overlay" id="showTransitionOverlay" aria-hidden="true"></div>
+        <div class="performance-blackout-overlay" id="performanceBlackoutOverlay" aria-hidden="true"></div>
 
         <header class="stage-header glass">
           <div>
@@ -41,7 +42,7 @@
             <div class="track-details">
               <strong id="trackName">No audio loaded</strong>
               <span id="trackMeta">Drop a song anywhere or choose a file</span>
-              <div class="timeline" id="timeline" role="slider" aria-label="Track position" tabindex="0">
+              <div class="timeline" id="timeline" role="slider" aria-label="Track position" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0" tabindex="0">
                 <div class="timeline-fill" id="timelineFill"></div>
               </div>
             </div>
@@ -56,6 +57,65 @@
             <small>DECK TIME</small>
             <div class="time-readout" id="timeReadout">00:00 / 00:00</div>
           </div>
+        </section>
+
+        <section class="performance-dock" id="performanceDock" aria-label="Live show controls" hidden>
+          <div class="performance-dock-copy">
+            <small id="performanceDockState">PERFORMANCE MODE</small>
+            <strong id="performanceDockCurrent">Manual visual</strong>
+            <span id="performanceDockNext">No show sequence queued</span>
+            <div class="performance-dock-progress"><i id="performanceDockProgress"></i></div>
+          </div>
+          <div class="performance-dock-actions" role="group" aria-label="Show transport">
+            <button id="performancePreviousButton" type="button" title="Previous show entry" aria-label="Previous show entry">&#8592;</button>
+            <button class="primary" id="performancePlayButton" type="button">START</button>
+            <button id="performanceNextButton" type="button" title="Next show entry" aria-label="Next show entry">&#8594;</button>
+            <button class="blackout" id="performanceBlackoutButton" type="button">BLACKOUT</button>
+            <button id="exitPerformanceModeButton" type="button">EXIT</button>
+          </div>
+          <small class="performance-dock-shortcuts">SPACE start/pause &middot; &larr;/&rarr; change cue &middot; B blackout &middot; ESC exit</small>
+        </section>
+
+        <section class="show-composer-workspace" id="showComposerWorkspace" aria-label="Show Composer" hidden>
+          <header class="composer-workspace-header">
+            <div><small>QUARTIC PULSE PERFORMANCE AUTHORING</small><h2>SHOW COMPOSER</h2></div>
+            <div class="composer-workspace-actions">
+              <button id="composerBuildButton" type="button">BUILD FROM SONG MAP</button>
+              <button id="composerAddCueButton" type="button">+ ADD CUE</button>
+              <button id="composerRecordButton" type="button">RECORD AUTOMATION</button>
+              <button id="composerPlayButton" type="button">PLAY SHOW</button>
+              <button id="closeShowComposerButton" type="button">CLOSE</button>
+            </div>
+          </header>
+          <div class="composer-workspace-summary">
+            <span id="composerCueCount">0 CUES</span><span id="composerDuration">00:00</span><span id="composerSnapStatus">SECTION / BEAT READY</span>
+          </div>
+          <div class="composer-timeline-shell">
+            <div class="composer-lane-labels" aria-hidden="true"><strong>VISUAL PROFILE</strong><span>DIRECTOR</span><span>MOTION</span><span>EQUATION</span><span>COLOR FLOW</span><span>CAMERA</span></div>
+            <div class="composer-timeline-scroll" id="composerTimelineScroll">
+              <div class="composer-ruler" id="composerRuler"></div>
+              <div class="composer-cue-track" id="composerCueTrack"></div>
+              <div class="composer-automation-lanes" id="composerAutomationLanes"></div>
+              <i class="composer-playhead" id="composerPlayhead"></i>
+            </div>
+          </div>
+          <section class="composer-inspector" id="composerInspector">
+            <div class="section-heading"><span>SELECTED CUE</span><small id="composerSelectedStatus">NONE</small></div>
+            <div class="composer-inspector-grid">
+              <label>LABEL<input id="composerCueLabel" type="text" maxlength="50" placeholder="Cue name" /></label>
+              <label>VISUAL PROFILE<select id="composerCueProfile"></select></label>
+              <label>ADVANCE<select id="composerCueAdvance"><option value="time">Seconds</option><option value="beats">Beats</option></select></label>
+              <label>DURATION<input id="composerCueDuration" type="number" min="0.1" max="3600" step="0.1" value="16" /></label>
+              <label>TRANSITION<select id="composerCueTransition"><option value="cut">Cut</option><option value="black">Fade through black</option></select></label>
+              <label>CAMERA<select id="composerCueCamera"><option value="">Use profile</option><option value="off">Off</option><option value="orbit">Slow Orbit</option><option value="drift">Deep Drift</option><option value="zoom">Zoom Breath</option></select></label>
+              <label>DIRECTOR %<input id="composerCueDirector" type="number" min="0" max="100" placeholder="Profile" /></label>
+              <label>MOTION %<input id="composerCueMotion" type="number" min="0" max="100" placeholder="Profile" /></label>
+              <label>EQUATION %<input id="composerCueEquation" type="number" min="0" max="100" placeholder="Profile" /></label>
+              <label>COLOR FLOW %<input id="composerCueFlow" type="number" min="0" max="100" placeholder="Profile" /></label>
+            </div>
+            <div class="composer-inspector-actions"><button id="composerMoveLeftButton" type="button">MOVE LEFT</button><button id="composerApplyCueButton" type="button">APPLY CUE</button><button id="composerSnapButton" type="button">SNAP TO SECTION</button><button id="composerMoveRightButton" type="button">MOVE RIGHT</button><button class="danger" id="composerDeleteCueButton" type="button">DELETE</button></div>
+            <small>Blank automation values inherit the saved profile. Changes are deterministic and are included in Performance Packages.</small>
+          </section>
         </section>
 
         <section class="render-status" id="renderStatus">
@@ -89,24 +149,31 @@
         <nav class="settings-tabs" aria-label="Visualizer settings">
           <button class="settings-tab active" type="button" data-tab="music" aria-selected="true">MUSIC</button>
           <button class="settings-tab" type="button" data-tab="appearance" aria-selected="false" title="Appearance and visual settings">VISUALS</button>
-          <button class="settings-tab" type="button" data-tab="live" aria-selected="false">LIVE</button>
-          <button class="settings-tab" type="button" data-tab="stream" aria-selected="false">STREAM</button>
+          <button class="settings-tab" type="button" data-tab="live" aria-selected="false">PERFORM</button>
           <button class="settings-tab" type="button" data-tab="export" aria-selected="false">EXPORT</button>
           <button class="settings-tab" type="button" data-tab="system" aria-selected="false">SYSTEM</button>
-          <button class="settings-tab" type="button" data-tab="about" aria-selected="false">ABOUT</button>
         </nav>
 
         <nav class="live-subtabs" aria-label="Live performance settings" hidden>
-          <button class="live-subtab active" type="button" data-live-tab="show" aria-selected="true">SHOW</button>
-          <button class="live-subtab" type="button" data-live-tab="controls" aria-selected="false">CONTROLS</button>
-          <button class="live-subtab" type="button" data-live-tab="camera" aria-selected="false">CAMERA</button>
-          <button class="live-subtab" type="button" data-live-tab="tools" aria-selected="false">TOOLS</button>
+          <button class="live-subtab active" type="button" data-live-tab="show" aria-selected="true"><strong>SHOW</strong><small>Sequence profiles</small></button>
+          <button class="live-subtab" type="button" data-live-tab="composer" aria-selected="false"><strong>COMPOSER</strong><small>Build cue timeline</small></button>
+          <button class="live-subtab" type="button" data-live-tab="controls" aria-selected="false"><strong>CONTROLS</strong><small>MIDI, OSC &amp; keys</small></button>
+          <button class="live-subtab" type="button" data-live-tab="camera" aria-selected="false"><strong>CAMERA</strong><small>Paths &amp; bookmarks</small></button>
+          <button class="live-subtab" type="button" data-live-tab="tools" aria-selected="false"><strong>TOOLS</strong><small>Capture &amp; randomize</small></button>
+          <button class="live-subtab" type="button" data-live-tab="stream" aria-selected="false"><strong>STREAM</strong><small>OBS output &amp; automation</small></button>
         </nav>
 
         <nav class="music-subtabs" aria-label="Music settings">
-          <button class="music-subtab active" type="button" data-music-tab="music" aria-selected="true">DECK</button>
-          <button class="music-subtab" type="button" data-music-tab="playlist" aria-selected="false">PLAYLIST</button>
-          <button class="music-subtab" type="button" data-music-tab="frequency-color" aria-selected="false">FREQUENCY COLOR</button>
+          <button class="music-subtab active" type="button" data-music-tab="music" aria-selected="true"><strong>DECK</strong><small>Source &amp; playback</small></button>
+          <button class="music-subtab" type="button" data-music-tab="playlist" aria-selected="false"><strong>PLAYLIST</strong><small>Queue local songs</small></button>
+          <button class="music-subtab" type="button" data-music-tab="analysis" aria-selected="false"><strong>ANALYSIS</strong><small>Personality &amp; song map</small></button>
+          <button class="music-subtab" type="button" data-music-tab="frequency-color" aria-selected="false"><strong>COLOR</strong><small>Frequency palette</small></button>
+        </nav>
+
+        <nav class="system-subtabs" aria-label="System settings" hidden>
+          <button class="system-subtab active" type="button" data-system-tab="system" aria-selected="true"><strong>PERFORMANCE</strong><small>Hardware &amp; quality</small></button>
+          <button class="system-subtab" type="button" data-system-tab="reports" aria-selected="false"><strong>REPORTS</strong><small>Crashes &amp; bugs</small></button>
+          <button class="system-subtab" type="button" data-system-tab="about" aria-selected="false"><strong>ABOUT</strong><small>Project &amp; licenses</small></button>
         </nav>
 
         <nav class="appearance-subtabs" aria-label="Appearance settings" hidden>
@@ -190,6 +257,120 @@
           </section>
         </div>
 
+        <div class="tab-panel" data-tab-panel="analysis">
+          <section class="panel-section music-analysis-section">
+            <div class="section-heading"><span>MUSIC ANALYSIS</span><small>FOUNDATION</small></div>
+            <div class="analysis-intro-card">
+              <strong>SHAPE THE ANALYZER FOR THE MUSIC</strong>
+              <p>Music Personality profiles tune band boundaries, smoothing, beat recognition, and visual response. Whole-song mapping and the Mathematical Song Director will build on this page.</p>
+            </div>
+            <select id="musicPersonality" aria-label="Music Personality" hidden>
+              <option value="balanced">Balanced</option>
+              <option value="electronic">Electronic / EDM</option>
+              <option value="hiphop">Hip-Hop</option>
+              <option value="rock">Rock / Metal</option>
+              <option value="pop">Pop</option>
+              <option value="ambient">Ambient / Classical</option>
+              <option value="custom">Custom</option>
+            </select>
+            <div id="musicPersonalityMount"></div>
+
+            <div class="music-divider song-map-divider"></div>
+            <div class="section-heading song-map-heading"><span>SONG MAP</span><small id="songMapStatus">LOAD A SONG</small></div>
+            <div class="song-map-card" id="songMapCard">
+              <div class="song-map-empty" id="songMapEmpty">
+                <strong>WHOLE-SONG ANALYSIS</strong>
+                <p>Load a local song to map its energy, frequency balance, beats, and musical sections. Completed maps are cached on this PC.</p>
+              </div>
+              <div class="song-map-actions">
+                <button id="analyzeSongButton" type="button" disabled>ANALYZE SONG</button>
+                <button id="clearSongMapButton" type="button" disabled>CLEAR MAP</button>
+              </div>
+              <div class="song-map-progress" id="songMapProgress" hidden>
+                <i id="songMapProgressFill"></i>
+                <span id="songMapProgressText">DECODING AUDIO</span>
+              </div>
+              <div class="song-map-results" id="songMapResults" hidden>
+                <div class="song-map-stats" id="songMapStats"></div>
+                <div class="song-map-timeline" id="songMapTimeline">
+                  <canvas id="songMapCanvas" role="slider" tabindex="0" aria-label="Song Map timeline" aria-valuemin="0" aria-valuenow="0"></canvas>
+                  <i class="song-map-playhead" id="songMapPlayhead"></i>
+                </div>
+                <div class="song-map-legend" aria-hidden="true"><span class="energy">ENERGY</span><span class="bass">BASS</span><span class="mids">MIDS</span><span class="highs">HIGHS</span><span class="beats">BEATS</span></div>
+                <div class="song-map-sections" id="songMapSections"></div>
+              </div>
+            </div>
+
+            <div class="music-divider song-director-divider"></div>
+            <div class="section-heading song-director-heading"><span>MATHEMATICAL SONG DIRECTOR</span><small id="songDirectorStatus">NEEDS SONG MAP</small></div>
+            <div class="song-director-card" id="songDirectorCard">
+              <div class="song-director-lead">
+                <strong>LET THE SONG SHAPE THE SHOW</strong>
+                <p>Uses Song Map sections to smoothly direct camera motion, equation pressure, color travel, depth, and folding. Your underlying visual preset is never rewritten.</p>
+              </div>
+              <label class="toggle-row song-director-toggle">
+                <span><strong>Enable Song Director</strong><small>Uses the same deterministic cue plan live and during offline export · starts in standby after launch or import</small></span>
+                <input id="songDirectorEnabled" type="checkbox" /><i></i>
+              </label>
+              <select id="songDirectorStyle" aria-label="Song Director style" hidden>
+                <option value="subtle">Subtle</option>
+                <option value="cinematic" selected>Cinematic</option>
+                <option value="mathematical">Mathematical</option>
+                <option value="storm">Storm</option>
+              </select>
+              <div class="song-director-style-grid" id="songDirectorStyleGrid" role="radiogroup" aria-label="Song Director style">
+                <button type="button" data-director-style="subtle" role="radio" aria-checked="false"><strong>SUBTLE</strong><small>Gentle movement</small></button>
+                <button type="button" data-director-style="cinematic" class="active" role="radio" aria-checked="true"><strong>CINEMATIC</strong><small>Wide section arcs</small></button>
+                <button type="button" data-director-style="mathematical" role="radio" aria-checked="false"><strong>MATHEMATICAL</strong><small>Equation focused</small></button>
+                <button type="button" data-director-style="storm" role="radio" aria-checked="false"><strong>STORM</strong><small>Tempest energy</small></button>
+              </div>
+              <label class="select-control song-director-behavior-control">
+                <span>MUSICAL BEHAVIOR <small id="songDirectorBehaviorResolved">AUTO · BALANCED</small></span>
+                <select id="songDirectorBehavior">
+                  <option value="auto" selected>Auto · Follow Music Personality</option>
+                  <option value="balanced">Balanced</option>
+                  <option value="electronic">Electronic / EDM</option>
+                  <option value="hiphop">Hip-Hop</option>
+                  <option value="rock">Rock / Metal</option>
+                  <option value="pop">Pop</option>
+                  <option value="ambient">Ambient / Classical</option>
+                </select>
+              </label>
+              <div class="slider-group song-director-intensity">
+                <label><span>DIRECTOR INTENSITY (%)</span><output id="songDirectorIntensityValue">55%</output></label>
+                <input id="songDirectorIntensity" type="range" min="0" max="1" value="0.55" step="0.01" />
+              </div>
+              <div class="song-director-now" id="songDirectorNow" aria-live="polite">
+                <span><small>CURRENT CUE</small><strong>WAITING FOR SONG MAP</strong></span>
+                <div class="song-director-meters" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+              </div>
+              <div class="song-director-plan" id="songDirectorPlan"></div>
+              <div class="song-director-cue-editor" id="songDirectorCueEditor" hidden>
+                <div class="song-director-editor-heading">
+                  <span><small>EDIT SECTION CUE</small><strong id="songDirectorCueName">SELECT A SECTION</strong></span>
+                  <em id="songDirectorCueState">AUTO</em>
+                </div>
+                <label class="select-control song-director-emphasis-control">
+                  EMPHASIS
+                  <select id="songDirectorCueEmphasis">
+                    <option value="auto" selected>Automatic Balance</option>
+                    <option value="camera">Camera Movement</option>
+                    <option value="equation">Equation Shape</option>
+                    <option value="color">Color Travel</option>
+                    <option value="dimension">Dimensional Depth</option>
+                    <option value="fold">Fold / Warp</option>
+                  </select>
+                </label>
+                <div class="slider-group song-director-cue-strength">
+                  <label><span>SECTION STRENGTH (%)</span><output id="songDirectorCueStrengthValue">100%</output></label>
+                  <input id="songDirectorCueStrength" type="range" min="0" max="1" value="1" step="0.01" />
+                </div>
+                <button id="resetSongDirectorCue" class="song-director-reset-cue" type="button">RETURN SECTION TO AUTO</button>
+              </div>
+            </div>
+          </section>
+        </div>
+
         <div class="tab-panel" data-tab-panel="playlist">
           <section class="panel-section playlist-section">
             <div class="section-heading"><span>PLAYLIST</span><small id="playlistCount">0 TRACKS</small></div>
@@ -262,6 +443,10 @@
               </span>
               <span class="visual-style-copy"><strong>3D MANDELBULB</strong><small>True power-4 ray-marched fractal</small></span>
             </button>
+            <button class="visual-style-card" type="button" data-visual-style="6" role="radio" aria-checked="false">
+              <span class="visual-style-preview preview-mainframe" aria-hidden="true"></span>
+              <span class="visual-style-copy"><strong>MAINFRAME ROOM</strong><small>Reactive data chamber and storm reactor</small></span>
+            </button>
           </div>
           <select id="visualStyle" aria-label="Visual style" hidden>
             <option value="0" selected>Fractal</option>
@@ -270,6 +455,7 @@
             <option value="3">Conventional · Pulse Rings</option>
             <option value="4">Conventional · Waveform Field</option>
             <option value="5">3D Fractal · Power-4 Mandelbulb</option>
+            <option value="6">Scene · Tempest Mainframe Room</option>
           </select>
 
           <div class="basic-experience-card basic-ui-only" aria-label="Visual intensity presets">
@@ -486,8 +672,8 @@
               <button class="visual-preset" type="button" data-effect-preset="neon"><strong>NEON SHELL</strong><small>Fast luminous contour</small></button>
             </div>
             <div class="slider-group">
-              <label><span>MANDELBULB POWER</span><output id="bulbPowerValue">4.0</output></label>
-              <input id="bulbPower" type="range" min="2" max="10" value="4" step="0.1" />
+              <label><span>MANDELBULB POWER</span><output id="bulbPowerValue">4</output></label>
+              <input id="bulbPower" type="range" min="2" max="10" value="4" step="1" />
             </div>
             <div class="slider-group">
               <label><span>LIVE DETAIL (%)</span><output id="bulbDetailValue">55%</output></label>
@@ -518,6 +704,11 @@
                 </div>
               </div>
             </details>
+          </div>
+
+          <div class="visual-options visual-info-card mainframe-room-options" data-visual-options="6" hidden>
+            <strong>TEMPEST MAINFRAME ROOM</strong>
+            <small>Pseudo-3D chamber with frequency-routed floor conduits, server-wall packets, reactor illumination, expanding beat waves, storm flashes, and slow depth parallax. Use Flow, Motion, Reactivity, and the active color system to shape the scene.</small>
           </div>
 
           <label class="control-label" for="palette">COLOR SYSTEM</label>
@@ -826,6 +1017,14 @@
             <div class="section-heading"><span>SHOW SEQUENCER</span><small id="showStatus">STOPPED</small></div>
             <p class="show-lead">Arrange saved profiles into a performance and advance them by elapsed time or musical beats.</p>
 
+            <div class="performance-mode-card">
+              <div class="section-heading"><span>PERFORMANCE MODE</span><small>LIVE OPERATOR VIEW</small></div>
+              <p>Hide the setup panel and keep show transport, cue status, and emergency blackout controls over the visual.</p>
+              <label class="toggle-row"><span><strong>Enter fullscreen</strong><small>Use the entire display or projector</small></span><input id="performanceFullscreen" type="checkbox" checked /><i></i></label>
+              <label class="toggle-row"><span><strong>Keep music HUD</strong><small>Show track information and deck controls</small></span><input id="performanceShowHud" type="checkbox" checked /><i></i></label>
+              <button class="performance-mode-enter" id="enterPerformanceModeButton" type="button">ENTER PERFORMANCE MODE</button>
+            </div>
+
             <div class="beat-grid-card">
               <div class="section-heading"><span>BEAT GRID</span><small id="beatGridStatus">LISTENING</small></div>
               <div class="beat-grid-display">
@@ -873,6 +1072,38 @@
             <small class="show-current" id="showCurrentLabel">Nothing queued</small>
             <label class="toggle-row"><span><strong>Loop show</strong><small>Return to the first entry after the last</small></span><input id="showLoop" type="checkbox" checked /><i></i></label>
             <label class="toggle-row"><span><strong>Shuffle entries</strong><small>Choose a different queued profile at each advance</small></span><input id="showShuffle" type="checkbox" /><i></i></label>
+
+            <div class="performance-package-card">
+              <div class="section-heading"><span>PERFORMANCE PACKAGE</span><small>PORTABLE SHOW</small></div>
+              <p>Archive or share the current visual, modulation routes, Song Director plan, cue edits, and show sequence as one reproducible JSON package.</p>
+              <div class="performance-package-grid">
+                <label>TITLE<input id="performancePackageTitle" type="text" maxlength="80" placeholder="My Quartic Pulse performance" /></label>
+                <label>CREATOR<input id="performancePackageCreator" type="text" maxlength="80" value="Tempest Mainframe" /></label>
+              </div>
+              <label>NOTES<textarea id="performancePackageNotes" maxlength="500" rows="3" placeholder="Optional setup or performance notes"></textarea></label>
+              <div class="performance-package-safety"><strong>NO AUDIO INCLUDED</strong><span>Only a portable track fingerprint is saved so the correct local song can be matched later.</span></div>
+              <div class="performance-package-actions">
+                <button class="primary" id="exportPerformancePackageButton" type="button">EXPORT PACKAGE</button>
+                <button id="importPerformancePackageButton" type="button">IMPORT PACKAGE</button>
+              </div>
+              <input id="importPerformancePackageInput" type="file" accept="application/json,.json,.quartic-performance.json" hidden />
+              <small class="performance-package-status" id="performancePackageStatus">Ready to create a reproducible performance package.</small>
+            </div>
+          </section>
+        </div>
+
+        <div class="tab-panel" data-tab-panel="composer">
+          <section class="panel-section composer-panel-section">
+            <div class="section-heading"><span>SHOW COMPOSER</span><small id="composerPanelStatus">READY</small></div>
+            <p class="show-lead">Turn a Song Map into an editable visual cue timeline, or arrange saved profiles manually.</p>
+            <div class="composer-panel-card">
+              <strong>AUTOMATIC START</strong>
+              <span>Song sections become timed cues. Saved full profiles rotate across the arrangement while section energy shapes Director, motion, equation, color, and camera automation.</span>
+              <button id="composerPanelBuildButton" type="button">BUILD FROM SONG MAP</button>
+            </div>
+            <div class="composer-panel-stats"><div><strong id="composerPanelCueCount">0</strong><small>CUES</small></div><div><strong id="composerPanelDuration">00:00</strong><small>SHOW TIME</small></div></div>
+            <button class="composer-open-button" id="openShowComposerButton" type="button">OPEN EXPANDED COMPOSER</button>
+            <p class="modulation-note">The expanded editor temporarily uses the full window. Closing it returns to the normal visual and control layout without stopping the show.</p>
           </section>
         </div>
 
@@ -1192,6 +1423,44 @@
         </section>
         </div>
 
+        <div class="tab-panel" data-tab-panel="reports">
+          <section class="panel-section report-center-section">
+            <div class="section-heading"><span>REPORT CENTER</span><small id="reportCenterStatus">READY</small></div>
+            <p class="report-center-lead">Create a sanitized report that can be copied into GitHub or Discord, saved as text, or printed to paper/PDF.</p>
+
+            <div class="report-incident-card">
+              <div class="section-heading"><span>RECENT AUTOMATIC INCIDENT</span><small id="reportIncidentCount">0 SAVED</small></div>
+              <select id="reportIncidentSelect"><option value="">No captured crashes</option></select>
+              <div class="report-incident-actions"><button id="reportUseIncidentButton" type="button" disabled>INCLUDE SELECTED</button><button id="reportClearIncidentsButton" type="button" disabled>CLEAR HISTORY</button></div>
+              <small>Quartic Pulse stores up to 20 sanitized renderer, main-process, and Electron child-process incidents locally.</small>
+            </div>
+
+            <div class="report-form-card">
+              <label>REPORT TYPE<select id="reportCategory"><option value="bug">Bug</option><option value="crash">Crash</option><option value="export">Export problem</option><option value="audio">Audio problem</option><option value="performance">Performance problem</option><option value="feedback">Feedback</option></select></label>
+              <label>SHORT SUMMARY<input id="reportSummary" type="text" maxlength="120" placeholder="What went wrong?" /></label>
+              <label>WHAT HAPPENED<textarea id="reportActual" maxlength="2000" rows="4" placeholder="Describe what you saw."></textarea></label>
+              <label>STEPS TO REPRODUCE<textarea id="reportSteps" maxlength="2000" rows="4" placeholder="1. Loaded...&#10;2. Selected...&#10;3. The problem appeared..."></textarea></label>
+              <label>WHAT YOU EXPECTED<textarea id="reportExpected" maxlength="1200" rows="3" placeholder="What should have happened?"></textarea></label>
+              <label>CONTACT OR GITHUB NAME (OPTIONAL)<input id="reportContact" type="text" maxlength="100" placeholder="Only if you want a reply" /></label>
+              <label class="toggle-row"><span><strong>Include system diagnostics</strong><small>Version, Windows build, CPU, GPU, memory, and visual mode—never song files or local paths</small></span><input id="reportIncludeDiagnostics" type="checkbox" checked /><i></i></label>
+              <button class="report-generate-button" id="generateReportButton" type="button">GENERATE REPORT</button>
+            </div>
+
+            <div class="report-output-card">
+              <div class="section-heading"><span>PASTE-READY REPORT</span><small id="reportLengthStatus">NOT GENERATED</small></div>
+              <textarea id="reportOutput" rows="18" readonly spellcheck="false" placeholder="Generate a report to preview it here."></textarea>
+              <div class="report-action-grid">
+                <button id="copyReportButton" type="button" disabled>COPY</button>
+                <button id="saveReportButton" type="button" disabled>SAVE TEXT</button>
+                <button id="printReportButton" type="button" disabled>PRINT / PDF</button>
+                <button id="githubReportButton" type="button" disabled>OPEN GITHUB</button>
+                <button class="primary" id="submitReportButton" type="button" disabled>SEND REPORT</button>
+              </div>
+              <p class="report-submit-note" id="reportSubmitNote">Online submission requires the project’s secure report relay. Discord webhook credentials are never stored in the public source or application.</p>
+            </div>
+          </section>
+        </div>
+
         <div class="tab-panel" data-tab-panel="about">
           <section class="panel-section about-section">
             <div class="brand-logo-frame">
@@ -1201,7 +1470,7 @@
             <div class="about-title">
               <div class="eyebrow">TEMPEST MAINFRAME PRESENTS</div>
               <h2>QUARTIC PULSE</h2>
-              <span>Version 0.28.3</span>
+              <span>Version 0.29.1</span>
             </div>
 
             <p class="about-lead">A Windows 11 music visualizer and music-to-video renderer powered by a family of audio-modulated fractal equations.</p>
@@ -1224,7 +1493,7 @@
             <div class="about-card about-release-card">
               <strong>VERSION 0.28 HIGHLIGHTS</strong>
               <ul>
-                <li>20 named 2D fractal equations plus the true GPU ray-marched power-4 3D Mandelbulb</li>
+                <li>20 named 2D fractal equations, the true GPU ray-marched power-4 3D Mandelbulb, and the audio-reactive Tempest Mainframe Room</li>
                 <li>Calmer equation modulation with dedicated music-envelope smoothing</li>
                 <li>Preset-led Basic mode with larger controls and a full Advanced workspace</li>
                 <li>Low-flash visual preset and first-run photosensitivity guidance</li>
@@ -1242,7 +1511,7 @@
             <div class="about-card">
               <strong>TEMPEST MAINFRAME</strong>
               <p>Creator and maintainer of Quartic Pulse—experimental visual software built at the intersection of mathematics, music, and digital media.</p>
-              <small>Human-directed, AI-assisted development · Storm Horizon Media identity and branding</small>
+              <small>Human-directed, AI-assisted development · Storm Horizon Media and Storm Horizon Radio</small>
             </div>
 
             <div class="about-grid">
@@ -1260,7 +1529,7 @@
               </div>
             </div>
 
-            <p class="brand-notice">The Storm Horizon Media name, logo, and associated branding are not granted under the GPL and remain the property of their respective owner. Modified versions may use replacement branding. Electron, NAudio, and optional FFmpeg components retain their own licenses.</p>
+            <p class="brand-notice">Tempest Mainframe, Storm Horizon Media, Storm Horizon Radio, Quartic Pulse, and their official branding are original or commissioned assets owned by the project owner and are not granted under the GPL. Modified versions may use replacement branding. Electron, Chromium, NAudio, and FFmpeg retain their own licenses; see the included THIRD_PARTY_NOTICES.md.</p>
           </section>
         </div>
         <div class="appearance-actions" aria-label="Appearance actions">
