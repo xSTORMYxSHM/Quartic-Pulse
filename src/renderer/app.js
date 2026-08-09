@@ -40,6 +40,8 @@
   if (!performanceSequencerEngineFactory) throw new Error('Quartic performance sequencer engine failed to load.');
   const performanceShowDataEngineFactory = window.QuarticPerformanceShowDataEngine;
   if (!performanceShowDataEngineFactory) throw new Error('Quartic performance show data engine failed to load.');
+  const performanceShowComposerControllerFactory = window.QuarticPerformanceShowComposerController;
+  if (!performanceShowComposerControllerFactory) throw new Error('Quartic performance show composer controller failed to load.');
   const exportControllerFactory = window.QuarticExportController;
   if (!exportControllerFactory) throw new Error('Quartic export controller failed to load.');
   const exportSessionEngineFactory = window.QuarticExportSessionEngine;
@@ -1874,9 +1876,40 @@
   const performanceShowDataEngine = performanceShowDataEngineFactory.create({
     createId: () => crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`
   });
+  const showComposerController = performanceShowComposerControllerFactory.create({
+    query: $,
+    documentRef: document,
+    getModel: () => ({
+      entries: state.showSequence,
+      profiles: savedProfiles,
+      currentIndex: state.showIndex,
+      playing: state.showPlaying,
+      hasSongMap: Boolean(activeSongMap?.sections?.length)
+    }),
+    formatTime,
+    entryDuration: showEntrySeconds,
+    sequenceDuration: showSequenceDuration,
+    entryStart: showEntryStartSeconds,
+    profileForEntry: showProfileForEntry,
+    sanitizeAutomation: serializeShowAutomation,
+    escapeMarkup: escapeShowMarkup,
+    onBuild: buildShowFromSongMap,
+    onPlay: () => $('#showPlayButton').click(),
+    onAdd: addComposerCue,
+    onSelect: handleComposerCueSelection,
+    onCommit: commitComposerCue,
+    onMove: moveComposerCue,
+    onSnap: snapComposerCueToSection,
+    onDelete: deleteComposerCue,
+    onReorder: reorderComposerCue,
+    onRecordingChange: (recording) => showToast(recording ? 'Automation recording armed. Live control changes will update the selected cue.' : 'Automation recording stopped.'),
+    onRecordAutomation: recordComposerAutomation,
+    onRecordCamera: recordComposerCamera,
+    onOpenChange: () => requestAnimationFrame(setCanvasSize)
+  });
   const exportSessionEngine = exportSessionEngineFactory.create();
   const exportEncoderEngine = exportEncoderEngineFactory.create();
-  window.__quarticControllers = Object.freeze({ audio: audioController, performance: performanceController, export: exportController });
+  window.__quarticControllers = Object.freeze({ audio: audioController, performance: performanceController, showComposer: showComposerController, export: exportController });
   window.__quarticEngines = Object.freeze({
     audioAnalysis: audioAnalysisEngine,
     performanceSequencer: performanceSequencerEngine,
@@ -2266,12 +2299,6 @@
     return performanceShowDataEngine.sanitizeEntry(entry);
   }
 
-  let composerSelectedCueId = '';
-  let composerRecording = false;
-  let composerDragCueId = '';
-  let composerTimelineWidth = 960;
-  let composerInitialized = false;
-
   function showEntrySeconds(entry) {
     return performanceSequencerEngine.entryDurationSeconds(entry, effectiveBpm());
   }
@@ -2282,10 +2309,6 @@
 
   function showEntryStartSeconds(index) {
     return performanceSequencerEngine.entryStartSeconds(state.showSequence, index, effectiveBpm());
-  }
-
-  function selectedComposerIndex() {
-    return state.showSequence.findIndex((entry) => entry.id === composerSelectedCueId);
   }
 
   function composerFullProfiles() {
@@ -2362,163 +2385,39 @@
     state.showPlaying = false;
     state.showIndex = -1;
     state.showSequence = composeShowEntriesFromSongMap(activeSongMap, profiles);
-    composerSelectedCueId = state.showSequence[0]?.id || '';
+    showComposerController.setSelectedCueId(state.showSequence[0]?.id || '');
     persistShowSequence();
     renderShowSequence();
     renderShowComposer();
     showToast(`Built ${state.showSequence.length} cues from the Song Map.`);
   }
 
-  function composerPercent(value, maximum) {
-    return Number.isFinite(value) ? String(Math.round(value / maximum * 100)) : '';
-  }
-
-  function renderComposerInspector() {
-    if (!composerInitialized) return;
-    const index = selectedComposerIndex();
-    const entry = state.showSequence[index];
-    const controls = $('#composerInspector').querySelectorAll('input, select, button');
-    controls.forEach((control) => { control.disabled = !entry; });
-    $('#composerSelectedStatus').textContent = entry ? `CUE ${index + 1} OF ${state.showSequence.length}` : 'NONE';
-    const profileSelect = $('#composerCueProfile');
-    profileSelect.replaceChildren();
-    savedProfiles.forEach((profile) => {
-      const option = document.createElement('option');
-      option.value = profile.id;
-      option.textContent = `${profile.kind === 'colors' ? 'COLOR' : 'FULL'} · ${profile.name}`;
-      profileSelect.appendChild(option);
-    });
-    if (!entry) {
-      $('#composerCueLabel').value = '';
-      $('#composerCueDuration').value = '16';
-      ['composerCueDirector', 'composerCueMotion', 'composerCueEquation', 'composerCueFlow'].forEach((id) => { $(`#${id}`).value = ''; });
-      return;
-    }
-    const automation = serializeShowAutomation(entry.automation);
-    $('#composerCueLabel').value = entry.label || '';
-    profileSelect.value = entry.profileId;
-    $('#composerCueAdvance').value = entry.advance;
-    $('#composerCueDuration').value = entry.value;
-    $('#composerCueTransition').value = entry.transition;
-    $('#composerCueCamera').value = automation.camera || '';
-    $('#composerCueDirector').value = composerPercent(automation.director, 1);
-    $('#composerCueMotion').value = composerPercent(automation.motion, 2.5);
-    $('#composerCueEquation').value = composerPercent(automation.equation, 1.5);
-    $('#composerCueFlow').value = composerPercent(automation.flow, 1);
-    $('#composerMoveLeftButton').disabled = index <= 0;
-    $('#composerMoveRightButton').disabled = index < 0 || index >= state.showSequence.length - 1;
-    $('#composerSnapButton').disabled = !activeSongMap?.sections?.length;
-  }
-
-  function composerLaneValue(entry, key, maximum) {
-    const automation = serializeShowAutomation(entry.automation);
-    if (key === 'camera') return automation.camera ? automation.camera.toUpperCase() : 'PROFILE';
-    const value = automation[key];
-    return Number.isFinite(value) ? `${Math.round(value / maximum * 100)}%` : 'PROFILE';
-  }
-
   function updateComposerPlayhead(entryProgress = 0) {
-    if (!composerInitialized) return;
-    const total = showSequenceDuration();
-    const index = state.showIndex;
-    const seconds = index >= 0 ? showEntryStartSeconds(index) + showEntrySeconds(state.showSequence[index]) * clamp(entryProgress, 0, 1) : 0;
-    $('#composerPlayhead').style.left = `${total ? seconds / total * composerTimelineWidth : 0}px`;
+    showComposerController.updatePlayhead(entryProgress);
   }
 
   function renderShowComposer() {
-    if (!composerInitialized) return;
-    if (composerSelectedCueId && selectedComposerIndex() < 0) composerSelectedCueId = '';
-    if (!composerSelectedCueId && state.showSequence.length) composerSelectedCueId = state.showSequence[0].id;
-    const duration = showSequenceDuration();
-    const count = state.showSequence.length;
-    $('#composerCueCount').textContent = `${count} ${count === 1 ? 'CUE' : 'CUES'}`;
-    $('#composerDuration').textContent = formatTime(duration);
-    $('#composerPanelCueCount').textContent = String(count);
-    $('#composerPanelDuration').textContent = formatTime(duration);
-    $('#composerPanelStatus').textContent = activeSongMap ? 'SONG MAP READY' : 'MANUAL';
-    $('#composerSnapStatus').textContent = activeSongMap ? 'SECTION / BEAT READY' : 'BEAT GRID READY';
-    $('#composerPlayButton').textContent = state.showPlaying ? 'PAUSE SHOW' : 'PLAY SHOW';
-    $('#composerRecordButton').classList.toggle('active', composerRecording);
-    $('#composerRecordButton').textContent = composerRecording ? 'RECORDING AUTOMATION' : 'RECORD AUTOMATION';
-
-    composerTimelineWidth = Math.max(960, Math.round(duration * 18));
-    const ruler = $('#composerRuler');
-    const track = $('#composerCueTrack');
-    const lanes = $('#composerAutomationLanes');
-    [ruler, track, lanes].forEach((element) => { element.style.width = `${composerTimelineWidth}px`; });
-    ruler.replaceChildren();
-    const rulerStep = duration > 900 ? 120 : (duration > 360 ? 60 : (duration > 120 ? 30 : 10));
-    for (let second = 0; second <= Math.max(duration, rulerStep); second += rulerStep) {
-      const marker = document.createElement('span');
-      marker.style.left = `${duration ? second / duration * composerTimelineWidth : 0}px`;
-      marker.textContent = formatTime(second);
-      ruler.appendChild(marker);
-    }
-    track.replaceChildren();
-    const laneKeys = [['director', 1], ['motion', 2.5], ['equation', 1.5], ['flow', 1], ['camera', 1]];
-    lanes.replaceChildren(...laneKeys.map(([key, maximum]) => {
-      const lane = document.createElement('div');
-      lane.className = 'composer-automation-lane';
-      state.showSequence.forEach((entry, index) => {
-        const segment = document.createElement('span');
-        const width = duration ? showEntrySeconds(entry) / duration * composerTimelineWidth : composerTimelineWidth;
-        const automation = serializeShowAutomation(entry.automation);
-        const normalized = key === 'camera' ? (automation.camera ? .7 : .12) : (Number.isFinite(automation[key]) ? automation[key] / maximum : .12);
-        segment.style.width = `${Math.max(18, width)}px`;
-        const level = clamp(normalized, .08, 1);
-        segment.style.background = `linear-gradient(90deg, rgba(135,92,255,${(.05 + level * .18).toFixed(3)}), rgba(92,245,220,${(.025 + level * .11).toFixed(3)}))`;
-        segment.style.color = `rgba(207,215,229,${(.48 + level * .46).toFixed(3)})`;
-        segment.textContent = composerLaneValue(entry, key, maximum);
-        segment.dataset.index = String(index);
-        lane.appendChild(segment);
-      });
-      return lane;
-    }));
-    state.showSequence.forEach((entry, index) => {
-      const profile = showProfileForEntry(entry);
-      const cue = document.createElement('button');
-      cue.type = 'button';
-      cue.className = `composer-cue${entry.id === composerSelectedCueId ? ' selected' : ''}${index === state.showIndex ? ' active' : ''}`;
-      cue.dataset.cueId = entry.id;
-      cue.draggable = true;
-      cue.style.width = `${Math.max(18, duration ? showEntrySeconds(entry) / duration * composerTimelineWidth : composerTimelineWidth)}px`;
-      cue.innerHTML = `<strong>${escapeShowMarkup(entry.label || `Cue ${index + 1}`)}</strong><span>${escapeShowMarkup(profile?.name || 'Missing profile')}</span><small>${formatTime(showEntrySeconds(entry))}</small>`;
-      track.appendChild(cue);
-    });
-    renderComposerInspector();
-    updateComposerPlayhead();
+    showComposerController.render();
   }
 
-  function commitComposerCue() {
-    const index = selectedComposerIndex();
+  function commitComposerCue(cueId, draft) {
+    const index = state.showSequence.findIndex((entry) => entry.id === cueId);
     if (index < 0) return;
     const entry = state.showSequence[index];
-    const readPercent = (id, maximum) => {
-      const raw = $(`#${id}`).value.trim();
-      return raw === '' ? undefined : clamp(Number(raw) || 0, 0, 100) / 100 * maximum;
-    };
-    entry.label = $('#composerCueLabel').value;
-    entry.profileId = $('#composerCueProfile').value;
-    entry.advance = $('#composerCueAdvance').value;
-    const durationValue = Number($('#composerCueDuration').value) || 1;
+    entry.label = draft.label;
+    entry.profileId = draft.profileId;
+    entry.advance = draft.advance;
+    const durationValue = Number(draft.value) || 1;
     entry.value = entry.advance === 'time' ? clamp(Math.round(durationValue * 100) / 100, .1, 3600) : clamp(Math.round(durationValue), 1, 3600);
-    entry.transition = $('#composerCueTransition').value;
-    entry.automation = serializeShowAutomation({
-      camera: $('#composerCueCamera').value,
-      director: readPercent('composerCueDirector', 1),
-      motion: readPercent('composerCueMotion', 2.5),
-      equation: readPercent('composerCueEquation', 1.5),
-      flow: readPercent('composerCueFlow', 1)
-    });
+    entry.transition = draft.transition;
+    entry.automation = serializeShowAutomation(draft.automation);
     state.showSequence[index] = serializeShowEntry(entry);
-    composerSelectedCueId = state.showSequence[index].id;
     persistShowSequence();
     renderShowSequence();
-    renderShowComposer();
   }
 
-  function moveComposerCue(direction) {
-    const index = selectedComposerIndex();
+  function moveComposerCue(cueId, direction) {
+    const index = state.showSequence.findIndex((entry) => entry.id === cueId);
     const target = index + direction;
     if (index < 0 || target < 0 || target >= state.showSequence.length) return;
     [state.showSequence[index], state.showSequence[target]] = [state.showSequence[target], state.showSequence[index]];
@@ -2526,11 +2425,10 @@
     state.showIndex = -1;
     persistShowSequence();
     renderShowSequence();
-    renderShowComposer();
   }
 
-  function snapComposerCueToSection() {
-    const index = selectedComposerIndex();
+  function snapComposerCueToSection(cueId) {
+    const index = state.showSequence.findIndex((entry) => entry.id === cueId);
     const section = activeSongMap?.sections?.[index];
     if (index < 0 || !section) return showToast('This cue has no matching Song Map section.', true);
     const entry = state.showSequence[index];
@@ -2539,116 +2437,73 @@
     entry.value = Math.max(.1, Math.round((section.end - section.start) * 100) / 100);
     persistShowSequence();
     renderShowSequence();
-    renderShowComposer();
     showToast(`Cue snapped to ${section.label || `section ${index + 1}`}.`);
   }
 
-  function selectComposerCue(cueId, { apply = true, seek = true } = {}) {
-    composerSelectedCueId = cueId;
-    const index = selectedComposerIndex();
+  function handleComposerCueSelection(cueId, { apply = true, seek = true } = {}) {
+    const index = state.showSequence.findIndex((entry) => entry.id === cueId);
     if (index < 0) return;
     if (apply) applyShowEntry(index, true);
     if (seek && state.audioMode === 'deck' && Number.isFinite(audio.duration)) {
       audio.currentTime = clamp(showEntryStartSeconds(index), 0, audio.duration);
       updateSongMapPlayhead(audio.currentTime);
     }
-    renderShowComposer();
   }
 
-  function setShowComposerOpen(open) {
-    const workspace = $('#showComposerWorkspace');
-    workspace.hidden = !open;
-    document.body.classList.toggle('composer-mode', open);
-    if (open) renderShowComposer();
-    requestAnimationFrame(setCanvasSize);
+  function addComposerCue() {
+    const profile = ensureComposerBaseProfile()[0];
+    const entry = serializeShowEntry({
+      id: crypto.randomUUID?.() || `cue-${Date.now()}`,
+      profileId: profile.id,
+      label: `Cue ${state.showSequence.length + 1}`,
+      advance: 'beats', value: 16, transition: state.showSequence.length ? 'black' : 'cut', automation: {}
+    });
+    state.showSequence.push(entry);
+    persistShowSequence();
+    renderShowSequence();
+    return entry.id;
+  }
+
+  function reorderComposerCue(sourceId, targetId) {
+    const sourceIndex = state.showSequence.findIndex((entry) => entry.id === sourceId);
+    const targetIndex = state.showSequence.findIndex((entry) => entry.id === targetId);
+    if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) return;
+    const [entry] = state.showSequence.splice(sourceIndex, 1);
+    state.showSequence.splice(targetIndex, 0, entry);
+    state.showPlaying = false;
+    state.showIndex = -1;
+    persistShowSequence();
+    renderShowSequence();
+  }
+
+  function deleteComposerCue(cueId) {
+    const index = state.showSequence.findIndex((entry) => entry.id === cueId);
+    if (index < 0) return '';
+    state.showSequence.splice(index, 1);
+    state.showPlaying = false;
+    state.showIndex = -1;
+    persistShowSequence();
+    renderShowSequence();
+    return state.showSequence[Math.min(index, state.showSequence.length - 1)]?.id || '';
+  }
+
+  function recordComposerAutomation(cueId, key, value) {
+    const entry = state.showSequence.find((candidate) => candidate.id === cueId);
+    if (!entry) return;
+    entry.automation = { ...serializeShowAutomation(entry.automation), [key]: value };
+    persistShowSequence();
+  }
+
+  function recordComposerCamera(cueId, camera) {
+    const entry = state.showSequence.find((candidate) => candidate.id === cueId);
+    if (!entry) return;
+    entry.automation = { ...serializeShowAutomation(entry.automation), camera };
+    persistShowSequence();
   }
 
   function initializeShowComposer() {
-    composerInitialized = true;
-    $('#composerBuildButton').addEventListener('click', buildShowFromSongMap);
-    $('#composerPanelBuildButton').addEventListener('click', buildShowFromSongMap);
-    $('#openShowComposerButton').addEventListener('click', () => setShowComposerOpen(true));
-    $('#closeShowComposerButton').addEventListener('click', () => setShowComposerOpen(false));
-    $('#composerPlayButton').addEventListener('click', () => $('#showPlayButton').click());
-    $('#composerAddCueButton').addEventListener('click', () => {
-      const profile = ensureComposerBaseProfile()[0];
-      const entry = serializeShowEntry({
-        id: crypto.randomUUID?.() || `cue-${Date.now()}`,
-        profileId: profile.id,
-        label: `Cue ${state.showSequence.length + 1}`,
-        advance: 'beats', value: 16, transition: state.showSequence.length ? 'black' : 'cut', automation: {}
-      });
-      state.showSequence.push(entry);
-      composerSelectedCueId = entry.id;
-      persistShowSequence();
-      renderShowSequence();
-      renderShowComposer();
-    });
-    $('#composerRecordButton').addEventListener('click', () => {
-      composerRecording = !composerRecording;
-      renderShowComposer();
-      showToast(composerRecording ? 'Automation recording armed. Live control changes will update the selected cue.' : 'Automation recording stopped.');
-    });
-    $('#composerCueTrack').addEventListener('click', (event) => {
-      const cue = event.target.closest('[data-cue-id]');
-      if (cue) selectComposerCue(cue.dataset.cueId);
-    });
-    $('#composerCueTrack').addEventListener('dragstart', (event) => {
-      composerDragCueId = event.target.closest('[data-cue-id]')?.dataset.cueId || '';
-      if (composerDragCueId) event.dataTransfer.effectAllowed = 'move';
-    });
-    $('#composerCueTrack').addEventListener('dragover', (event) => { if (composerDragCueId) event.preventDefault(); });
-    $('#composerCueTrack').addEventListener('drop', (event) => {
-      event.preventDefault();
-      const targetId = event.target.closest('[data-cue-id]')?.dataset.cueId;
-      const sourceIndex = state.showSequence.findIndex((entry) => entry.id === composerDragCueId);
-      const targetIndex = state.showSequence.findIndex((entry) => entry.id === targetId);
-      if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) return;
-      const [entry] = state.showSequence.splice(sourceIndex, 1);
-      state.showSequence.splice(targetIndex, 0, entry);
-      state.showPlaying = false;
-      state.showIndex = -1;
-      persistShowSequence();
-      renderShowSequence();
-      renderShowComposer();
-    });
-    $('#composerApplyCueButton').addEventListener('click', commitComposerCue);
-    $('#composerMoveLeftButton').addEventListener('click', () => moveComposerCue(-1));
-    $('#composerMoveRightButton').addEventListener('click', () => moveComposerCue(1));
-    $('#composerSnapButton').addEventListener('click', snapComposerCueToSection);
-    $('#composerDeleteCueButton').addEventListener('click', () => {
-      const index = selectedComposerIndex();
-      if (index < 0) return;
-      state.showSequence.splice(index, 1);
-      composerSelectedCueId = state.showSequence[Math.min(index, state.showSequence.length - 1)]?.id || '';
-      state.showPlaying = false;
-      state.showIndex = -1;
-      persistShowSequence();
-      renderShowSequence();
-      renderShowComposer();
-    });
-    document.addEventListener('input', (event) => {
-      if (!composerRecording || selectedComposerIndex() < 0) return;
-      const mapping = {
-        songDirectorIntensity: ['director', 1], motion: ['motion', 2.5], equationMod: ['equation', 1.5], flow: ['flow', 1]
-      }[event.target.id];
-      if (!mapping) return;
-      const entry = state.showSequence[selectedComposerIndex()];
-      entry.automation = { ...serializeShowAutomation(entry.automation), [mapping[0]]: clamp(Number(event.target.value) || 0, 0, mapping[1]) };
-      persistShowSequence();
-      renderShowComposer();
-    });
-    document.addEventListener('click', (event) => {
-      if (!composerRecording || selectedComposerIndex() < 0) return;
-      const camera = event.target.closest('[data-camera-preset]')?.dataset.cameraPreset;
-      if (!camera) return;
-      const entry = state.showSequence[selectedComposerIndex()];
-      entry.automation = { ...serializeShowAutomation(entry.automation), camera };
-      persistShowSequence();
-      renderShowComposer();
-    });
+    showComposerController.initialize();
     if (isSmokeTest) window.__quarticPulseComposeShowEntries = composeShowEntriesFromSongMap;
-    renderShowComposer();
   }
 
   function applyShowCueAutomation(entry) {
@@ -2697,12 +2552,8 @@
     document.querySelectorAll('.show-entry').forEach((element) => {
       element.classList.toggle('active', Number(element.dataset.index) === state.showIndex);
     });
-    if (composerInitialized) {
-      $('#composerPlayButton').textContent = state.showPlaying ? 'PAUSE SHOW' : 'PLAY SHOW';
-      document.querySelectorAll('.composer-cue').forEach((element) => {
-        const index = state.showSequence.findIndex((candidate) => candidate.id === element.dataset.cueId);
-        element.classList.toggle('active', index === state.showIndex);
-      });
+    if (showComposerController.initialized) {
+      showComposerController.renderPlaybackState();
     }
     updatePerformanceDock();
   }
@@ -2843,7 +2694,7 @@
 
   function updateShowSequencer(beatChanged) {
     if (!state.showPlaying || state.showIndex < 0 || state.showTransitioning) {
-      if (composerInitialized && state.showIndex < 0) updateComposerPlayhead(0);
+      if (showComposerController.initialized && state.showIndex < 0) updateComposerPlayhead(0);
       return;
     }
     const entry = state.showSequence[state.showIndex];
@@ -6385,7 +6236,7 @@
     }
     $('#addShowEntryButton').disabled = !savedProfiles.length;
     renderShowSequence();
-    if (composerInitialized) renderShowComposer();
+    if (showComposerController.initialized) renderShowComposer();
   }
 
   function renderShowSequence() {
@@ -6407,7 +6258,7 @@
     });
     $('#showSequenceEmpty').hidden = state.showSequence.length > 0;
     updateShowUi();
-    if (composerInitialized) renderShowComposer();
+    if (showComposerController.initialized) renderShowComposer();
   }
 
   function updateBeatGridUi() {
@@ -7867,7 +7718,7 @@
     if (!item?.file) songMapStatus('LOAD A SONG');
     else if (!map && !songMapAnalyzing) songMapStatus('READY');
     renderSongDirector();
-    if (composerInitialized) renderShowComposer();
+    if (showComposerController.initialized) renderShowComposer();
     if (!map) return;
     const profile = musicPersonalityProfiles[map.personality]?.label || (map.personality === 'custom' ? 'Custom' : 'Analyzer');
     songMapStatus(`CACHED · ${profile}`);

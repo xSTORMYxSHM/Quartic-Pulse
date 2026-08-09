@@ -21,6 +21,8 @@ class FakeElement {
     this.id = id;
     this.style = {};
     this.classList = new FakeClassList();
+    this.children = [];
+    this.dataset = {};
     this.listeners = new Map();
     this.attributes = new Map();
     this.textContent = '';
@@ -29,6 +31,8 @@ class FakeElement {
     this.value = '';
     this.checked = false;
     this.pointerCapture = null;
+    this.innerHTML = '';
+    this.type = '';
   }
   addEventListener(type, callback) {
     if (!this.listeners.has(type)) this.listeners.set(type, []);
@@ -44,6 +48,9 @@ class FakeElement {
   setPointerCapture(id) { this.pointerCapture = id; }
   hasPointerCapture(id) { return this.pointerCapture === id; }
   releasePointerCapture(id) { if (this.pointerCapture === id) this.pointerCapture = null; }
+  appendChild(child) { this.children.push(child); return child; }
+  replaceChildren(...children) { this.children = children; }
+  querySelectorAll() { return []; }
 }
 
 const ids = [
@@ -51,18 +58,37 @@ const ids = [
   'restartButton', 'skipBackButton', 'skipForwardButton', 'volume', 'muteButton', 'playbackRate', 'loopPlayback',
   'performanceDock', 'performanceDockState', 'performanceDockCurrent', 'performanceDockNext',
   'performancePlayButton', 'performancePreviousButton', 'performanceNextButton', 'performanceBlackoutButton',
+  'composerBuildButton', 'composerPanelBuildButton', 'openShowComposerButton', 'closeShowComposerButton',
+  'composerPlayButton', 'composerAddCueButton', 'composerRecordButton', 'composerCueTrack', 'composerApplyCueButton',
+  'composerMoveLeftButton', 'composerMoveRightButton', 'composerSnapButton', 'composerDeleteCueButton',
+  'composerInspector', 'composerSelectedStatus', 'composerCueProfile', 'composerCueLabel', 'composerCueDuration',
+  'composerCueDirector', 'composerCueMotion', 'composerCueEquation', 'composerCueFlow', 'composerCueAdvance',
+  'composerCueTransition', 'composerCueCamera', 'composerRuler', 'composerAutomationLanes', 'composerCueCount',
+  'composerDuration', 'composerPanelCueCount', 'composerPanelDuration', 'composerPanelStatus', 'composerSnapStatus',
+  'composerPlayhead', 'showComposerWorkspace',
   'performanceDockProgress', 'exportProgress', 'exportProgressFill', 'exportProgressText', 'stageRenderFill',
   'stageRenderText', 'stageRenderMeta', 'stageRenderMode', 'stageRenderNote', 'pauseExportButton',
   'endExportButton', 'cancelExportButton'
 ];
 const elements = new Map(ids.map((id) => [`#${id}`, new FakeElement(id)]));
 global.window = {};
+const documentListeners = new Map();
 global.document = {
   body: new FakeElement('body'),
-  querySelector: (selector) => elements.get(selector) || null
+  querySelector: (selector) => elements.get(selector) || null,
+  querySelectorAll: () => [],
+  createElement: (tagName) => {
+    const element = new FakeElement(tagName);
+    element.tagName = String(tagName).toUpperCase();
+    return element;
+  },
+  addEventListener: (type, callback) => {
+    if (!documentListeners.has(type)) documentListeners.set(type, []);
+    documentListeners.get(type).push(callback);
+  }
 };
 
-for (const file of ['audio-controller.js', 'audio-analysis-engine.js', 'performance-controller.js', 'performance-sequencer-engine.js', 'performance-show-data-engine.js', 'export-controller.js', 'export-session-engine.js', 'export-encoder-engine.js']) {
+for (const file of ['audio-controller.js', 'audio-analysis-engine.js', 'performance-controller.js', 'performance-sequencer-engine.js', 'performance-show-data-engine.js', 'performance-show-composer-controller.js', 'export-controller.js', 'export-session-engine.js', 'export-encoder-engine.js']) {
   const source = fs.readFileSync(path.join(__dirname, '..', 'src', 'renderer', 'modules', file), 'utf8');
   vm.runInThisContext(source, { filename: file });
 }
@@ -170,6 +196,42 @@ performanceController.setProgress(.42);
 assert(performanceActions === 4, 'Performance controller callbacks were not bound.');
 assert(elements.get('#performanceDockProgress').style.width === '42%', 'Performance progress did not render.');
 assert(performanceController.diagnostics.ready && performanceController.diagnostics.bound, 'Performance controller diagnostics failed.');
+
+const composerEntries = [
+  { id: 'cue-a', profileId: 'profile-a', label: 'Opening', advance: 'beats', value: 8, transition: 'cut', automation: { motion: 1.25 } },
+  { id: 'cue-b', profileId: 'profile-a', label: 'Drop', advance: 'time', value: 4, transition: 'black', automation: { camera: 'orbit' } }
+];
+const composerProfiles = [{ id: 'profile-a', name: 'Main', kind: 'settings' }];
+let composerBuilds = 0;
+let composerPlays = 0;
+let committedComposerDraft = null;
+const showComposerController = window.QuarticPerformanceShowComposerController.create({
+  getModel: () => ({ entries: composerEntries, profiles: composerProfiles, currentIndex: 0, playing: true, hasSongMap: true }),
+  formatTime: (seconds) => `${seconds}s`,
+  entryDuration: (entry) => Number(entry.value),
+  sequenceDuration: () => 12,
+  entryStart: (index) => index ? 8 : 0,
+  profileForEntry: () => composerProfiles[0],
+  sanitizeAutomation: (automation) => automation || {},
+  onBuild: () => { composerBuilds += 1; },
+  onPlay: () => { composerPlays += 1; },
+  onCommit: (_cueId, draft) => { committedComposerDraft = draft; }
+});
+showComposerController.initialize();
+showComposerController.bind();
+elements.get('#composerBuildButton').dispatch('click');
+elements.get('#composerPlayButton').dispatch('click');
+showComposerController.setSelectedCueId('cue-b');
+showComposerController.render();
+elements.get('#composerCueLabel').value = 'Edited Drop';
+elements.get('#composerCueDuration').value = '6.5';
+elements.get('#composerCueDirector').value = '75';
+elements.get('#composerApplyCueButton').dispatch('click');
+assert(composerBuilds === 1 && composerPlays === 1, 'Show Composer callbacks were not bound exactly once.');
+assert(showComposerController.selectedIndex() === 1 && showComposerController.selectedCueId === 'cue-b', 'Show Composer selection state failed.');
+assert(elements.get('#composerCueTrack').children.length === 2 && elements.get('#composerAutomationLanes').children.length === 5, 'Show Composer timeline did not render its cues and automation lanes.');
+assert(committedComposerDraft?.label === 'Edited Drop' && committedComposerDraft?.value === 6.5 && committedComposerDraft?.automation?.director === .75, 'Show Composer editor draft was not emitted correctly.');
+assert(showComposerController.diagnostics.ready && showComposerController.diagnostics.bound && showComposerController.diagnostics.initialized, 'Show Composer controller diagnostics failed.');
 
 const straightSequencer = window.QuarticPerformanceSequencerEngine.create();
 assert(straightSequencer.entryDurationSeconds({ advance: 'beats', value: 16 }, 120) === 8, 'Beat cue duration was incorrect.');
