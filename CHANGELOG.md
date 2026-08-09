@@ -4,7 +4,16 @@ All notable Quartic Pulse changes are documented here. Quartic Pulse follows sem
 
 ## Unreleased
 
-No changes recorded yet.
+### Added
+
+- Began the v0.30 workspace redesign with a Photoshop-style left rail for Music, Visuals, Perform, Export, and System while retaining the scalable contextual inspector on the right.
+- Added an always-visible Basic / Advanced control in the inspector header with workspace-specific guidance for each mode.
+- Added a standalone renderer workspace-shell module that owns workspace definitions, navigation groups, active-state synchronization, and interface-mode routing as the first step toward breaking up the monolithic renderer.
+
+### Changed
+
+- Replaced the crowded five-item inspector tab row with the dedicated workspace rail, leaving the right panel focused on only the controls and subtabs relevant to the selected workspace.
+- Added responsive compact and touchscreen layouts for the workspace rail without changing canvas camera state while navigating.
 
 ## 0.29.1 - 2026-08-08
 

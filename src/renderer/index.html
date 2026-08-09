@@ -12,6 +12,24 @@
   </head>
   <body>
     <div class="app-shell">
+      <nav class="workspace-rail" aria-label="Quartic Pulse workspaces">
+        <div class="workspace-rail-brand" aria-hidden="true">QP</div>
+        <button class="workspace-button active" type="button" data-workspace="music" aria-selected="true" title="Music workspace">
+          <span class="workspace-symbol" aria-hidden="true">MU</span><strong>MUSIC</strong><small>Source</small>
+        </button>
+        <button class="workspace-button" type="button" data-workspace="appearance" aria-selected="false" title="Visual workspace">
+          <span class="workspace-symbol" aria-hidden="true">FX</span><strong>VISUALS</strong><small>Design</small>
+        </button>
+        <button class="workspace-button" type="button" data-workspace="live" aria-selected="false" title="Performance workspace">
+          <span class="workspace-symbol" aria-hidden="true">GO</span><strong>PERFORM</strong><small>Live</small>
+        </button>
+        <button class="workspace-button" type="button" data-workspace="export" aria-selected="false" title="Export workspace">
+          <span class="workspace-symbol" aria-hidden="true">EX</span><strong>EXPORT</strong><small>Render</small>
+        </button>
+        <button class="workspace-button" type="button" data-workspace="system" aria-selected="false" title="System workspace">
+          <span class="workspace-symbol" aria-hidden="true">SY</span><strong>SYSTEM</strong><small>Setup</small>
+        </button>
+      </nav>
       <main class="stage" id="stage">
         <canvas id="fractalCanvas" aria-label="Audio-reactive fractal visualization"></canvas>
         <div class="show-transition-overlay" id="showTransitionOverlay" aria-hidden="true"></div>
@@ -146,6 +164,17 @@
       <aside class="control-panel">
         <div class="panel-resizer" id="panelResizer" role="separator" aria-label="Resize settings panel" aria-orientation="vertical" tabindex="0"></div>
         <div class="panel-content">
+        <header class="inspector-header">
+          <div class="inspector-heading">
+            <small>ACTIVE WORKSPACE</small>
+            <strong id="inspectorWorkspaceTitle">MUSIC</strong>
+            <span id="interfaceModeDescription">Sources, playback, playlists, and song analysis</span>
+          </div>
+          <div class="interface-mode-switch" role="group" aria-label="Interface control level">
+            <button class="active" type="button" data-interface-mode="basic" aria-pressed="true">BASIC</button>
+            <button type="button" data-interface-mode="advanced" aria-pressed="false">ADVANCED</button>
+          </div>
+        </header>
         <nav class="settings-tabs" aria-label="Visualizer settings">
           <button class="settings-tab active" type="button" data-tab="music" aria-selected="true">MUSIC</button>
           <button class="settings-tab" type="button" data-tab="appearance" aria-selected="false" title="Appearance and visual settings">VISUALS</button>
@@ -1198,17 +1227,6 @@
           <section class="panel-section system-section">
             <div class="section-heading"><span>SYSTEM SETTINGS</span><small>HARDWARE + LIMITS</small></div>
 
-            <div class="interface-mode-card">
-              <div class="interface-mode-copy">
-                <strong>CONTROL LEVEL</strong>
-                <small id="interfaceModeDescription">Visuals, presets, colors, and quick controls</small>
-              </div>
-              <div class="interface-mode-switch" role="group" aria-label="Interface control level">
-                <button class="active" type="button" data-interface-mode="basic" aria-pressed="true">BASIC</button>
-                <button type="button" data-interface-mode="advanced" aria-pressed="false">ADVANCED</button>
-              </div>
-            </div>
-
             <div class="system-feature-card">
               <div class="section-heading"><span>ADVANCED FEATURES</span><small>GLOBAL SWITCHES</small></div>
               <p>Central controls for costly visual and live-performance features.</p>
@@ -1470,7 +1488,7 @@
             <div class="about-title">
               <div class="eyebrow">TEMPEST MAINFRAME PRESENTS</div>
               <h2>QUARTIC PULSE</h2>
-              <span>Version 0.29.1</span>
+              <span>Version 0.30.0 Development Preview</span>
             </div>
 
             <p class="about-lead">A Windows 11 music visualizer and music-to-video renderer powered by a family of audio-modulated fractal equations.</p>
@@ -1579,6 +1597,7 @@
     </div>
     <audio id="audio" preload="metadata" crossorigin="anonymous"></audio>
     <audio id="exportCompleteStinger" preload="auto" src="../../assets/audio/export-complete-stinger.wav"></audio>
+    <script src="modules/workspace-shell.js"></script>
     <script src="app.js"></script>
   </body>
 </html>

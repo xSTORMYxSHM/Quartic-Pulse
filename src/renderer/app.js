@@ -26,6 +26,8 @@
   }
 
   const $ = (selector) => document.querySelector(selector);
+  const workspaceShell = window.QuarticWorkspaceShell;
+  if (!workspaceShell) throw new Error('Quartic workspace shell failed to load.');
   const canvas = $('#fractalCanvas');
   const stage = $('#stage');
   const audio = $('#audio');
@@ -5184,58 +5186,7 @@
   }
 
   function activateTab(tabName) {
-    if (tabName === 'live') tabName = 'show';
-    const musicTabNames = ['music', 'playlist', 'analysis', 'frequency-color'];
-    const appearanceTabNames = ['appearance', 'reactivity', 'dimensional', 'folding', 'mapping'];
-    const liveTabNames = ['show', 'composer', 'controls', 'camera', 'tools', 'stream'];
-    const systemTabNames = ['system', 'reports', 'about'];
-    if (state.interfaceMode === 'basic' && ['reactivity', 'dimensional', 'folding', 'mapping'].includes(tabName)) {
-      tabName = 'appearance';
-    }
-    const inMusicGroup = musicTabNames.includes(tabName);
-    const inAppearanceGroup = appearanceTabNames.includes(tabName);
-    const inLiveGroup = liveTabNames.includes(tabName);
-    const inSystemGroup = systemTabNames.includes(tabName);
-    document.body.classList.toggle('appearance-active', inAppearanceGroup);
-    const topLevelTab = inMusicGroup ? 'music' : (inAppearanceGroup ? 'appearance' : (inLiveGroup ? 'live' : (inSystemGroup ? 'system' : tabName)));
-    document.querySelectorAll('.settings-tab').forEach((button) => {
-      const active = button.dataset.tab === topLevelTab;
-      button.classList.toggle('active', active);
-      button.setAttribute('aria-selected', String(active));
-    });
-    const musicSubtabs = document.querySelector('.music-subtabs');
-    musicSubtabs.hidden = !inMusicGroup;
-    document.querySelectorAll('.music-subtab').forEach((button) => {
-      const active = inMusicGroup && button.dataset.musicTab === tabName;
-      button.classList.toggle('active', active);
-      button.setAttribute('aria-selected', String(active));
-    });
-    const appearanceSubtabs = document.querySelector('.appearance-subtabs');
-    appearanceSubtabs.hidden = !inAppearanceGroup;
-    document.querySelectorAll('.appearance-subtab').forEach((button) => {
-      const active = inAppearanceGroup && button.dataset.appearanceTab === tabName;
-      button.classList.toggle('active', active);
-      button.setAttribute('aria-selected', String(active));
-    });
-    const liveSubtabs = document.querySelector('.live-subtabs');
-    liveSubtabs.hidden = !inLiveGroup;
-    document.querySelectorAll('.live-subtab').forEach((button) => {
-      const active = inLiveGroup && button.dataset.liveTab === tabName;
-      button.classList.toggle('active', active);
-      button.setAttribute('aria-selected', String(active));
-    });
-    const systemSubtabs = document.querySelector('.system-subtabs');
-    systemSubtabs.hidden = !inSystemGroup;
-    document.querySelectorAll('.system-subtab').forEach((button) => {
-      const active = inSystemGroup && button.dataset.systemTab === tabName;
-      button.classList.toggle('active', active);
-      button.setAttribute('aria-selected', String(active));
-    });
-    document.querySelectorAll('.tab-panel').forEach((panel) => {
-      const active = panel.dataset.tabPanel === tabName;
-      panel.classList.toggle('active', active);
-      if (active) panel.scrollTop = 0;
-    });
+    workspaceShell.activate(tabName, state.interfaceMode);
   }
 
   function updateVisualStyleOptions() {
@@ -5261,14 +5212,7 @@
     const mode = requestedMode === 'advanced' ? 'advanced' : 'basic';
     state.interfaceMode = mode;
     document.body.dataset.interfaceMode = mode;
-    document.querySelectorAll('[data-interface-mode]').forEach((button) => {
-      const active = button.dataset.interfaceMode === mode;
-      button.classList.toggle('active', active);
-      button.setAttribute('aria-pressed', String(active));
-    });
-    $('#interfaceModeDescription').textContent = mode === 'advanced'
-      ? 'Fine tuning, equation controls, and music mapping'
-      : 'Visuals, presets, colors, and quick controls';
+    workspaceShell.syncInterfaceMode(mode);
     const basic = mode === 'basic';
     document.querySelectorAll('.advanced-ui-only, .advanced-ui-control').forEach((element) => {
       element.hidden = basic;
@@ -5287,10 +5231,9 @@
     let mode = 'basic';
     try { mode = localStorage.getItem(interfaceModeStorageKey) || mode; } catch (_) { /* Use Basic mode. */ }
     setInterfaceMode(mode, false);
-    document.querySelector('.interface-mode-switch').addEventListener('click', (event) => {
-      const button = event.target.closest('[data-interface-mode]');
-      if (!button || button.dataset.interfaceMode === state.interfaceMode) return;
-      setInterfaceMode(button.dataset.interfaceMode);
+    workspaceShell.bindInterfaceMode((nextMode) => {
+      if (nextMode === state.interfaceMode) return;
+      setInterfaceMode(nextMode);
       showToast(`${state.interfaceMode === 'advanced' ? 'Advanced' : 'Basic'} controls enabled`);
     });
   }
@@ -5998,7 +5941,7 @@
 
   const performancePackageApplication = 'quartic-pulse-performance';
   const performancePackageSchemaVersion = 1;
-  const performancePackageAppVersion = '0.29.1';
+  const performancePackageAppVersion = '0.30.0-dev.1';
   const pendingPerformanceMapStorageKey = 'quarticPulsePendingPerformanceMapV1';
 
   function stableStringify(value) {
@@ -8968,26 +8911,7 @@
     $('#customPaletteEditor').hidden = state.palette !== 4;
   });
 
-  document.querySelector('.settings-tabs').addEventListener('click', (event) => {
-    const button = event.target.closest('.settings-tab');
-    if (button) activateTab(button.dataset.tab);
-  });
-  document.querySelector('.music-subtabs').addEventListener('click', (event) => {
-    const button = event.target.closest('.music-subtab');
-    if (button) activateTab(button.dataset.musicTab);
-  });
-  document.querySelector('.appearance-subtabs').addEventListener('click', (event) => {
-    const button = event.target.closest('.appearance-subtab');
-    if (button) activateTab(button.dataset.appearanceTab);
-  });
-  document.querySelector('.live-subtabs').addEventListener('click', (event) => {
-    const button = event.target.closest('.live-subtab');
-    if (button) activateTab(button.dataset.liveTab);
-  });
-  document.querySelector('.system-subtabs').addEventListener('click', (event) => {
-    const button = event.target.closest('.system-subtab');
-    if (button) activateTab(button.dataset.systemTab);
-  });
+  workspaceShell.bindNavigation(activateTab);
   $('#showExportPreview').addEventListener('change', (event) => {
     if (state.exporting) document.body.classList.toggle('hide-export-preview', !event.target.checked);
   });
@@ -9346,6 +9270,7 @@
   initializeSettingTools();
   initializePaletteTools();
   initializeInterfaceMode();
+  activateTab(document.querySelector('.tab-panel.active')?.dataset.tabPanel || 'music');
   initializeMusicPersonality();
   initializeSongMap();
   initializeSongDirector();

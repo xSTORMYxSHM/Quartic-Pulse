@@ -787,7 +787,19 @@ function createWindow() {
               const rect = tools.getBoundingClientRect();
               return rect.left >= quickControlsRect.left - 1 && rect.right <= quickControlsRect.right + 1;
             }));
-            const mainTabsFit = [...document.querySelectorAll('.settings-tab')].every((tab) => tab.scrollWidth <= tab.clientWidth + 1);
+            const workspaceRail = document.querySelector('.workspace-rail');
+            const workspaceButtons = [...document.querySelectorAll('.workspace-button')];
+            const inspectorHeader = document.querySelector('.inspector-header');
+            const mainTabsFit = workspaceButtons.every((tab) => tab.scrollWidth <= tab.clientWidth + 1);
+            const workspaceShellReady = Boolean(
+              window.QuarticWorkspaceShell
+              && workspaceRail?.getBoundingClientRect().height === window.innerHeight
+              && workspaceButtons.length === 5
+              && workspaceButtons.filter((button) => button.classList.contains('active')).length === 1
+              && inspectorHeader?.getBoundingClientRect().height >= 58
+              && document.querySelector('#inspectorWorkspaceTitle')?.textContent
+              && document.querySelectorAll('.interface-mode-switch [data-interface-mode]').length === 2
+            );
             const unleashedToggle = document.querySelector('.unleashed-toggle');
             const unleashedRect = unleashedToggle?.getBoundingClientRect();
             const unleashedTextRect = unleashedToggle?.querySelector(':scope > span')?.getBoundingClientRect();
@@ -803,7 +815,7 @@ function createWindow() {
             const aboutContentReady = activeSystemTab !== 'about' || Boolean(
               document.querySelector('.about-feature-grid')
               && document.querySelector('.about-release-card')
-              && document.querySelector('.about-title > span')?.textContent.includes('0.29.1')
+              && document.querySelector('.about-title > span')?.textContent.includes('0.30.0')
             );
             const musicPersonalityButtons = [...document.querySelectorAll('[data-music-personality]')];
             const musicPersonalityReady = musicPersonalityButtons.length === 7
@@ -905,6 +917,7 @@ function createWindow() {
               sidebarLayoutReady,
               quickControlsLayoutReady,
               mainTabsFit,
+              workspaceShellReady,
               unleashedLayoutReady,
               unleashedMetrics: unleashedRect ? {
                 rowWidth: Math.round(unleashedRect.width),
@@ -1204,9 +1217,15 @@ function createWindow() {
           }
           console.log(`SMOKE_TEST ${JSON.stringify(result)}`);
           fs.writeFileSync(path.join(os.tmpdir(), 'quartic-pulse-smoke-result.json'), JSON.stringify(result, null, 2));
-          process.exitCode = result.ready && result.webgl2 && result.frequencyBands && result.visualStyles && result.playlistReady && result.obsOutputReady && result.profilesReady && result.windowsAudioReady && result.outputCaptureReady && result.audioHudReady && result.hudTransportReady && result.stageGeometryReady && result.exportStatusReady && result.sidebarLayoutReady && result.quickControlsLayoutReady && result.mainTabsFit && result.unleashedLayoutReady && result.aboutContentReady && result.musicPersonalityReady && result.songMapReady && result.songMapAnalysisReady && result.songDirectorReady && result.songDirectorAnalysisReady && result.appearanceNavigationReady && result.modulationMatrixReady && result.showSequencerReady && result.showComposerReady && result.showComposerWorkspaceReady && result.showComposerGenerationReady && result.liveControlsReady && result.creativeToolsReady && result.performanceAssistantReady && result.reportCenterReady && result.reportGenerationReady && result.performanceAutomationStandbyReady && result.offlineExportReady && result.exportQolReady && result.nativeExportEncoderReady && result.obsAutomationReady && result.coreEquationReady && result.coreEquationInputReady && result.percentageScalesReady && result.pulseControls && result.customColorRolesReady && result.beatDetectorControls && result.bulbControls && result.pulsePresetsReady && result.visualEffectControls && result.effectPresetsReady && result.visualOptionsReady && result.syntheticPulseReady && result.adaptiveBeatReady && result.obsWindowMovable && result.obsDragStripReady && result.obsChromaSafe && result.rotationVelocityReady && result.activeTab === requestedSmokeTab && result.activeVisualStyle === String(requestedSmokeStyle) && result.canvasWidth > 0 ? 0 : 1;
+          process.exitCode = result.ready && result.webgl2 && result.frequencyBands && result.visualStyles && result.playlistReady && result.obsOutputReady && result.profilesReady && result.windowsAudioReady && result.outputCaptureReady && result.audioHudReady && result.hudTransportReady && result.stageGeometryReady && result.exportStatusReady && result.sidebarLayoutReady && result.quickControlsLayoutReady && result.mainTabsFit && result.workspaceShellReady && result.unleashedLayoutReady && result.aboutContentReady && result.musicPersonalityReady && result.songMapReady && result.songMapAnalysisReady && result.songDirectorReady && result.songDirectorAnalysisReady && result.appearanceNavigationReady && result.modulationMatrixReady && result.showSequencerReady && result.showComposerReady && result.showComposerWorkspaceReady && result.showComposerGenerationReady && result.liveControlsReady && result.creativeToolsReady && result.performanceAssistantReady && result.reportCenterReady && result.reportGenerationReady && result.performanceAutomationStandbyReady && result.offlineExportReady && result.exportQolReady && result.nativeExportEncoderReady && result.obsAutomationReady && result.coreEquationReady && result.coreEquationInputReady && result.percentageScalesReady && result.pulseControls && result.customColorRolesReady && result.beatDetectorControls && result.bulbControls && result.pulsePresetsReady && result.visualEffectControls && result.effectPresetsReady && result.visualOptionsReady && result.syntheticPulseReady && result.adaptiveBeatReady && result.obsWindowMovable && result.obsDragStripReady && result.obsChromaSafe && result.rotationVelocityReady && result.activeTab === requestedSmokeTab && result.activeVisualStyle === String(requestedSmokeStyle) && result.canvasWidth > 0 ? 0 : 1;
         } catch (error) {
           console.error('SMOKE_TEST_FAILED', error);
+          try {
+            fs.writeFileSync(path.join(os.tmpdir(), 'quartic-pulse-smoke-result.json'), JSON.stringify({
+              ready: false,
+              smokeError: error?.stack || error?.message || String(error)
+            }, null, 2));
+          } catch (_) { /* Preserve the original smoke-test failure. */ }
           process.exitCode = 1;
         } finally {
           app.quit();
