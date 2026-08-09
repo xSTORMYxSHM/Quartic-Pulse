@@ -40,6 +40,8 @@
   if (!exportControllerFactory) throw new Error('Quartic export controller failed to load.');
   const exportSessionEngineFactory = window.QuarticExportSessionEngine;
   if (!exportSessionEngineFactory) throw new Error('Quartic export session engine failed to load.');
+  const exportEncoderEngineFactory = window.QuarticExportEncoderEngine;
+  if (!exportEncoderEngineFactory) throw new Error('Quartic export encoder engine failed to load.');
   const canvas = $('#fractalCanvas');
   const stage = $('#stage');
   const audio = $('#audio');
@@ -1808,9 +1810,8 @@
   let windowsOutputScanGeneration = 0;
   let monitorGain;
   let recordingDestination;
-  let mediaRecorder;
+  let liveExportEncoder;
   let exportProgressHideTimer;
-  let appendQueue = Promise.resolve();
   let pendingOfflineRender = null;
   let lastExportPreflight = null;
   let toastTimer;
@@ -1866,8 +1867,13 @@
   });
   const audioAnalysisEngine = audioAnalysisEngineFactory.create();
   const exportSessionEngine = exportSessionEngineFactory.create();
+  const exportEncoderEngine = exportEncoderEngineFactory.create();
   window.__quarticControllers = Object.freeze({ audio: audioController, performance: performanceController, export: exportController });
-  window.__quarticEngines = Object.freeze({ audioAnalysis: audioAnalysisEngine, exportSession: exportSessionEngine });
+  window.__quarticEngines = Object.freeze({
+    audioAnalysis: audioAnalysisEngine,
+    exportSession: exportSessionEngine,
+    exportEncoder: exportEncoderEngine
+  });
 
   function createAudioGraph() {
     if (audioContext) return;
@@ -3151,7 +3157,7 @@
       updateSongMapPlayhead(displayTime);
       const liveRecordingActive = state.exporting
         && exportSessionEngine.mode === 'live'
-        && mediaRecorder?.state === 'recording';
+        && liveExportEncoder?.state === 'recording';
       if (liveRecordingActive) {
         const overall = progress * .80;
         setExportProgress(
@@ -3495,7 +3501,7 @@
     const note = $('#exportPerformanceNote');
     const load = width * height * fps;
     const offline = $('#exportMode')?.value !== 'live';
-    const masterMbps = Math.round(offlineVideoBitrate(width, height, fps, detail) / 1000000);
+    const masterMbps = Math.round(exportEncoderEngine.offlineVideoBitrate(width, height, fps, detail) / 1000000);
     let message = offline
       ? `Offline · ${width}×${height} at ${fps} FPS · ~${masterMbps} Mb/s quality master`
       : `Live · ${width}×${height} at ${fps} FPS · real-time frame rate required`;
@@ -3532,7 +3538,7 @@
     const detail = Number($('#exportDetail').value);
     const mode = $('#exportMode').value;
     const duration = Math.max(.1, Number(durationOverride) || Number(audio.duration) || 0);
-    const masterBitrate = offlineVideoBitrate(width, height, fps, detail);
+    const masterBitrate = exportEncoderEngine.offlineVideoBitrate(width, height, fps, detail);
     const result = await window.quarticDesktop.getExportPreflight({
       width, height, fps, detail, mode, duration, masterBitrate,
       format: $('#videoFormat').value,
@@ -4589,7 +4595,7 @@
     const duration = clamp(Number($('#quickClipDuration').value) || 10, 5, 15);
     const session = await window.quarticDesktop.beginExport({ suggestedName: `${state.audioName || 'Quartic-Pulse'}-clip`, format: 'mp4' });
     if (!session) return;
-    let recorder;
+    let quickEncoder;
     let captureStream;
     let progressTimer;
     try {
@@ -4597,8 +4603,11 @@
       await audioContext.resume();
       const canvasStream = canvas.captureStream(60);
       captureStream = new MediaStream([...canvasStream.getVideoTracks(), ...recordingDestination.stream.getAudioTracks()]);
-      recorder = new MediaRecorder(captureStream, { mimeType: chooseRecorderType(), videoBitsPerSecond: Math.round(canvas.width * canvas.height * 60 * .1) });
-      let queue = Promise.resolve();
+      quickEncoder = exportEncoderEngine.createLive({
+        stream: captureStream,
+        videoBitsPerSecond: Math.round(canvas.width * canvas.height * 60 * .1),
+        onChunk: (bytes) => window.quarticDesktop.appendExport(session.id, bytes)
+      });
       quickCaptureActive = true;
       $('#quickCaptureStatus').textContent = `RECORDING ${duration}s`;
       $('#captureClipButton').disabled = true;
@@ -4606,24 +4615,17 @@
       progressTimer = setInterval(() => {
         $('#quickCaptureProgress').style.width = `${clamp((performance.now() - startedAt) / (duration * 10), 0, 100)}%`;
       }, 100);
-      recorder.addEventListener('dataavailable', (event) => {
-        if (!event.data.size) return;
-        queue = queue.then(async () => window.quarticDesktop.appendExport(session.id, await event.data.arrayBuffer()));
-      });
-      await new Promise((resolve, reject) => {
-        recorder.addEventListener('error', (event) => reject(event.error || new Error('Quick recorder failed.')), { once: true });
-        recorder.addEventListener('stop', resolve, { once: true });
-        recorder.start(1000);
-        setTimeout(() => recorder.state !== 'inactive' && recorder.stop(), duration * 1000);
-      });
+      quickEncoder.start(1000);
+      setTimeout(() => quickEncoder.stop(), duration * 1000);
+      await quickEncoder.waitForStop();
       clearInterval(progressTimer);
-      await queue;
+      await quickEncoder.drain();
       const result = await window.quarticDesktop.finishExport(session.id);
       $('#quickCaptureProgress').style.width = '100%';
       $('#quickCaptureStatus').textContent = 'SAVED';
       showToast(result.warning || `Quick clip saved: ${result.outputPath}`, Boolean(result.warning));
     } catch (error) {
-      if (recorder?.state !== 'inactive') recorder.stop();
+      quickEncoder?.stop();
       await window.quarticDesktop.abortExport(session.id).catch(() => {});
       $('#quickCaptureStatus').textContent = 'FAILED';
       throw error;
@@ -6991,11 +6993,6 @@
     audioController.renderTransport({ liveInput, deckPlaying, playing, exporting: state.exporting });
   }
 
-  function chooseRecorderType() {
-    const types = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
-    return types.find((type) => MediaRecorder.isTypeSupported(type)) || '';
-  }
-
   function fftInPlace(real, imaginary) {
     const length = real.length;
     for (let index = 1, reversed = 0; index < length; index++) {
@@ -8049,39 +8046,6 @@
     loadSongMapForCurrentTrack();
   }
 
-  function offlineVideoBitrate(width, height, fps, detail = 1.6) {
-    const bitsPerPixel = detail >= 3 ? 1.2 : (detail >= 2 ? .95 : (detail >= 1.5 ? .72 : .5));
-    return Math.round(clamp(width * height * fps * bitsPerPixel, 12000000, 420000000));
-  }
-
-  async function chooseOfflineEncoderConfig(width, height, fps, detail) {
-    if (!window.VideoEncoder || !window.VideoFrame) throw new Error('This graphics driver does not expose the offline video encoder.');
-    const bitrate = offlineVideoBitrate(width, height, fps, detail);
-    const candidates = [
-      { codecName: 'vp9', codec: 'vp09.00.10.08', hardwareAcceleration: 'prefer-software' },
-      { codecName: 'vp9', codec: 'vp09.00.10.08', hardwareAcceleration: 'prefer-hardware' },
-      { codecName: 'vp8', codec: 'vp8', hardwareAcceleration: 'prefer-software' },
-      { codecName: 'vp8', codec: 'vp8', hardwareAcceleration: 'prefer-hardware' }
-    ];
-    for (const candidate of candidates) {
-      const config = {
-        codec: candidate.codec,
-        width,
-        height,
-        framerate: fps,
-        bitrate,
-        bitrateMode: 'variable',
-        latencyMode: 'quality',
-        hardwareAcceleration: candidate.hardwareAcceleration
-      };
-      try {
-        const support = await VideoEncoder.isConfigSupported(config);
-        if (support.supported) return { codecName: candidate.codecName, config: support.config || config, bitrate };
-      } catch (_) { /* Try the next encoder. */ }
-    }
-    throw new Error(`No offline VP9/VP8 encoder supports ${width}×${height} at ${fps} FPS.`);
-  }
-
   function requestOfflineVisualFrame() {
     if (pendingOfflineRender) return Promise.reject(new Error('The previous offline frame is still rendering.'));
     return new Promise((resolve) => { pendingOfflineRender = resolve; });
@@ -8102,7 +8066,7 @@
     const audioBuffer = await audioContext.decodeAudioData((await item.file.arrayBuffer()).slice(0));
     const duration = Math.min(audioBuffer.duration, Math.max(.1, Number(options.durationLimit) || audioBuffer.duration));
     const frameCount = Math.max(1, Math.ceil(duration * fps));
-    const encoderChoice = await chooseOfflineEncoderConfig(width, height, fps, exportDetail);
+    const encoderChoice = await exportEncoderEngine.chooseOfflineConfig(width, height, fps, exportDetail);
     const session = await window.quarticDesktop.beginOfflineExport({
       suggestedName: `${state.audioName || 'quartic-pulse'}${options.test ? '-5-second-test' : ''}`,
       format, width, height, fps, frameCount,
@@ -8120,9 +8084,7 @@
     state.loopBeforeExport = audio.loop;
     const previousVisualTime = state.visualTime;
     const previousModulationRotationPhase = state.modulationRotationPhase;
-    let encoder = null;
-    let encoderError = null;
-    let encodedQueue = Promise.resolve();
+    let offlineEncoder = null;
     let exportCompleted = false;
     let renderedFrameCount = 0;
     try {
@@ -8155,15 +8117,10 @@
       audioController.renderLiveStatus('OFFLINE RENDER', true);
       setCanvasSize();
       const analyzeFrame = createOfflineAudioAnalyzer(audioBuffer, fps);
-      encoder = new VideoEncoder({
-        output: (chunk) => {
-          const bytes = new Uint8Array(chunk.byteLength);
-          chunk.copyTo(bytes);
-          encodedQueue = encodedQueue.then(() => window.quarticDesktop.appendOfflineFrame(session.id, bytes));
-        },
-        error: (error) => { encoderError = error; }
+      offlineEncoder = exportEncoderEngine.createOffline({
+        encoderConfig: encoderChoice.config,
+        onChunk: (bytes) => window.quarticDesktop.appendOfflineFrame(session.id, bytes)
       });
-      encoder.configure(encoderChoice.config);
       setExportProgress(
         0,
         `Quality master ready | ${Math.round(encoderChoice.bitrate / 1000000)} Mb/s | rendering frames next`,
@@ -8178,24 +8135,19 @@
         }
         if (exportSessionEngine.cancelRequested) throw new DOMException('Offline export cancelled.', 'AbortError');
         if (exportSessionEngine.finishRequested && frameIndex > 0) break;
-        if (encoderError) throw encoderError;
+        if (offlineEncoder.error) throw offlineEncoder.error;
         const time = frameIndex / fps;
         state.offlineCurrentTime = time;
         state.visualTime = time;
         analyzeFrame(time);
         await requestOfflineVisualFrame();
-        const videoFrame = new VideoFrame(canvas, {
+        offlineEncoder.encode(canvas, {
           timestamp: Math.round(time * 1000000),
           duration: Math.round(1000000 / fps),
-          alpha: 'discard'
+          keyFrame: frameIndex % Math.max(1, fps * 2) === 0
         });
-        encoder.encode(videoFrame, { keyFrame: frameIndex % Math.max(1, fps * 2) === 0 });
-        videoFrame.close();
         renderedFrameCount = frameIndex + 1;
-        if (encoder.encodeQueueSize > 5) {
-          await encoder.flush();
-          await encodedQueue;
-        }
+        await offlineEncoder.flushIfBackpressured(5);
         const progress = (frameIndex + 1) / frameCount;
         if (frameIndex % Math.max(1, Math.floor(fps / 5)) === 0 || frameIndex + 1 === frameCount) {
           const overall = progress * .80;
@@ -8207,10 +8159,8 @@
         }
       }
       setExportProgress(.80, 'Frames rendered | flushing the video encoder | overall 80%', 'Frames rendered | flushing encoder | overall 80%');
-      await encoder.flush();
-      encoder.close();
-      encoder = null;
-      await encodedQueue;
+      await offlineEncoder.finish();
+      offlineEncoder = null;
       if (exportSessionEngine.cancelRequested) throw new DOMException('Offline export cancelled.', 'AbortError');
       setExportProgress(.85, 'Encoded frames written | preparing final video | overall 85%', 'Encoded frames written | finalizing next | overall 85%');
       state.offlineExporting = false;
@@ -8230,8 +8180,7 @@
       $('#revealButton').hidden = false;
       showToast(result.warning || `${result.partial ? 'Shortened export' : 'Offline export'} complete: ${result.outputPath}`, Boolean(result.warning));
     } catch (error) {
-      if (encoder && encoder.state !== 'closed') encoder.close();
-      await encodedQueue.catch(() => {});
+      await offlineEncoder?.abort();
       pendingOfflineRender = null;
       if (exportSessionEngine.session?.id) await window.quarticDesktop.abortOfflineExport(exportSessionEngine.session.id).catch(() => {});
       exportSessionEngine.clear();
@@ -8325,24 +8274,18 @@
         ...canvasStream.getVideoTracks(),
         ...recordingDestination.stream.getAudioTracks()
       ]);
-      const mimeType = chooseRecorderType();
       const bitsPerPixel = width >= 3840 ? .13 : .1;
       const videoBitsPerSecond = Math.round(width * height * fps * bitsPerPixel);
-      mediaRecorder = new MediaRecorder(combinedStream, { mimeType, videoBitsPerSecond });
-      appendQueue = Promise.resolve();
-
-      mediaRecorder.addEventListener('dataavailable', (event) => {
-        if (!event.data.size) return;
-        appendQueue = appendQueue.then(async () => {
-          const bytes = await event.data.arrayBuffer();
-          await window.quarticDesktop.appendExport(session.id, bytes);
-        });
+      liveExportEncoder = exportEncoderEngine.createLive({
+        stream: combinedStream,
+        videoBitsPerSecond,
+        onChunk: (bytes) => window.quarticDesktop.appendExport(session.id, bytes),
+        onError: (error) => showToast(`Recorder error: ${error?.message || 'unknown error'}`, true),
+        onStop: finishLiveExport
       });
-      mediaRecorder.addEventListener('error', (event) => showToast(`Recorder error: ${event.error?.message || 'unknown error'}`, true));
-      mediaRecorder.addEventListener('stop', finishLiveExport, { once: true });
 
       audio.currentTime = 0;
-      mediaRecorder.start(1000);
+      liveExportEncoder.start(1000);
       await audio.play();
       $('#exportButton').classList.add('recording');
       $('#exportLabel').textContent = 'STOP & SAVE';
@@ -8403,9 +8346,9 @@
       setExportActionButtons(false, true);
       return;
     }
-    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+    if (liveExportEncoder && liveExportEncoder.state !== 'inactive') {
       audio.pause();
-      mediaRecorder.stop();
+      liveExportEncoder.stop();
     }
   }
 
@@ -8424,7 +8367,7 @@
     }
     exportSessionEngine.requestCancel();
     audio.pause();
-    if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+    if (liveExportEncoder && liveExportEncoder.state !== 'inactive') liveExportEncoder.stop();
   }
 
   function stopExport() {
@@ -8437,7 +8380,7 @@
     $('#exportButton').disabled = true;
     setExportActionButtons(false, false);
     try {
-      await appendQueue;
+      await liveExportEncoder?.drain();
       if (exportSessionEngine.cancelRequested) {
         await window.quarticDesktop.abortExport(session.id).catch(() => {});
         showToast('Live export cancelled and temporary files discarded');
@@ -8459,7 +8402,7 @@
       $('#loopPlayback').disabled = false;
       document.body.classList.remove('exporting', 'hide-export-preview');
       exportSessionEngine.clear();
-      mediaRecorder = null;
+      liveExportEncoder = null;
       $('#exportButton').classList.remove('recording');
       updateTrackControls();
       renderPlaylist();

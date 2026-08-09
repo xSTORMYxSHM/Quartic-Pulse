@@ -62,7 +62,7 @@ global.document = {
   querySelector: (selector) => elements.get(selector) || null
 };
 
-for (const file of ['audio-controller.js', 'audio-analysis-engine.js', 'performance-controller.js', 'export-controller.js', 'export-session-engine.js']) {
+for (const file of ['audio-controller.js', 'audio-analysis-engine.js', 'performance-controller.js', 'export-controller.js', 'export-session-engine.js', 'export-encoder-engine.js']) {
   const source = fs.readFileSync(path.join(__dirname, '..', 'src', 'renderer', 'modules', file), 'utf8');
   vm.runInThisContext(source, { filename: file });
 }
@@ -211,4 +211,83 @@ assert(exportSessionEngine.completed && exportSessionEngine.progress === 1, 'Exp
 exportSessionEngine.clear();
 assert(!exportSessionEngine.session, 'Export session was not cleared.');
 
-console.log('CONTROLLER_SMOKE_OK');
+class FakeMediaRecorder {
+  static isTypeSupported(type) { return type.includes('vp9') || type === 'video/webm'; }
+  constructor(stream, config) {
+    this.stream = stream;
+    this.config = config;
+    this.state = 'inactive';
+    this.listeners = new Map();
+  }
+  addEventListener(type, callback) {
+    if (!this.listeners.has(type)) this.listeners.set(type, []);
+    this.listeners.get(type).push(callback);
+  }
+  emit(type, event = {}) { for (const callback of this.listeners.get(type) || []) callback(event); }
+  start() { this.state = 'recording'; }
+  stop() { this.state = 'inactive'; this.emit('stop'); }
+}
+
+class FakeVideoFrame {
+  constructor(source, config) { this.source = source; this.config = config; this.closed = false; }
+  close() { this.closed = true; }
+}
+
+class FakeVideoEncoder {
+  static async isConfigSupported(config) { return { supported: config.codec.startsWith('vp09'), config }; }
+  constructor(callbacks) {
+    this.callbacks = callbacks;
+    this.state = 'unconfigured';
+    this.encodeQueueSize = 0;
+  }
+  configure(config) { this.config = config; this.state = 'configured'; }
+  encode(frame) {
+    this.encodeQueueSize += 1;
+    const value = Math.round(frame.config.timestamp / 1000);
+    this.callbacks.output({ byteLength: 1, copyTo: (bytes) => { bytes[0] = value; } });
+  }
+  async flush() { this.encodeQueueSize = 0; }
+  close() { this.state = 'closed'; }
+}
+
+(async () => {
+  const encoderEngine = window.QuarticExportEncoderEngine.create({
+    MediaRecorderClass: FakeMediaRecorder,
+    VideoEncoderClass: FakeVideoEncoder,
+    VideoFrameClass: FakeVideoFrame
+  });
+  assert(encoderEngine.chooseRecorderType().includes('vp9'), 'Live recorder type selection did not prefer VP9.');
+  const encoderChoice = await encoderEngine.chooseOfflineConfig(1920, 1080, 60, 1.6);
+  assert(encoderChoice.codecName === 'vp9' && encoderChoice.bitrate > 0, 'Offline encoder configuration selection failed.');
+
+  const liveChunks = [];
+  const liveEncoder = encoderEngine.createLive({
+    stream: {},
+    videoBitsPerSecond: 12000000,
+    onChunk: async (bytes) => { liveChunks.push(new Uint8Array(bytes)[0]); }
+  });
+  liveEncoder.start();
+  liveEncoder.recorder.emit('dataavailable', { data: { size: 1, arrayBuffer: async () => Uint8Array.of(1).buffer } });
+  liveEncoder.recorder.emit('dataavailable', { data: { size: 1, arrayBuffer: async () => Uint8Array.of(2).buffer } });
+  liveEncoder.stop();
+  await liveEncoder.waitForStop();
+  await liveEncoder.drain();
+  assert(liveChunks.join(',') === '1,2', 'Live encoder chunks were not serialized in emission order.');
+
+  const offlineChunks = [];
+  const offlineEncoder = encoderEngine.createOffline({
+    encoderConfig: encoderChoice.config,
+    onChunk: async (bytes) => { offlineChunks.push(bytes[0]); }
+  });
+  for (let index = 1; index <= 6; index++) {
+    offlineEncoder.encode({}, { timestamp: index * 1000, duration: 1000, keyFrame: index === 1 });
+  }
+  const flushed = await offlineEncoder.flushIfBackpressured(5);
+  await offlineEncoder.finish();
+  assert(flushed && offlineChunks.join(',') === '1,2,3,4,5,6', 'Offline encoder backpressure or chunk ordering failed.');
+  assert(offlineEncoder.state === 'closed', 'Offline encoder did not close after finalization.');
+  console.log('CONTROLLER_SMOKE_OK');
+})().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});
