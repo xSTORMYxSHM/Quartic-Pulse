@@ -62,7 +62,7 @@ global.document = {
   querySelector: (selector) => elements.get(selector) || null
 };
 
-for (const file of ['audio-controller.js', 'audio-analysis-engine.js', 'performance-controller.js', 'export-controller.js']) {
+for (const file of ['audio-controller.js', 'audio-analysis-engine.js', 'performance-controller.js', 'export-controller.js', 'export-session-engine.js']) {
   const source = fs.readFileSync(path.join(__dirname, '..', 'src', 'renderer', 'modules', file), 'utf8');
   vm.runInThisContext(source, { filename: file });
 }
@@ -186,5 +186,29 @@ assert(exportActions === 3, 'Export controller callbacks were not bound.');
 assert(elements.get('#exportProgressFill').style.width === '50%', 'Export progress did not render.');
 assert(elements.get('#stageRenderMode').textContent === 'OFFLINE MASTER EXPORT', 'Export mode did not render.');
 assert(exportController.diagnostics.ready && exportController.diagnostics.bound, 'Export controller diagnostics failed.');
+
+let exportClock = 1000;
+const exportSessionEngine = window.QuarticExportSessionEngine.create({ now: () => exportClock });
+const exportSession = { id: 'smoke-export' };
+exportSessionEngine.begin(exportSession, 'offline');
+exportSessionEngine.startProgress();
+exportClock = 4000;
+let exportTiming = exportSessionEngine.updateProgress(.5);
+assert(exportSession.mode === 'offline' && exportSessionEngine.matches('smoke-export'), 'Export session identity was not initialized.');
+assert(exportTiming.elapsedSeconds === 3 && exportTiming.remainingSeconds === 3, 'Export elapsed time or ETA was incorrect.');
+exportSessionEngine.pause();
+exportClock = 9000;
+assert(exportSessionEngine.timing().elapsedSeconds === 3, 'Paused export time continued advancing.');
+exportSessionEngine.resume();
+exportClock = 11000;
+exportTiming = exportSessionEngine.updateProgress(.75);
+assert(exportTiming.elapsedSeconds === 5, 'Resumed export did not exclude paused duration.');
+exportSessionEngine.requestFinish();
+exportSessionEngine.requestCancel();
+assert(exportSessionEngine.finishRequested && exportSessionEngine.cancelRequested, 'Export lifecycle requests were not recorded.');
+exportSessionEngine.markCompleted();
+assert(exportSessionEngine.completed && exportSessionEngine.progress === 1, 'Export completion state was not recorded.');
+exportSessionEngine.clear();
+assert(!exportSessionEngine.session, 'Export session was not cleared.');
 
 console.log('CONTROLLER_SMOKE_OK');

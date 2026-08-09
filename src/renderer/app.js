@@ -38,6 +38,8 @@
   if (!performanceControllerFactory) throw new Error('Quartic performance controller failed to load.');
   const exportControllerFactory = window.QuarticExportController;
   if (!exportControllerFactory) throw new Error('Quartic export controller failed to load.');
+  const exportSessionEngineFactory = window.QuarticExportSessionEngine;
+  if (!exportSessionEngineFactory) throw new Error('Quartic export session engine failed to load.');
   const canvas = $('#fractalCanvas');
   const stage = $('#stage');
   const audio = $('#audio');
@@ -1807,19 +1809,9 @@
   let monitorGain;
   let recordingDestination;
   let mediaRecorder;
-  let exportSession;
   let exportProgressHideTimer;
-  let exportProgressOverall = 0;
-  let liveExportCompleted = false;
   let appendQueue = Promise.resolve();
   let pendingOfflineRender = null;
-  let offlineExportCancelled = false;
-  let offlineExportFinishRequested = false;
-  let offlineExportPaused = false;
-  let liveExportCancelled = false;
-  let exportStartedAt = 0;
-  let exportPauseStartedAt = 0;
-  let exportPausedDuration = 0;
   let lastExportPreflight = null;
   let toastTimer;
   const applyingEffectPreset = { fractal: false, fold: false, spectrum: false, radial: false, bulb: false };
@@ -1873,8 +1865,9 @@
     onLoop: (enabled) => { audio.loop = enabled; }
   });
   const audioAnalysisEngine = audioAnalysisEngineFactory.create();
+  const exportSessionEngine = exportSessionEngineFactory.create();
   window.__quarticControllers = Object.freeze({ audio: audioController, performance: performanceController, export: exportController });
-  window.__quarticEngines = Object.freeze({ audioAnalysis: audioAnalysisEngine });
+  window.__quarticEngines = Object.freeze({ audioAnalysis: audioAnalysisEngine, exportSession: exportSessionEngine });
 
   function createAudioGraph() {
     if (audioContext) return;
@@ -3152,12 +3145,12 @@
     updatePerformanceAssistantUi();
     updateVisualIntensityMeter();
     if (state.audioMode === 'deck' && Number.isFinite(audio.duration)) {
-      const offlineSessionActive = state.exporting && exportSession?.mode === 'offline';
+      const offlineSessionActive = state.exporting && exportSessionEngine.mode === 'offline';
       const displayTime = offlineSessionActive ? (state.offlineCurrentTime || 0) : audio.currentTime;
       const progress = audioController.renderTimeline(displayTime, audio.duration);
       updateSongMapPlayhead(displayTime);
       const liveRecordingActive = state.exporting
-        && exportSession?.mode === 'live'
+        && exportSessionEngine.mode === 'live'
         && mediaRecorder?.state === 'recording';
       if (liveRecordingActive) {
         const overall = progress * .80;
@@ -3262,26 +3255,20 @@
   }
 
   function setExportProgress(overall, panelText, stageText = panelText) {
-    exportProgressOverall = clamp(Number(overall) || 0, 0, 1);
+    const timing = exportSessionEngine.updateProgress(overall);
     let metaText;
-    if (exportStartedAt) {
-      const now = performance.now();
-      const paused = exportPausedDuration + (exportPauseStartedAt ? now - exportPauseStartedAt : 0);
-      const elapsedSeconds = Math.max(0, (now - exportStartedAt - paused) / 1000);
-      if (offlineExportPaused) metaText = `Paused · elapsed ${formatTime(elapsedSeconds)}`;
-      else if (exportProgressOverall > .01 && exportProgressOverall < .995) {
-        const remainingSeconds = elapsedSeconds * (1 - exportProgressOverall) / exportProgressOverall;
-        metaText = `Elapsed ${formatTime(elapsedSeconds)} · estimated remaining ${formatTime(remainingSeconds)}`;
-      } else metaText = `Elapsed ${formatTime(elapsedSeconds)}`;
+    if (exportSessionEngine.diagnostics.snapshot.startedAt) {
+      if (timing.paused) metaText = `Paused · elapsed ${formatTime(timing.elapsedSeconds)}`;
+      else if (timing.remainingSeconds !== null) {
+        metaText = `Elapsed ${formatTime(timing.elapsedSeconds)} · estimated remaining ${formatTime(timing.remainingSeconds)}`;
+      } else metaText = `Elapsed ${formatTime(timing.elapsedSeconds)}`;
     }
-    exportController.renderProgress({ overall: exportProgressOverall, panelText, stageText, metaText });
+    exportController.renderProgress({ overall: timing.progress, panelText, stageText, metaText });
   }
 
   function beginExportProgress(panelText, stageText = panelText) {
     clearTimeout(exportProgressHideTimer);
-    exportStartedAt = performance.now();
-    exportPauseStartedAt = 0;
-    exportPausedDuration = 0;
+    exportSessionEngine.startProgress();
     exportController.begin();
     setExportProgress(0, panelText, stageText);
   }
@@ -3296,9 +3283,10 @@
   }
 
   function completeExportProgress(outputPath) {
+    exportSessionEngine.markCompleted();
     setExportProgress(1, `Saved 100% | ${exportedFileName(outputPath)}`, 'Export saved 100%');
     exportController.setNote('The finished video has been saved successfully.');
-    const elapsedSeconds = exportStartedAt ? Math.max(0, (performance.now() - exportStartedAt - exportPausedDuration) / 1000) : 0;
+    const elapsedSeconds = exportSessionEngine.elapsed();
     exportController.renderProgress({
       overall: 1,
       panelText: `Saved 100% | ${exportedFileName(outputPath)}`,
@@ -3325,13 +3313,13 @@
   }
 
   window.quarticDesktop.onExportProgress?.((update) => {
-    if (!update || !exportSession || update.id !== exportSession.id) return;
+    if (!update || !exportSessionEngine.matches(update.id)) return;
     const phaseProgress = clamp(Number(update.progress) || 0, 0, 1);
-    const renderShare = exportSession.mode === 'offline' ? .85 : .80;
+    const renderShare = exportSessionEngine.mode === 'offline' ? .85 : .80;
     let overall;
     let phaseLabel;
     if (update.stage === 'saving') {
-      const start = Math.max(renderShare, exportProgressOverall);
+      const start = Math.max(renderShare, exportSessionEngine.progress);
       overall = start + (.995 - start) * phaseProgress;
       phaseLabel = `Saving ${Math.round(phaseProgress * 100)}%`;
     } else {
@@ -3672,7 +3660,7 @@
       outputPath: result.outputPath,
       sizeBytes: Number(result.sizeBytes) || 0,
       encoderLabel: result.encoderLabel || details.encoderLabel || '',
-      mode: details.mode || exportSession?.mode || 'offline',
+      mode: details.mode || exportSessionEngine.mode || 'offline',
       width: details.width || width,
       height: details.height || height,
       fps: details.fps || Number($('#fps').value),
@@ -3718,7 +3706,7 @@
 
   async function recoverInterruptedExport(id) {
     state.exporting = true;
-    exportSession = { id, mode: 'offline' };
+    exportSessionEngine.begin({ id }, 'offline');
     document.body.classList.add('exporting', 'hide-export-preview');
     setStageExportMode('offline');
     setExportActionButtons(false, false);
@@ -3733,7 +3721,7 @@
       showToast(`Recovered export complete: ${result.outputPath}`);
     } finally {
       state.exporting = false;
-      exportSession = null;
+      exportSessionEngine.clear();
       document.body.classList.remove('exporting', 'hide-export-preview');
       await refreshRecoverableExports();
     }
@@ -8128,8 +8116,7 @@
       return;
     }
 
-    exportSession = session;
-    exportSession.mode = 'offline';
+    exportSessionEngine.begin(session, 'offline');
     state.loopBeforeExport = audio.loop;
     const previousVisualTime = state.visualTime;
     const previousModulationRotationPhase = state.modulationRotationPhase;
@@ -8138,9 +8125,6 @@
     let encodedQueue = Promise.resolve();
     let exportCompleted = false;
     let renderedFrameCount = 0;
-    offlineExportCancelled = false;
-    offlineExportFinishRequested = false;
-    offlineExportPaused = false;
     try {
       state.exportWidth = width;
       state.exportHeight = height;
@@ -8187,13 +8171,13 @@
       );
 
       for (let frameIndex = 0; frameIndex < frameCount; frameIndex++) {
-        if (offlineExportCancelled) throw new DOMException('Offline export cancelled.', 'AbortError');
-        if (offlineExportFinishRequested && frameIndex > 0) break;
-        while (offlineExportPaused && !offlineExportCancelled && !offlineExportFinishRequested) {
+        if (exportSessionEngine.cancelRequested) throw new DOMException('Offline export cancelled.', 'AbortError');
+        if (exportSessionEngine.finishRequested && frameIndex > 0) break;
+        while (exportSessionEngine.paused && !exportSessionEngine.cancelRequested && !exportSessionEngine.finishRequested) {
           await new Promise((resolve) => setTimeout(resolve, 100));
         }
-        if (offlineExportCancelled) throw new DOMException('Offline export cancelled.', 'AbortError');
-        if (offlineExportFinishRequested && frameIndex > 0) break;
+        if (exportSessionEngine.cancelRequested) throw new DOMException('Offline export cancelled.', 'AbortError');
+        if (exportSessionEngine.finishRequested && frameIndex > 0) break;
         if (encoderError) throw encoderError;
         const time = frameIndex / fps;
         state.offlineCurrentTime = time;
@@ -8227,41 +8211,38 @@
       encoder.close();
       encoder = null;
       await encodedQueue;
-      if (offlineExportCancelled) throw new DOMException('Offline export cancelled.', 'AbortError');
+      if (exportSessionEngine.cancelRequested) throw new DOMException('Offline export cancelled.', 'AbortError');
       setExportProgress(.85, 'Encoded frames written | preparing final video | overall 85%', 'Encoded frames written | finalizing next | overall 85%');
       state.offlineExporting = false;
       setExportActionButtons(false, true);
-      $('#exportLabel').textContent = offlineExportFinishRequested ? 'FINISHING SHORT EXPORT…' : 'MUXING AUDIO…';
+      $('#exportLabel').textContent = exportSessionEngine.finishRequested ? 'FINISHING SHORT EXPORT…' : 'MUXING AUDIO…';
       $('#exportButton').disabled = true;
       setExportProgress(.85, 'Frames complete | finalizing and saving | overall 85%', 'Frames complete | finalizing 0% | overall 85%');
       const result = await window.quarticDesktop.finishOfflineExport(session.id, {
-        allowPartial: offlineExportFinishRequested,
+        allowPartial: exportSessionEngine.finishRequested,
         renderedFrameCount
       });
       state.exportedPath = result.outputPath;
       exportCompleted = true;
       recordExportResult(result, { mode: options.test ? 'test' : 'offline', width, height, fps, duration: renderedFrameCount / fps });
       completeExportProgress(result.outputPath);
-      exportSession = null;
+      exportSessionEngine.clear();
       $('#revealButton').hidden = false;
       showToast(result.warning || `${result.partial ? 'Shortened export' : 'Offline export'} complete: ${result.outputPath}`, Boolean(result.warning));
     } catch (error) {
       if (encoder && encoder.state !== 'closed') encoder.close();
       await encodedQueue.catch(() => {});
       pendingOfflineRender = null;
-      if (exportSession?.id) await window.quarticDesktop.abortOfflineExport(exportSession.id).catch(() => {});
-      exportSession = null;
-      if (error.name === 'AbortError' || offlineExportCancelled) showToast('Offline export cancelled and temporary files discarded');
+      if (exportSessionEngine.session?.id) await window.quarticDesktop.abortOfflineExport(exportSessionEngine.session.id).catch(() => {});
+      exportSessionEngine.clear();
+      if (error.name === 'AbortError' || exportSessionEngine.cancelRequested) showToast('Offline export cancelled and temporary files discarded');
       else throw error;
     } finally {
       state.offlineExporting = false;
       state.exporting = false;
       state.visualTime = previousVisualTime;
       state.modulationRotationPhase = previousModulationRotationPhase;
-      offlineExportCancelled = false;
-      offlineExportFinishRequested = false;
-      offlineExportPaused = false;
-      exportPauseStartedAt = 0;
+      exportSessionEngine.resetRequests();
       resetPulseEvents();
       document.body.classList.remove('exporting', 'hide-export-preview');
       $('#exportButton').classList.remove('recording');
@@ -8316,10 +8297,7 @@
       finalEncoder: options.preflight?.encoder?.id
     });
     if (!session) return;
-    exportSession = session;
-    exportSession.mode = 'live';
-    liveExportCompleted = false;
-    liveExportCancelled = false;
+    exportSessionEngine.begin(session, 'live');
     state.loopBeforeExport = audio.loop;
 
     try {
@@ -8380,8 +8358,8 @@
       audioController.renderLiveStatus('RECORDING', true);
       showToast(`Recording ${width}×${height} at ${fps} FPS for ${format.toUpperCase()} export`);
     } catch (error) {
-      if (exportSession?.id) await window.quarticDesktop.abortExport(exportSession.id).catch(() => {});
-      exportSession = null;
+      if (exportSessionEngine.session?.id) await window.quarticDesktop.abortExport(exportSessionEngine.session.id).catch(() => {});
+      exportSessionEngine.clear();
       state.exporting = false;
       renderPlaylist();
       audio.loop = state.loopBeforeExport;
@@ -8394,34 +8372,31 @@
   }
 
   function resumeOfflineExportClock() {
-    if (exportPauseStartedAt) exportPausedDuration += performance.now() - exportPauseStartedAt;
-    exportPauseStartedAt = 0;
-    offlineExportPaused = false;
+    exportSessionEngine.resume();
     exportController.setPaused(false);
   }
 
   function togglePauseExport() {
-    if (exportSession?.mode !== 'offline' || !state.offlineExporting || offlineExportCancelled) return;
-    if (offlineExportPaused) {
+    if (exportSessionEngine.mode !== 'offline' || !state.offlineExporting || exportSessionEngine.cancelRequested) return;
+    if (exportSessionEngine.paused) {
       resumeOfflineExportClock();
       exportController.setNote('Offline rendering resumed from the next exact frame.');
-      setExportProgress(exportProgressOverall, exportController.getPanelText(), `Rendering resumed · overall ${Math.floor(exportProgressOverall * 100)}%`);
+      setExportProgress(exportSessionEngine.progress, exportController.getPanelText(), `Rendering resumed · overall ${Math.floor(exportSessionEngine.progress * 100)}%`);
     } else {
-      offlineExportPaused = true;
-      exportPauseStartedAt = performance.now();
+      const timing = exportSessionEngine.pause();
       exportController.setPaused(true, {
         note: 'Offline rendering is paused safely between frames.',
-        stageText: `Paused at ${Math.floor(exportProgressOverall * 100)}%`,
-        metaText: `Paused · elapsed ${formatTime((performance.now() - exportStartedAt - exportPausedDuration) / 1000)}`
+        stageText: `Paused at ${Math.floor(exportSessionEngine.progress * 100)}%`,
+        metaText: `Paused · elapsed ${formatTime(timing.elapsedSeconds)}`
       });
     }
   }
 
   function endAndFinishExport() {
-    if (exportSession?.mode === 'offline') {
+    if (exportSessionEngine.mode === 'offline') {
       if (!state.offlineExporting) return;
       resumeOfflineExportClock();
-      offlineExportFinishRequested = true;
+      exportSessionEngine.requestFinish();
       exportController.setNote('Stopping after the current frame, then finishing and saving the shortened video.');
       $('#exportLabel').textContent = 'ENDING & FINISHING…';
       $('#exportButton').disabled = true;
@@ -8435,19 +8410,19 @@
   }
 
   function cancelExport() {
-    if (!state.exporting || !exportSession) return;
+    if (!state.exporting || !exportSessionEngine.session) return;
     if (!window.confirm('Cancel this export and permanently discard its temporary output?')) return;
     exportController.setNote('Cancelling the export and discarding its temporary output.');
     $('#exportLabel').textContent = 'CANCELLING…';
     $('#exportButton').disabled = true;
     setExportActionButtons(false, false);
-    if (exportSession.mode === 'offline') {
+    if (exportSessionEngine.mode === 'offline') {
       resumeOfflineExportClock();
-      offlineExportCancelled = true;
-      if (!state.offlineExporting) window.quarticDesktop.abortOfflineExport(exportSession.id).catch(() => {});
+      exportSessionEngine.requestCancel();
+      if (!state.offlineExporting) window.quarticDesktop.abortOfflineExport(exportSessionEngine.session.id).catch(() => {});
       return;
     }
-    liveExportCancelled = true;
+    exportSessionEngine.requestCancel();
     audio.pause();
     if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
   }
@@ -8457,13 +8432,13 @@
   }
 
   async function finishLiveExport() {
-    const session = exportSession;
+    const session = exportSessionEngine.session;
     $('#exportLabel').textContent = 'FINALIZING…';
     $('#exportButton').disabled = true;
     setExportActionButtons(false, false);
     try {
       await appendQueue;
-      if (liveExportCancelled) {
+      if (exportSessionEngine.cancelRequested) {
         await window.quarticDesktop.abortExport(session.id).catch(() => {});
         showToast('Live export cancelled and temporary files discarded');
         return;
@@ -8471,7 +8446,7 @@
       setExportProgress(.80, 'Recording complete | finalizing and saving | overall 80%', 'Recording complete | finalizing 0% | overall 80%');
       const result = await window.quarticDesktop.finishExport(session.id);
       state.exportedPath = result.outputPath;
-      liveExportCompleted = true;
+      exportSessionEngine.markCompleted();
       recordExportResult(result, { mode: 'live', width: state.exportWidth, height: state.exportHeight, fps: Number($('#fps').value), duration: audio.currentTime });
       completeExportProgress(result.outputPath);
       $('#revealButton').hidden = false;
@@ -8483,7 +8458,7 @@
       audio.loop = state.loopBeforeExport;
       $('#loopPlayback').disabled = false;
       document.body.classList.remove('exporting', 'hide-export-preview');
-      exportSession = null;
+      exportSessionEngine.clear();
       mediaRecorder = null;
       $('#exportButton').classList.remove('recording');
       updateTrackControls();
@@ -8498,8 +8473,8 @@
       $('#unleashedMode').disabled = false;
       $('#performanceMode').disabled = false;
       updateUnleashedMode(state.unleashedMode);
-      if (!liveExportCompleted) exportController.hide();
-      liveExportCancelled = false;
+      if (!exportSessionEngine.completed) exportController.hide();
+      exportSessionEngine.resetRequests();
       audioController.renderLiveStatus('IDLE');
       setCanvasSize();
       setPlayState();
