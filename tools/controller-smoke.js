@@ -92,7 +92,7 @@ global.document = {
   }
 };
 
-for (const file of ['audio-controller.js', 'audio-analysis-engine.js', 'performance-controller.js', 'performance-sequencer-engine.js', 'performance-show-data-engine.js', 'performance-show-composer-controller.js', 'profile-manager-controller.js', 'song-map-data-engine.js', 'performance-package-engine.js', 'export-controller.js', 'export-session-engine.js', 'export-encoder-engine.js']) {
+for (const file of ['audio-controller.js', 'audio-analysis-engine.js', 'performance-controller.js', 'performance-sequencer-engine.js', 'performance-show-data-engine.js', 'performance-show-composer-controller.js', 'profile-manager-controller.js', 'song-map-data-engine.js', 'song-director-engine.js', 'performance-package-engine.js', 'export-controller.js', 'export-session-engine.js', 'export-encoder-engine.js']) {
   const source = fs.readFileSync(path.join(__dirname, '..', 'src', 'renderer', 'modules', file), 'utf8');
   vm.runInThisContext(source, { filename: file });
 }
@@ -357,6 +357,37 @@ assert(songMapEngine.overrideFor(directorOverrides, 'map-a', 2)?.emphasis === 'c
 directorOverrides = songMapEngine.updateOverride(directorOverrides, 'map-a', 2, null);
 assert(!songMapEngine.overrideFor(directorOverrides, 'map-a', 2), 'Song Director override was not removed.');
 assert(songMapEngine.diagnostics.ready, 'Song Map data engine diagnostics failed.');
+
+const songDirectorEngine = window.QuarticSongDirectorEngine.create({ hashText: songMapEngine.hashText });
+const directorMap = {
+  key: 'director-map',
+  duration: 12,
+  personality: 'electronic',
+  beats: [1, 2, 3, 4.5, 6, 7.5, 9, 10.5],
+  sections: [
+    { start: 0, end: 5, label: 'Opening Build', kind: 'build', energy: .55, bass: .7, mids: .5, highs: .4 },
+    { start: 5, end: 12, label: 'Main Peak', kind: 'peak', energy: .92, bass: .9, mids: .75, highs: .8 }
+  ]
+};
+assert(songDirectorEngine.resolveBehavior('auto', directorMap) === 'electronic', 'Song Director did not resolve the mapped music personality.');
+const directorPlan = songDirectorEngine.generatePlan(directorMap, 'rock');
+assert(directorPlan.length === 2 && directorPlan.every((cue) => cue.behaviorId === 'rock'), 'Song Director plan did not apply the selected behavior.');
+assert(JSON.stringify(directorPlan) === JSON.stringify(songDirectorEngine.generatePlan(directorMap, 'rock')), 'Song Director plan generation was not deterministic.');
+const directorResult = songDirectorEngine.evaluate({
+  plan: directorPlan,
+  map: directorMap,
+  time: 6,
+  styleId: 'mathematical',
+  intensity: .5,
+  getOverride: (index) => index === 1 ? { strength: .8, emphasis: 'equation' } : null,
+  dimensionalEnabled: false,
+  foldingEnabled: false
+});
+assert(directorResult.cue.index === 1 && directorResult.values.cueLabel === 'Main Peak', 'Song Director did not select the active cue.');
+assert(Number.isFinite(directorResult.values.motion) && Number.isFinite(directorResult.values.equation), 'Song Director modulation values were not finite.');
+assert(directorResult.values.fractalTilt === 0 && directorResult.values.fractalSlice === 0, 'Song Director dimensional gating failed.');
+assert(directorResult.values.equationFold === 0 && directorResult.values.equationWarp === 0, 'Song Director folding gating failed.');
+assert(songDirectorEngine.diagnostics.ready, 'Song Director engine diagnostics failed.');
 
 let packageId = 0;
 const packageEngine = window.QuarticPerformancePackageEngine.create({

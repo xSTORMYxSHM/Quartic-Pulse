@@ -46,6 +46,8 @@
   if (!profileManagerControllerFactory) throw new Error('Quartic profile manager controller failed to load.');
   const songMapDataEngineFactory = window.QuarticSongMapDataEngine;
   if (!songMapDataEngineFactory) throw new Error('Quartic Song Map data engine failed to load.');
+  const songDirectorEngineFactory = window.QuarticSongDirectorEngine;
+  if (!songDirectorEngineFactory) throw new Error('Quartic Song Director engine failed to load.');
   const performancePackageEngineFactory = window.QuarticPerformancePackageEngine;
   if (!performancePackageEngineFactory) throw new Error('Quartic performance package engine failed to load.');
   const exportControllerFactory = window.QuarticExportController;
@@ -1933,6 +1935,7 @@
     onError: (message) => showToast(message, true)
   });
   const songMapDataEngine = songMapDataEngineFactory.create();
+  const songDirectorEngine = songDirectorEngineFactory.create({ hashText: songMapDataEngine.hashText });
   const performancePackageEngine = performancePackageEngineFactory.create({
     appVersion: '0.30.0-dev.1',
     hashText: songMapDataEngine.hashText,
@@ -1949,6 +1952,7 @@
     performanceSequencer: performanceSequencerEngine,
     performanceShowData: performanceShowDataEngine,
     songMapData: songMapDataEngine,
+    songDirector: songDirectorEngine,
     performancePackage: performancePackageEngine,
     exportSession: exportSessionEngine,
     exportEncoder: exportEncoderEngine
@@ -6859,37 +6863,11 @@
   let selectedSongDirectorMapKey = '';
   const songDirectorOverridesStorageKey = 'quarticPulseDirectorOverridesV1';
 
-  const songDirectorStyles = Object.freeze({
-    subtle: { label: 'Subtle', master: .48, camera: .62, equation: .48, color: .6, depth: .42, fold: .34 },
-    cinematic: { label: 'Cinematic', master: 1, camera: 1.12, equation: .82, color: .95, depth: 1.08, fold: .72 },
-    mathematical: { label: 'Mathematical', master: .94, camera: .65, equation: 1.35, color: .88, depth: .92, fold: 1.24 },
-    storm: { label: 'Storm', master: 1.22, camera: 1.12, equation: 1.16, color: 1.2, depth: 1.16, fold: 1.08 }
-  });
-
-  const songDirectorBehaviors = Object.freeze({
-    balanced: { label: 'Balanced', camera: 1, equation: 1, color: 1, motion: 1, depth: 1, fold: 1, pulse: 1, rotation: 1, bass: 1, mids: 1, highs: 1, transition: .18 },
-    electronic: { label: 'Electronic / EDM', camera: 1.08, equation: 1.08, color: 1.25, motion: 1.25, depth: 1.05, fold: 1.05, pulse: 1.35, rotation: 1.12, bass: 1.25, mids: .95, highs: 1.2, transition: .11 },
-    hiphop: { label: 'Hip-Hop', camera: 1.2, equation: 1.1, color: .9, motion: .85, depth: .8, fold: .9, pulse: 1.05, rotation: .65, bass: 1.45, mids: 1, highs: .75, transition: .22 },
-    rock: { label: 'Rock / Metal', camera: 1, equation: 1.15, color: 1, motion: 1.2, depth: 1, fold: 1.18, pulse: 1.3, rotation: 1.05, bass: 1.05, mids: 1.3, highs: 1.18, transition: .13 },
-    pop: { label: 'Pop', camera: .95, equation: .9, color: 1.35, motion: 1.05, depth: .95, fold: .8, pulse: 1.1, rotation: .9, bass: .95, mids: 1.15, highs: 1.25, transition: .16 },
-    ambient: { label: 'Ambient / Classical', camera: .72, equation: .58, color: .82, motion: .62, depth: 1.35, fold: .68, pulse: .35, rotation: .42, bass: .7, mids: 1.12, highs: .95, transition: .34 }
-  });
+  const songDirectorStyles = songDirectorEngine.styles;
+  const songDirectorBehaviors = songDirectorEngine.behaviors;
 
   function resolveSongDirectorBehavior(map = activeSongMap) {
-    if (songDirectorBehaviors[state.songDirectorBehavior]) return state.songDirectorBehavior;
-    return songDirectorBehaviors[map?.personality] ? map.personality : 'balanced';
-  }
-
-  function behaviorTargetScale(key, behavior) {
-    if (['zoom', 'panX', 'panY'].includes(key)) return behavior.camera;
-    if (key === 'rotationOffset') return behavior.rotation;
-    if (key === 'motion') return behavior.motion;
-    if (['equation', 'bulbPower'].includes(key)) return behavior.equation;
-    if (['frequencyHue', 'flow', 'bulbGlow'].includes(key)) return behavior.color;
-    if (['fractalTilt', 'fractalSlice'].includes(key)) return behavior.depth;
-    if (['equationFold', 'equationWarp', 'bulbFold'].includes(key)) return behavior.fold;
-    if (key === 'pulseJagged') return behavior.pulse;
-    return 1;
+    return songDirectorEngine.resolveBehavior(state.songDirectorBehavior, map);
   }
 
   function readSongDirectorOverrides() {
@@ -6907,95 +6885,8 @@
     catch (_) { /* Cue edits remain optional if local storage is unavailable. */ }
   }
 
-  function directorEmphasisGroup(key) {
-    if (['zoom', 'rotationOffset', 'panX', 'panY', 'motion'].includes(key)) return 'camera';
-    if (['equation', 'bulbPower'].includes(key)) return 'equation';
-    if (['frequencyHue', 'flow', 'bulbGlow', 'pulseJagged'].includes(key)) return 'color';
-    if (['fractalTilt', 'fractalSlice'].includes(key)) return 'dimension';
-    if (['equationFold', 'equationWarp', 'bulbFold'].includes(key)) return 'fold';
-    return 'other';
-  }
-
-  function directorCueTargets(cue) {
-    const override = songDirectorOverrideFor(cue.index);
-    if (!override) return cue.targets;
-    return Object.fromEntries(Object.entries(cue.targets).map(([key, value]) => {
-      const emphasisScale = override.emphasis === 'auto'
-        ? 1
-        : (directorEmphasisGroup(key) === override.emphasis ? 1.35 : .72);
-      return [key, value * override.strength * emphasisScale];
-    }));
-  }
-
-  function directorSeedUnit(text) {
-    return parseInt(hashSongMapText(String(text)), 16) / 0xffffffff;
-  }
-
-  function directorSectionArc(kind) {
-    return ({ intro: .32, build: .76, peak: 1, breakdown: .24, bass: .76, lift: .72, outro: .18, steady: .56 })[kind] ?? .56;
-  }
-
   function generateSongDirectorPlan(map = activeSongMap) {
-    if (!map?.sections?.length) return [];
-    const behaviorId = resolveSongDirectorBehavior(map);
-    const behavior = songDirectorBehaviors[behaviorId];
-    return map.sections.map((section, index) => {
-      const randomA = directorSeedUnit(`${map.key}|${index}|a`);
-      const randomB = directorSeedUnit(`${map.key}|${index}|b`);
-      const direction = randomA < .5 ? -1 : 1;
-      const arc = directorSectionArc(section.kind);
-      const energy = clamp(Number(section.energy) || 0, 0, 1);
-      const bass = clamp((Number(section.bass) || 0) * behavior.bass, 0, 1.35);
-      const mids = clamp((Number(section.mids) || 0) * behavior.mids, 0, 1.35);
-      const highs = clamp((Number(section.highs) || 0) * behavior.highs, 0, 1.35);
-      const brightness = highs - bass;
-      const sectionLength = Math.max(.1, (Number(section.end) || map.duration) - (Number(section.start) || 0));
-      const sectionBeatCount = map.beats.filter((beat) => beat >= section.start && beat < section.end).length;
-      const beatRate = clamp(sectionBeatCount / sectionLength / 2.5, 0, 1);
-      const buildDirection = section.kind === 'build' ? 1 : (section.kind === 'outro' ? -1 : 0);
-      return {
-        index,
-        start: Number(section.start) || 0,
-        end: Number(section.end) || map.duration,
-        label: section.label || `Movement ${index + 1}`,
-        kind: section.kind || 'steady',
-        energy,
-        behaviorId,
-        transitionFraction: behavior.transition,
-        targets: Object.fromEntries(Object.entries({
-          zoom: (arc - .46) * .14 + buildDirection * .025,
-          rotationOffset: direction * (.018 + arc * .052 + randomB * .018),
-          panX: direction * (.004 + randomB * .014) * (.45 + arc),
-          panY: (randomA - .5) * .022 * (.5 + arc),
-          equation: Math.max(0, .012 + energy * .105 + arc * .035),
-          frequencyHue: brightness * .18 + direction * (.025 + randomB * .045),
-          flow: .018 + arc * .085 + highs * .035,
-          motion: .025 + arc * .16 + energy * .09 + beatRate * .035,
-          fractalTilt: .015 + arc * .095 + mids * .035,
-          fractalSlice: .01 + arc * .072 + highs * .03,
-          equationFold: .004 + arc * .025 + mids * .012,
-          equationWarp: .006 + arc * .038 + bass * .014,
-          bulbPower: direction * (.04 + arc * .12),
-          bulbFold: .004 + arc * .026,
-          bulbGlow: .025 + arc * .14 + highs * .05,
-          pulseJagged: .02 + arc * .13 + beatRate * .055
-        }).map(([key, value]) => [key, value * behaviorTargetScale(key, behavior)]))
-      };
-    });
-  }
-
-  function smoothstep01(value) {
-    const t = clamp(value, 0, 1);
-    return t * t * (3 - 2 * t);
-  }
-
-  function directorTargetScale(key, style) {
-    if (['zoom', 'rotationOffset', 'panX', 'panY', 'motion'].includes(key)) return style.camera;
-    if (['equation', 'bulbPower'].includes(key)) return style.equation;
-    if (['frequencyHue', 'flow', 'bulbGlow'].includes(key)) return style.color;
-    if (['fractalTilt', 'fractalSlice'].includes(key)) return style.depth;
-    if (['equationFold', 'equationWarp', 'bulbFold'].includes(key)) return style.fold;
-    return 1;
+    return songDirectorEngine.generatePlan(map, state.songDirectorBehavior);
   }
 
   function updateSongDirector(time) {
@@ -7005,41 +6896,19 @@
       updateSongDirectorNow(null, {}, time);
       return state.songDirectorValues;
     }
-    const duration = activeSongMap.duration || 1;
-    const songTime = clamp(Number(time) || 0, 0, duration);
-    let index = activeSongDirectorPlan.findIndex((cue) => songTime >= cue.start && songTime < cue.end);
-    if (index < 0) index = activeSongDirectorPlan.length - 1;
-    const cue = activeSongDirectorPlan[index];
-    const previous = activeSongDirectorPlan[Math.max(0, index - 1)];
-    const sectionLength = Math.max(.1, cue.end - cue.start);
-    const sectionProgress = clamp((songTime - cue.start) / sectionLength, 0, 1);
-    const transition = Math.min(7, Math.max(.65, sectionLength * (cue.transitionFraction || .18)));
-    const blend = index ? smoothstep01((songTime - cue.start) / transition) : 1;
-    let arcEnvelope = 1;
-    if (cue.kind === 'build') arcEnvelope = .56 + .44 * smoothstep01(sectionProgress);
-    else if (cue.kind === 'outro') arcEnvelope = 1 - .68 * smoothstep01(sectionProgress);
-    else if (cue.kind === 'intro') arcEnvelope = .55 + .45 * smoothstep01(sectionProgress);
-    const style = songDirectorStyles[state.songDirectorStyle] || songDirectorStyles.cinematic;
-    const master = clamp(state.songDirectorIntensity, 0, 1) * style.master;
-    const values = { cueIndex: index, cueLabel: cue.label, sectionProgress };
-    const previousTargets = directorCueTargets(previous);
-    const cueTargets = directorCueTargets(cue);
-    for (const key of Object.keys(cueTargets)) {
-      const from = previousTargets[key] || 0;
-      const to = cueTargets[key] || 0;
-      values[key] = (from + (to - from) * blend) * master * directorTargetScale(key, style) * arcEnvelope;
-    }
-    if (!state.fractalDimensional) {
-      values.fractalTilt = 0;
-      values.fractalSlice = 0;
-    }
-    if (!state.equationFolding) {
-      values.equationFold = 0;
-      values.equationWarp = 0;
-    }
-    state.songDirectorValues = values;
-    updateSongDirectorNow(cue, values, songTime);
-    return values;
+    const result = songDirectorEngine.evaluate({
+      plan: activeSongDirectorPlan,
+      map: activeSongMap,
+      time,
+      styleId: state.songDirectorStyle,
+      intensity: state.songDirectorIntensity,
+      getOverride: songDirectorOverrideFor,
+      dimensionalEnabled: state.fractalDimensional,
+      foldingEnabled: state.equationFolding
+    });
+    state.songDirectorValues = result.values;
+    updateSongDirectorNow(result.cue, result.values, result.songTime);
+    return result.values;
   }
 
   function updateSongDirectorNow(cue, values, time) {
