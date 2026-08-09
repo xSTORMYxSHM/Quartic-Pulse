@@ -32,6 +32,8 @@
   if (!visualCatalog) throw new Error('Quartic visual catalog failed to load.');
   const audioControllerFactory = window.QuarticAudioController;
   if (!audioControllerFactory) throw new Error('Quartic audio controller failed to load.');
+  const audioAnalysisEngineFactory = window.QuarticAudioAnalysisEngine;
+  if (!audioAnalysisEngineFactory) throw new Error('Quartic audio analysis engine failed to load.');
   const performanceControllerFactory = window.QuarticPerformanceController;
   if (!performanceControllerFactory) throw new Error('Quartic performance controller failed to load.');
   const exportControllerFactory = window.QuarticExportController;
@@ -1804,9 +1806,6 @@
   let windowsOutputScanGeneration = 0;
   let monitorGain;
   let recordingDestination;
-  let frequencyData;
-  let beatFrequencyData;
-  let timeData;
   let mediaRecorder;
   let exportSession;
   let exportProgressHideTimer;
@@ -1873,7 +1872,9 @@
     },
     onLoop: (enabled) => { audio.loop = enabled; }
   });
+  const audioAnalysisEngine = audioAnalysisEngineFactory.create();
   window.__quarticControllers = Object.freeze({ audio: audioController, performance: performanceController, export: exportController });
+  window.__quarticEngines = Object.freeze({ audioAnalysis: audioAnalysisEngine });
 
   function createAudioGraph() {
     if (audioContext) return;
@@ -1901,9 +1902,7 @@
     monitorGain.connect(audioContext.destination);
     analyser.connect(recordingDestination);
     updateMonitorGain();
-    frequencyData = new Uint8Array(analyser.frequencyBinCount);
-    beatFrequencyData = new Uint8Array(beatAnalyser.frequencyBinCount);
-    timeData = new Uint8Array(analyser.fftSize);
+    audioAnalysisEngine.attach(audioContext, analyser, beatAnalyser);
   }
 
   function audioIsActive() {
@@ -1931,26 +1930,6 @@
     if (!monitorGain || !audioContext) return;
     const target = state.monitorMuted ? 0 : state.monitorVolume;
     monitorGain.gain.setTargetAtTime(target, audioContext.currentTime, .015);
-  }
-
-  function averageBand(lowHz, highHz) {
-    if (!frequencyData || !audioContext) return 0;
-    const nyquist = audioContext.sampleRate / 2;
-    const low = Math.max(0, Math.floor(lowHz / nyquist * frequencyData.length));
-    const high = Math.min(frequencyData.length - 1, Math.ceil(highHz / nyquist * frequencyData.length));
-    let total = 0;
-    for (let i = low; i <= high; i++) total += frequencyData[i];
-    return total / Math.max(1, high - low + 1) / 255;
-  }
-
-  function averageBeatBand(lowHz, highHz) {
-    if (!beatFrequencyData || !audioContext) return 0;
-    const nyquist = audioContext.sampleRate / 2;
-    const low = Math.max(0, Math.floor(lowHz / nyquist * beatFrequencyData.length));
-    const high = Math.min(beatFrequencyData.length - 1, Math.ceil(highHz / nyquist * beatFrequencyData.length));
-    let total = 0;
-    for (let index = low; index <= high; index++) total += beatFrequencyData[index];
-    return total / Math.max(1, high - low + 1) / 255;
   }
 
   function getActiveFrequencyBands() {
@@ -2103,47 +2082,19 @@
   }
 
   function resetBeatDetector({ keepTotal = false } = {}) {
-    state.beatFastEnvelope = 0;
-    state.beatSlowEnvelope = 0;
-    state.beatOnsetAverage = .008;
-    state.beatCooldownRemaining = 0;
-    state.beatDetectorArmed = true;
-    if (!keepTotal) state.beatDetectedTotal = 0;
+    audioAnalysisEngine.resetBeatDetector(state, { keepTotal });
   }
 
   function updateAdaptiveBeatDetector(lowEnergy, lowMidEnergy, delta, { register = true } = {}) {
-    const frameDelta = clamp(Number(delta) || 1 / 60, 1 / 240, .1);
-    const sensitivity = clamp(Number(state.beatSensitivity) || 0, 0, 1);
-    const energy = clamp(lowEnergy * .72 + lowMidEnergy * .28, 0, 1);
-    const fastTime = energy > state.beatFastEnvelope ? .022 : .115;
-    const slowTime = energy > state.beatSlowEnvelope ? .46 : .78;
-    state.beatFastEnvelope += (energy - state.beatFastEnvelope) * (1 - Math.exp(-frameDelta / fastTime));
-    state.beatSlowEnvelope += (energy - state.beatSlowEnvelope) * (1 - Math.exp(-frameDelta / slowTime));
-    const onset = Math.max(0, state.beatFastEnvelope - state.beatSlowEnvelope);
-    state.beatOnsetAverage += (onset - state.beatOnsetAverage) * (1 - Math.exp(-frameDelta / .68));
-    state.beatCooldownRemaining = Math.max(0, state.beatCooldownRemaining - frameDelta);
-
-    const minimumEnergy = .13 - sensitivity * .095;
-    const thresholdFloor = .024 - sensitivity * .017;
-    const adaptiveThreshold = thresholdFloor + state.beatOnsetAverage * (2.45 - sensitivity * 1.55);
-    if (!state.beatDetectorArmed && (onset < adaptiveThreshold * .52 || energy < state.beatSlowEnvelope * 1.025)) {
-      state.beatDetectorArmed = true;
-    }
-    const detectedBeat = state.beatDetectorArmed
-      && state.beatCooldownRemaining <= 0
-      && energy >= minimumEnergy
-      && onset >= adaptiveThreshold;
-    if (detectedBeat) {
-      state.beatDetectorArmed = false;
-      state.beatCooldownRemaining = clamp(Number(state.beatCooldownMs) || 150, 80, 300) / 1000;
-      state.beatDetectedTotal += 1;
-      if (register) registerDetectedBeat();
-      if (state.beatPulse) state.beat = clamp(.28 + energy * .54 + onset * 3.2, .35, 1);
-    } else state.beat *= Math.exp(-frameDelta / .105);
+    const detectedBeat = audioAnalysisEngine.updateBeatDetector(state, lowEnergy, lowMidEnergy, delta, {
+      register,
+      onBeat: registerDetectedBeat
+    });
+    const diagnostics = audioAnalysisEngine.diagnostics.beat;
     window.__quarticPulseBeatDetectedTotal = state.beatDetectedTotal;
-    window.__quarticPulseBeatEnergy = energy;
-    window.__quarticPulseBeatOnset = onset;
-    window.__quarticPulseBeatThreshold = adaptiveThreshold;
+    window.__quarticPulseBeatEnergy = diagnostics.energy;
+    window.__quarticPulseBeatOnset = diagnostics.onset;
+    window.__quarticPulseBeatThreshold = diagnostics.threshold;
     return detectedBeat;
   }
 
@@ -2216,79 +2167,17 @@
   }
 
   function updateAudioAnalysis(delta) {
-    if (!analyser || !audioIsActive()) {
-      state.bass *= .94;
-      state.mids *= .94;
-      state.highs *= .94;
-      state.rms *= .94;
-      state.beat *= .86;
-      for (let band = 0; band < 3; band++) state.pulsePreviousLevels[band] *= .94;
-      for (let index = 0; index < 64; index++) {
-        state.spectrumData[index] *= .94;
-        state.waveformData[index] *= .88;
-      }
-      if (state.bass + state.mids + state.highs < .035) {
-        state.dominantBand = 'silence';
-        state.frequencyHue *= .97;
-      }
-      return;
-    }
-    analyser.getByteFrequencyData(frequencyData);
-    beatAnalyser?.getByteFrequencyData(beatFrequencyData);
-    analyser.getByteTimeDomainData(timeData);
-    let squareSum = 0;
-    for (const sample of timeData) {
-      const normalized = (sample - 128) / 128;
-      squareSum += normalized * normalized;
-    }
-    const rms = Math.sqrt(squareSum / timeData.length);
-    const manualGain = state.reactivity;
-    const bands = getActiveFrequencyBands();
-    const rawBass = averageBand(bands.floor, bands.lowMid) * 1.6 * state.analysisBassGain;
-    const rawMids = averageBand(bands.lowMid, bands.midHigh) * 1.45 * state.analysisMidGain;
-    const rawHighs = averageBand(bands.midHigh, bands.ceiling) * 1.8 * state.analysisHighGain;
-    const rawPeak = Math.max(rawBass, rawMids, rawHighs);
-    if (state.autoReactivity && rawPeak > .03) {
-      const desiredGain = clamp(state.autoReactivityTarget / Math.max(.03, rawPeak * manualGain), .25, 3);
-      const response = desiredGain < state.autoReactivityGain ? .18 : .015;
-      state.autoReactivityGain += (desiredGain - state.autoReactivityGain) * response;
-    } else if (!state.autoReactivity) {
-      state.autoReactivityGain += (1 - state.autoReactivityGain) * .08;
-    }
-    const effectiveGain = manualGain * (state.autoReactivity ? state.autoReactivityGain : 1);
-    const maximumLevel = state.autoReactivity ? .96 : 1;
-    const spectrumFloor = 20;
-    const spectrumCeiling = Math.min(20000, audioContext.sampleRate / 2);
-    for (let index = 0; index < 64; index++) {
-      const lowPosition = index / 64;
-      const highPosition = (index + 1) / 64;
-      const lowHz = spectrumFloor * Math.pow(spectrumCeiling / spectrumFloor, lowPosition);
-      const highHz = spectrumFloor * Math.pow(spectrumCeiling / spectrumFloor, highPosition);
-      const spectrumTarget = Math.min(maximumLevel, averageBand(lowHz, highHz) * 1.55 * effectiveGain);
-      state.spectrumData[index] += (spectrumTarget - state.spectrumData[index]) * .22;
-      const timeIndex = Math.min(timeData.length - 1, Math.round(index / 63 * (timeData.length - 1)));
-      const waveformTarget = clamp((timeData[timeIndex] - 128) / 128 * effectiveGain, -1, 1);
-      state.waveformData[index] += (waveformTarget - state.waveformData[index]) * .42;
-    }
-    const bass = Math.min(maximumLevel, rawBass * effectiveGain);
-    const mids = Math.min(maximumLevel, rawMids * effectiveGain);
-    const highs = Math.min(maximumLevel, rawHighs * effectiveGain);
-    state.bass += (bass - state.bass) * .24;
-    state.mids += (mids - state.mids) * .18;
-    state.highs += (highs - state.highs) * .2;
-    state.rms += (Math.min(maximumLevel, rms * 3.2 * effectiveGain) - state.rms) * .2;
-    const colorEnergy = state.bass + state.mids + state.highs;
-    if (colorEnergy > .035) {
-      const targetHue = (state.bass * .06 + state.mids * .45 + state.highs * .88) / colorEnergy;
-      const hueResponse = .04 + (1 - state.analysisSmoothing) * .28;
-      state.frequencyHue += (targetHue - state.frequencyHue) * hueResponse;
-      const strongest = Math.max(state.bass, state.mids, state.highs);
-      state.dominantBand = strongest === state.bass ? 'bass' : (strongest === state.mids ? 'mids' : 'highs');
-    } else state.dominantBand = 'silence';
-    const beatLow = averageBeatBand(30, 190) * 1.35;
-    const beatLowMid = averageBeatBand(150, 520) * 1.18;
-    updateAdaptiveBeatDetector(beatLow, beatLowMid, delta);
-    createMusicPulseEvents([bass, mids, highs]);
+    const result = audioAnalysisEngine.update(state, {
+      active: Boolean(analyser && audioIsActive()),
+      delta,
+      bands: getActiveFrequencyBands(),
+      onBeat: registerDetectedBeat,
+      onPulse: createMusicPulseEvents
+    });
+    window.__quarticPulseBeatDetectedTotal = state.beatDetectedTotal;
+    window.__quarticPulseBeatEnergy = result.beat.energy;
+    window.__quarticPulseBeatOnset = result.beat.onset;
+    window.__quarticPulseBeatThreshold = result.beat.threshold;
   }
 
   function updateEquationAudioEnvelope(delta) {

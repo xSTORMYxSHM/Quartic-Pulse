@@ -62,7 +62,7 @@ global.document = {
   querySelector: (selector) => elements.get(selector) || null
 };
 
-for (const file of ['audio-controller.js', 'performance-controller.js', 'export-controller.js']) {
+for (const file of ['audio-controller.js', 'audio-analysis-engine.js', 'performance-controller.js', 'export-controller.js']) {
   const source = fs.readFileSync(path.join(__dirname, '..', 'src', 'renderer', 'modules', file), 'utf8');
   vm.runInThisContext(source, { filename: file });
 }
@@ -95,6 +95,65 @@ assert(toggled === 1 && restarted === 1 && skipped === 10, 'Audio transport call
 assert(audio.currentTime === 60, 'Timeline pointer seeking did not update the media position.');
 assert(elements.get('#timelineFill').style.width === '50%', 'Timeline presentation did not render.');
 assert(audioController.diagnostics.ready && audioController.diagnostics.bound, 'Audio controller diagnostics failed.');
+
+const spectrumAnalyser = {
+  frequencyBinCount: 128,
+  fftSize: 256,
+  getByteFrequencyData: (data) => data.fill(180),
+  getByteTimeDomainData: (data) => data.fill(164)
+};
+const beatAnalyser = {
+  frequencyBinCount: 128,
+  getByteFrequencyData: (data) => data.fill(255)
+};
+const analysisState = {
+  bass: 0,
+  mids: 0,
+  highs: 0,
+  rms: 0,
+  beat: 0,
+  beatPulse: true,
+  beatSensitivity: .65,
+  beatCooldownMs: 150,
+  beatFastEnvelope: 0,
+  beatSlowEnvelope: 0,
+  beatOnsetAverage: .008,
+  beatCooldownRemaining: 0,
+  beatDetectorArmed: true,
+  beatDetectedTotal: 0,
+  reactivity: 1,
+  autoReactivity: true,
+  autoReactivityTarget: .55,
+  autoReactivityGain: 1,
+  analysisBassGain: 1,
+  analysisMidGain: 1,
+  analysisHighGain: 1,
+  analysisSmoothing: .55,
+  frequencyHue: 0,
+  dominantBand: 'silence',
+  pulsePreviousLevels: new Float32Array(3),
+  spectrumData: new Float32Array(64),
+  waveformData: new Float32Array(64)
+};
+let analysisBeatCount = 0;
+let analysisPulseCount = 0;
+const analysisEngine = window.QuarticAudioAnalysisEngine.create();
+analysisEngine.attach({ sampleRate: 48000 }, spectrumAnalyser, beatAnalyser);
+analysisEngine.resetBeatDetector(analysisState);
+const activeAnalysis = analysisEngine.update(analysisState, {
+  active: true,
+  delta: 1 / 60,
+  bands: { floor: 20, lowMid: 250, midHigh: 4000, ceiling: 16000 },
+  onBeat: () => { analysisBeatCount += 1; },
+  onPulse: () => { analysisPulseCount += 1; }
+});
+assert(analysisEngine.diagnostics.ready, 'Audio analysis engine did not attach its analyser buffers.');
+assert(activeAnalysis.levels.every((level) => level > 0), 'Audio analysis engine did not calculate frequency levels.');
+assert(analysisState.rms > 0 && analysisState.dominantBand !== 'silence', 'Audio analysis output state was not updated.');
+assert(analysisBeatCount === 1 && analysisPulseCount === 1, 'Audio analysis callbacks were not emitted.');
+const activeBass = analysisState.bass;
+analysisEngine.update(analysisState, { active: false });
+assert(analysisState.bass < activeBass, 'Inactive audio analysis did not decay its output.');
 
 let performanceActions = 0;
 const performanceController = window.QuarticPerformanceController.create({
