@@ -2,9 +2,16 @@
 
 All notable Quartic Pulse changes are documented here. Quartic Pulse follows semantic versioning where practical.
 
-## Unreleased
+## 0.30.5 - 2026-08-11
 
 ### Added
+
+- Added resolution-aware mathematical detail for offline exports. Quartic Pulse now enforces effective iteration floors of 480 at 1080p, 640 at 1440p, and 800 at 4K while preserving any higher Minimum Export Iterations value selected by the user.
+- Added a profile-based, offline-only export engine with a YouTube HEVC master, playback-lossless Ut Video master, and archive-lossless FFV1 master.
+- Added an HDR Output toggle to the YouTube profile. Standard BT.709 SDR is the compatibility default; enabling HDR switches the render target, shader transform, metadata, and encoder pipeline to 10-bit Rec.2020 HLG.
+- Added a 10-bit RGB WebGL export framebuffer and shader-side Rec.2020 HLG output transform for the YouTube HDR profile.
+- Added NVIDIA HEVC Main 10 quality encoding with a CPU x265 Main 10 fallback, explicit HDR color metadata, and 320 kb/s AAC audio.
+- Added exact raw-frame streaming to Ut Video RGB/FLAC and FFV1 RGB/FLAC without WebCodecs, MediaRecorder, or intermediate bitrate limits.
 
 - Began the v0.30 workspace redesign with a Photoshop-style left rail for Music, Visuals, Perform, Export, and System while retaining the scalable contextual inspector on the right.
 - Added an always-visible Basic / Advanced control in the inspector header with workspace-specific guidance for each mode.
@@ -14,6 +21,12 @@ All notable Quartic Pulse changes are documented here. Quartic Pulse follows sem
 
 ### Changed
 
+- Replaced the confusing Base Iterations × Export Detail workflow with one direct Minimum Export Iterations control ranging from 240 to 1200. Export definition is now independent from the lighter live-preview iteration budget, while automatic resolution floors remain active.
+- Simplified the Basic Export workspace to the controls most users need: resolution, frame rate, quality profile, HDR, export action, and recent files. Minimum export iterations, encoder diagnostics, preview, and completion-sound controls remain available in Advanced mode, while the redundant Export Engine and Export Detail fields are hidden.
+- Reworked the Ion, Ember, Aurora, and Mono color systems as restrained four-stop ramps with smoother transitions, lower saturation, and softer highlight colors for more comfortable SDR and HDR viewing.
+- Softened the default and reset colors for the Custom palette so it starts from the same eye-friendly tonal range as the built-in presets.
+- Export is now deterministic and offline-only. Quality profiles own the renderer pixel format, codec, container, audio codec, metadata, estimates, and destination extension as one validated pipeline.
+- Development launches now use the bundled FFmpeg binary before falling back to the system PATH, matching packaged builds more closely.
 - Replaced the crowded five-item inspector tab row with the dedicated workspace rail, leaving the right panel focused on only the controls and subtabs relevant to the selected workspace.
 - Added responsive compact and touchscreen layouts for the workspace rail without changing canvas camera state while navigating.
 - Basic mode now presents Deck, Playlist, Analysis, Show, Stream, Performance, Reports, and About as its essential tools. Frequency Color, Show Composer, external controls, camera paths, and creative utilities remain available in Advanced mode.

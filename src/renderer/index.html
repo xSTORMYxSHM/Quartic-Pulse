@@ -1371,16 +1371,19 @@
         <div class="tab-panel" data-tab-panel="export">
 
         <section class="export-section">
-          <div class="section-heading"><span>VIDEO EXPORT</span><small>MP4 / WEBM / MOV / MKV</small></div>
-          <div class="slider-group export-iterations">
-            <label><span>BASE ITERATIONS</span><output id="iterationsValue">220</output></label>
+          <div class="section-heading"><span>VIDEO EXPORT</span><small>QUALITY-FIRST OFFLINE</small></div>
+          <div class="slider-group export-iterations advanced-ui-only">
+            <label><span>MINIMUM EXPORT ITERATIONS</span><output id="exportIterationsValue">480</output></label>
+            <input id="exportIterations" type="range" min="240" max="1200" value="480" step="20" />
+          </div>
+          <div class="slider-group live-iterations-config" hidden>
+            <label><span>LIVE ITERATIONS</span><output id="iterationsValue">220</output></label>
             <input id="iterations" type="range" min="80" max="500" value="220" step="10" />
           </div>
           <div class="export-settings">
-            <label>EXPORT ENGINE
+            <label class="export-engine-config" hidden>EXPORT ENGINE
               <select id="exportMode">
-                <option value="offline" selected>Offline · exact frames</option>
-                <option value="live" disabled>Live · Unleashed only</option>
+                <option value="offline" selected>Offline · deterministic frames</option>
               </select>
             </label>
             <label>RESOLUTION
@@ -1400,15 +1403,14 @@
                 <option value="120">120</option>
               </select>
             </label>
-            <label>FORMAT
+            <label class="export-quality-profile">QUALITY PROFILE
               <select id="videoFormat">
-                <option value="mp4" selected>MP4 · H.264/AAC</option>
-                <option value="webm">WebM · VP9/Opus</option>
-                <option value="mov">MOV · H.264/AAC</option>
-                <option value="mkv">MKV · H.264/AAC</option>
+                <option value="youtube_hdr" selected>YouTube Master · HEVC Main 10 / MP4</option>
+                <option value="utvideo">Playback Lossless · Ut Video RGB / FLAC / MKV</option>
+                <option value="ffv1">Archive Lossless · FFV1 RGB / FLAC / MKV</option>
               </select>
             </label>
-            <label class="export-detail">EXPORT DETAIL
+            <label class="export-detail-config" hidden>EXPORT DETAIL
               <select id="exportDetail">
                 <option value="1">Live · 1×</option>
                 <option value="1.6" selected>Enhanced · 1.6×</option>
@@ -1417,15 +1419,19 @@
               </select>
             </label>
           </div>
-          <p class="export-performance-note" id="exportPerformanceNote">Offline · 1080p at 60 FPS · every frame completed</p>
-          <div class="export-encoder-status" id="exportEncoderStatus">
-            <i></i><span><strong>ENCODER CHECK PENDING</strong><small>Quartic Pulse will test NVIDIA, Intel, AMD, then CPU encoding</small></span>
+          <p class="export-performance-note advanced-ui-only" id="exportPerformanceNote">Offline SDR · 1080p at 60 FPS · compatibility master</p>
+          <div class="export-encoder-status advanced-ui-only" id="exportEncoderStatus">
+            <i></i><span><strong>QUALITY PIPELINE CHECK PENDING</strong><small>Quartic Pulse prefers NVIDIA Main 10 and safely falls back to CPU HEVC</small></span>
           </div>
-          <label class="toggle-row export-preview-toggle">
+          <label class="toggle-row export-hdr-toggle">
+            <span><strong>HDR output</strong><small>Rec.2020 HLG for HDR displays and YouTube. Off uses standard SDR color.</small></span>
+            <input id="exportHdrOutput" type="checkbox" /><i></i>
+          </label>
+          <label class="toggle-row export-preview-toggle advanced-ui-only">
             <span><strong>Show preview while exporting</strong><small>Off saves UI composition and update work</small></span>
             <input id="showExportPreview" type="checkbox" /><i></i>
           </label>
-          <label class="toggle-row export-complete-sound-toggle">
+          <label class="toggle-row export-complete-sound-toggle advanced-ui-only">
             <span><strong>Play completion stinger</strong><small>Sounds only after the finished video is fully saved</small></span>
             <input id="exportCompleteSound" type="checkbox" checked /><i></i>
           </label>

@@ -66,7 +66,7 @@
   });
 
   if (!gl) {
-    document.body.innerHTML = '<div style="padding:40px;font-family:Segoe UI;color:white">Quartic Pulse requires a WebGL2-capable graphics driver.</div>';
+    document.body.innerHTML = '<div class="webgl-error">Quartic Pulse requires a WebGL2-capable graphics driver.</div>';
     return;
   }
 
@@ -162,11 +162,42 @@
     uniform int uPalette;
     uniform float uChromaKey;
     uniform float uChromaThreshold;
+    uniform float uHdrExport;
     uniform sampler2D uMainframeRoom;
     uniform float uMainframeReady;
 
     vec3 cosinePalette(float t, vec3 a, vec3 b, vec3 c, vec3 d) {
       return a + b * cos(6.2831853 * (c * t + d));
+    }
+
+    vec3 fourStopPalette(float t, vec3 shadow, vec3 field, vec3 accent, vec3 detail) {
+      float position = fract(t) * 4.0;
+      float blend = smoothstep(0.0, 1.0, fract(position));
+      if (position < 1.0) return mix(shadow, field, blend);
+      if (position < 2.0) return mix(field, accent, blend);
+      if (position < 3.0) return mix(accent, detail, blend);
+      return mix(detail, shadow, blend);
+    }
+
+    float hlgEncode(float linearLight) {
+      const float a = 0.17883277;
+      const float b = 0.28466892;
+      const float c = 0.55991073;
+      float value = clamp(linearLight, 0.0, 1.0);
+      return value <= (1.0 / 12.0)
+        ? sqrt(3.0 * value)
+        : a * log(12.0 * value - b) + c;
+    }
+
+    vec3 encodeRec2020Hlg(vec3 displayColor) {
+      vec3 linear709 = pow(max(displayColor, 0.0), vec3(2.2));
+      linear709 = clamp((linear709 / (1.0 + .35 * linear709)) / .74074074, 0.0, 1.0);
+      vec3 linear2020 = vec3(
+        dot(linear709, vec3(.627404, .329283, .0433136)),
+        dot(linear709, vec3(.069097, .919540, .0113612)),
+        dot(linear709, vec3(.0163916, .0880132, .895595))
+      );
+      return vec3(hlgEncode(linear2020.r), hlgEncode(linear2020.g), hlgEncode(linear2020.b));
     }
 
     vec2 complexMultiply(vec2 a, vec2 b) {
@@ -183,17 +214,24 @@
 
     vec3 palette(float t) {
       if (uPalette == 0) {
-        return cosinePalette(t, vec3(.48,.42,.56), vec3(.52,.48,.50), vec3(1.0,.82,.64), vec3(.62,.12,.90));
+        return fourStopPalette(t,
+          vec3(.035,.067,.145), vec3(.125,.275,.430),
+          vec3(.390,.335,.555), vec3(.420,.660,.710));
       }
       if (uPalette == 1) {
-        return cosinePalette(t, vec3(.52,.34,.23), vec3(.48,.42,.30), vec3(1.0,.88,.62), vec3(.02,.06,.12));
+        return fourStopPalette(t,
+          vec3(.075,.043,.055), vec3(.300,.130,.145),
+          vec3(.610,.315,.220), vec3(.790,.585,.345));
       }
       if (uPalette == 2) {
-        return cosinePalette(t, vec3(.36,.52,.38), vec3(.34,.48,.40), vec3(.72,1.0,.68), vec3(.48,.08,.30));
+        return fourStopPalette(t,
+          vec3(.025,.090,.100), vec3(.070,.280,.285),
+          vec3(.250,.465,.380), vec3(.555,.680,.500));
       }
       if (uPalette == 3) {
-        float mono = .12 + .88 * pow(.5 + .5 * cos(6.2831853 * t), 1.45);
-        return vec3(mono * .88, mono * .93, mono);
+        return fourStopPalette(t,
+          vec3(.030,.040,.060), vec3(.145,.175,.215),
+          vec3(.350,.390,.435), vec3(.680,.705,.730));
       }
       float customPosition = fract(t) * 4.0;
       if (customPosition < 1.0) return mix(uCustom0, uCustom1, customPosition);
@@ -1172,6 +1210,7 @@
           color.g = min(color.g, max(color.r, color.b) * .62);
         }
       }
+      if (uHdrExport > .5) color = encodeRec2020Hlg(color);
       fragColor = vec4(color, 1.0);
     }
   `;
@@ -1201,7 +1240,7 @@
   gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
 
   const uniforms = {};
-  for (const name of ['uResolution','uCenter','uScale','uTime','uBass','uMids','uHighs','uRms','uBeat','uFlow','uMotion','uFractalDimensional','uFractalTilt','uFractalDepthSpeed','uFractalPerspective','uFractalSlice','uFractalLighting','uFractalAudioDepth','uEquationFolding','uEquationFold','uEquationWarp','uEquationFoldMotion','uEquationFoldOffset','uEquationWarpScale','uEquationFoldAudio','uCoreCStrength','uCoreBias','uBarWidth','uBarGlow','uBarReflection','uBarMotion','uBarEcho','uBarGrid','uBarStyle','uRadialSize','uRadialGlow','uRadialWaves','uRadialTwist','uRadialSpokes','uRadialAtmosphere','uPulseJagged','uPulseTrail','uPulseDetail','uPulseSize','uPulseEventCount','uBulbPower','uBulbWarp','uBulbDetail','uBulbAudio','uBulbOrbit','uBulbFold','uBulbGlow','uBulbCamera','uBulbYaw','uBulbPitch','uBulbSteps','uRotation','uEquation','uFrequencyHue','uFrequencyColor','uFractalType','uVisualStyle','uCustom0','uCustom1','uCustom2','uCustom3','uIterations','uPalette','uChromaKey','uChromaThreshold','uMainframeReady']) {
+  for (const name of ['uResolution','uCenter','uScale','uTime','uBass','uMids','uHighs','uRms','uBeat','uFlow','uMotion','uFractalDimensional','uFractalTilt','uFractalDepthSpeed','uFractalPerspective','uFractalSlice','uFractalLighting','uFractalAudioDepth','uEquationFolding','uEquationFold','uEquationWarp','uEquationFoldMotion','uEquationFoldOffset','uEquationWarpScale','uEquationFoldAudio','uCoreCStrength','uCoreBias','uBarWidth','uBarGlow','uBarReflection','uBarMotion','uBarEcho','uBarGrid','uBarStyle','uRadialSize','uRadialGlow','uRadialWaves','uRadialTwist','uRadialSpokes','uRadialAtmosphere','uPulseJagged','uPulseTrail','uPulseDetail','uPulseSize','uPulseEventCount','uBulbPower','uBulbWarp','uBulbDetail','uBulbAudio','uBulbOrbit','uBulbFold','uBulbGlow','uBulbCamera','uBulbYaw','uBulbPitch','uBulbSteps','uRotation','uEquation','uFrequencyHue','uFrequencyColor','uFractalType','uVisualStyle','uCustom0','uCustom1','uCustom2','uCustom3','uIterations','uPalette','uChromaKey','uChromaThreshold','uHdrExport','uMainframeReady']) {
     uniforms[name] = gl.getUniformLocation(program, name);
   }
   for (const name of ['uEquationBass','uEquationMids','uEquationHighs','uEquationBeat']) {
@@ -1423,6 +1462,8 @@
     exportWidth: 1920,
     exportHeight: 1080,
     exportDetail: 1.6,
+    exportIterations: 480,
+    exportIterationTarget: 0,
     autoDrift: true,
     beatPulse: true,
     drag: null,
@@ -1447,16 +1488,17 @@
     hardwareInfo: null,
     hardwareRecommendation: 'balanced',
     offlineExporting: false,
+    offlineHdrExport: false,
     offlineFps: 60,
     nowPlayingEnabled: false,
     nowPlayingTitle: '',
     nowPlayingArtist: 'Tempest Mainframe',
     nowPlayingPosition: 'bottom-left',
     customColors: [
-      [20 / 255, 15 / 255, 45 / 255],
-      [123 / 255, 44 / 255, 1],
-      [241 / 255, 75 / 255, 203 / 255],
-      [92 / 255, 245 / 255, 220 / 255]
+      [9 / 255, 17 / 255, 37 / 255],
+      [32 / 255, 70 / 255, 110 / 255],
+      [99 / 255, 85 / 255, 142 / 255],
+      [107 / 255, 168 / 255, 181 / 255]
     ],
     lastUiUpdate: 0
   };
@@ -1757,6 +1799,7 @@
     beatSensitivity: { defaultRange: .65, min: 0, max: 100, step: 1, decimals: 0, fromRange: (value) => value * 100, toRange: (value) => value / 100, tip: 'Controls the independent adaptive onset detector. Higher values recognize quieter and less bass-heavy beats without changing visual or equation smoothing.' },
     beatCooldown: { defaultRange: 150, min: 80, max: 300, step: 5, decimals: 0, tip: 'Minimum time between detected beats. Raise it if a single drum hit triggers twice; lower it for very fast music.' },
     iterations: { defaultRange: 220, min: 80, max: 500, step: 10, decimals: 0, tip: 'Higher iteration counts reveal finer boundaries but require more GPU work.' },
+    exportIterations: { defaultRange: 480, min: 240, max: 1200, step: 20, decimals: 0, tip: 'Sets the minimum mathematical depth for offline export. Resolution-aware protection automatically raises lower values to 480 at 1080p, 640 at 1440p, and 800 at 4K.' },
     obsChromaThreshold: { defaultRange: .08, min: 0, max: 100, step: 1, decimals: 0, fromRange: (value) => value / .5 * 100, toRange: (value) => value / 100 * .5, tip: 'Higher values replace more dark pixels with pure key green. Chroma-safe mode automatically shifts green subject colors away from the OBS key.' }
     ,beatBpm: { defaultRange: 120, min: 60, max: 200, step: .1, decimals: 1, tip: 'Manual tempo used when Automatic BPM is off or has not found a reliable beat.' }
     ,beatOffset: { defaultRange: 0, min: -500, max: 500, step: 5, decimals: 0, tip: 'Moves the beat grid earlier or later in milliseconds so visual changes land on the music.' }
@@ -1769,9 +1812,9 @@
     fractalType: { defaultValue: '0', tip: 'Selects the equation used for the live view and exported video.' },
     resolution: { defaultValue: '1920x1080', tip: 'Sets exported frame size. Higher resolutions require substantially more GPU work.' },
     fps: { defaultValue: '60', tip: 'Sets captured frames per second. 90 and 120 FPS require a fast GPU and storage.' },
-    videoFormat: { defaultValue: 'mp4', tip: 'Offline export uses FFmpeg to combine exact video frames with the selected song.' },
-    exportMode: { defaultValue: 'offline', tip: 'Offline completes every requested frame before advancing. Live records wall-clock playback and is available only in Unleashed mode.' },
-    exportDetail: { defaultValue: '1.6', tip: 'Multiplies iteration detail during export without changing live preview quality.' },
+    videoFormat: { defaultValue: 'youtube_hdr', tip: 'Choose a YouTube HEVC master, playback-friendly lossless RGB, or archive-grade lossless RGB. HDR is controlled separately.' },
+    exportMode: { defaultValue: 'offline', tip: 'Offline rendering completes and submits every exact frame before advancing the music timeline.' },
+    exportDetail: { defaultValue: '1.6', tip: 'Multiplies the selected base detail. Offline export also applies a resolution-aware minimum so 1440p and 4K receive enough mathematical definition.' },
     obsResolution: { defaultValue: '1920x1080', tip: 'Sets the exact client size of the clean window selected by OBS Window Capture.' },
     obsFps: { defaultValue: '60', tip: 'Sets how often the control window sends visual and music-analysis state to the OBS output.' }
     ,songDirectorBehavior: { defaultValue: 'auto', tip: 'Auto follows the Music Personality stored with the Song Map. An override changes directing behavior without changing analyzer bands or the visual preset.' }
@@ -1794,6 +1837,7 @@
     autoDrift: true,
     fractalDimensional: false,
     equationFolding: false,
+    exportHdrOutput: false,
     showExportPreview: false,
     exportCompleteSound: true,
     obsAlwaysOnTop: false,
@@ -1827,6 +1871,10 @@
   let liveExportEncoder;
   let exportProgressHideTimer;
   let pendingOfflineRender = null;
+  let hdrExportFramebuffer = null;
+  let hdrExportTexture = null;
+  let hdrExportWidth = 0;
+  let hdrExportHeight = 0;
   let lastExportPreflight = null;
   let toastTimer;
   const applyingEffectPreset = { fractal: false, fold: false, spectrum: false, radial: false, bulb: false };
@@ -2047,7 +2095,7 @@
       <div class="music-personality-grid" role="radiogroup" aria-label="Music Personality profiles">
         ${Object.entries(musicPersonalityProfiles).map(([id, profile]) => `
           <button class="music-personality-card${state.musicPersonality === id ? ' active' : ''}" type="button" data-music-personality="${id}" role="radio" aria-checked="${state.musicPersonality === id}">
-            <span class="personality-icon" aria-hidden="true">${profile.icon.map((height) => `<i style="height:${height}%"></i>`).join('')}</span>
+            <span class="personality-icon" aria-hidden="true">${profile.icon.map((height) => `<i data-height="${height}"></i>`).join('')}</span>
             <span><strong>${profile.label}</strong><small>${profile.description}</small></span>
           </button>`).join('')}
         <button class="music-personality-card${state.musicPersonality === 'custom' ? ' active' : ''}" type="button" data-music-personality="custom" role="radio" aria-checked="${state.musicPersonality === 'custom'}">
@@ -2767,6 +2815,49 @@
     gl.viewport(0, 0, canvas.width, canvas.height);
   }
 
+  function releaseHdrExportTarget() {
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    if (hdrExportTexture) gl.deleteTexture(hdrExportTexture);
+    if (hdrExportFramebuffer) gl.deleteFramebuffer(hdrExportFramebuffer);
+    hdrExportTexture = null;
+    hdrExportFramebuffer = null;
+    hdrExportWidth = 0;
+    hdrExportHeight = 0;
+  }
+
+  function ensureHdrExportTarget(width, height) {
+    if (hdrExportFramebuffer && hdrExportWidth === width && hdrExportHeight === height) return true;
+    releaseHdrExportTarget();
+    const framebuffer = gl.createFramebuffer();
+    const texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB10_A2, width, height, 0, gl.RGBA, gl.UNSIGNED_INT_2_10_10_10_REV, null);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
+    const complete = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.bindTexture(gl.TEXTURE_2D, null);
+    if (!complete) {
+      gl.deleteTexture(texture);
+      gl.deleteFramebuffer(framebuffer);
+      return false;
+    }
+    hdrExportFramebuffer = framebuffer;
+    hdrExportTexture = texture;
+    hdrExportWidth = width;
+    hdrExportHeight = height;
+    return true;
+  }
+
+  if (new URLSearchParams(window.location.search).get('smoke') === '1') {
+    window.__quarticHdrExportReady = ensureHdrExportTarget(64, 64);
+    releaseHdrExportTarget();
+  }
+
   function bulbHotspotHash(seed) {
     const value = Math.sin(seed * 127.1 + 311.7) * 43758.5453123;
     return value - Math.floor(value);
@@ -2837,6 +2928,9 @@
       state.performanceScale = Math.min(1, state.performanceScale + delta * .8);
     }
     setCanvasSize();
+    const renderingHdrExport = state.offlineExporting && state.offlineHdrExport && hdrExportFramebuffer;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, renderingHdrExport ? hdrExportFramebuffer : null);
+    gl.viewport(0, 0, canvas.width, canvas.height);
     advancePulseEvents(delta);
     if (!isObsOutput && !state.offlineExporting) updateAudioAnalysis(delta);
     updateEquationAudioEnvelope(delta);
@@ -2980,11 +3074,22 @@
     gl.uniform3fv(uniforms.uCustom2, state.customColors[2]);
     gl.uniform3fv(uniforms.uCustom3, state.customColors[3]);
     const detailMultiplier = state.exporting ? state.exportDetail : 1;
-    gl.uniform1i(uniforms.uIterations, Math.min(state.unleashedMode ? 2400 : 1200, Math.round(state.iterations * detailMultiplier)));
+    const requestedIterations = state.exporting && state.exportIterationTarget > 0
+      ? state.exportIterationTarget
+      : Math.round(state.iterations * detailMultiplier);
+    gl.uniform1i(uniforms.uIterations, Math.min(state.unleashedMode ? 2400 : 1200, requestedIterations));
     gl.uniform1i(uniforms.uPalette, state.palette);
     gl.uniform1f(uniforms.uChromaKey, isObsOutput && state.obsChromaKey ? 1 : 0);
     gl.uniform1f(uniforms.uChromaThreshold, state.obsChromaThreshold);
+    gl.uniform1f(uniforms.uHdrExport, renderingHdrExport ? 1 : 0);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
+    if (renderingHdrExport && $('#showExportPreview')?.checked) {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      gl.uniform1f(uniforms.uHdrExport, 0);
+      gl.drawArrays(gl.TRIANGLES, 0, 6);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, hdrExportFramebuffer);
+      gl.uniform1f(uniforms.uHdrExport, 1);
+    }
     if (pendingOfflineRender && state.offlineExporting) {
       gl.finish();
       const resolveOfflineRender = pendingOfflineRender;
@@ -3371,32 +3476,46 @@
     });
   }
 
+  function resolutionIterationFloor(width, height) {
+    const pixels = Math.max(1, Number(width) || 0) * Math.max(1, Number(height) || 0);
+    if (pixels <= 854 * 480) return 240;
+    if (pixels <= 1280 * 720) return 320;
+    if (pixels <= 1920 * 1080) return 480;
+    if (pixels <= 2560 * 1440) return 640;
+    return 800;
+  }
+
+  function effectiveExportIterations(width, height, requestedIterations = state.exportIterations) {
+    const requested = Math.round(Math.max(1, Number(requestedIterations) || 1));
+    const maximum = state.unleashedMode ? 2400 : 1200;
+    return Math.min(maximum, Math.max(requested, resolutionIterationFloor(width, height)));
+  }
+
   function updateExportPerformanceNote() {
     const [width, height] = $('#resolution').value.split('x').map(Number);
     const fps = Number($('#fps').value);
-    const detail = Number($('#exportDetail').value);
+    const iterationTarget = effectiveExportIterations(width, height, state.exportIterations);
     const note = $('#exportPerformanceNote');
     const load = width * height * fps;
-    const offline = $('#exportMode')?.value !== 'live';
-    const masterMbps = Math.round(exportEncoderEngine.offlineVideoBitrate(width, height, fps, detail) / 1000000);
-    let message = offline
-      ? `Offline · ${width}×${height} at ${fps} FPS · ~${masterMbps} Mb/s quality master`
-      : `Live · ${width}×${height} at ${fps} FPS · real-time frame rate required`;
+    const profile = $('#videoFormat')?.value || 'youtube_hdr';
+    const hdrOutput = profile === 'youtube_hdr' && Boolean($('#exportHdrOutput')?.checked);
+    const rawGbPerMinute = width * height * fps * 4 * 60 / 1073741824;
+    const estimatedGbPerMinute = rawGbPerMinute * (profile === 'utvideo' ? .62 : .58);
+    let message = profile === 'youtube_hdr'
+      ? hdrOutput
+        ? `YouTube HDR · ${width}×${height} at ${fps} FPS · 10-bit Rec.2020 HLG · quality-priority HEVC`
+        : `YouTube SDR · ${width}×${height} at ${fps} FPS · standard BT.709 color · quality-priority HEVC`
+      : profile === 'utvideo'
+      ? `Playback lossless · ${width}×${height} at ${fps} FPS · roughly ${estimatedGbPerMinute.toFixed(1)} GB/min · exact RGB`
+      : `Archive lossless · ${width}×${height} at ${fps} FPS · roughly ${estimatedGbPerMinute.toFixed(1)} GB/min · exact RGB`;
+    message += ` · ${iterationTarget} math iterations`;
     let warning = false;
     if (load >= 3840 * 2160 * 90) {
-      message = offline
-        ? `Offline · ${width}×${height} at ${fps} FPS · ~${masterMbps} Mb/s master · extreme load`
-        : `Live · ${width}×${height} at ${fps} FPS · extreme GPU and storage load`;
+      message += ' · extreme GPU, encoder, and storage load';
       warning = true;
     } else if (load >= 2560 * 1440 * 60) {
-      message = offline
-        ? `Offline · ${width}×${height} at ${fps} FPS · ~${masterMbps} Mb/s master · high load`
-        : `Live · ${width}×${height} at ${fps} FPS · high GPU load`;
+      message += ' · high GPU and storage load';
       warning = true;
-    } else if (load <= 1280 * 720 * 30) {
-      message = offline
-        ? `Offline · ${width}×${height} at ${fps} FPS · ~${masterMbps} Mb/s master · light load`
-        : `Live · ${width}×${height} at ${fps} FPS · light export load`;
     }
     note.textContent = message;
     note.classList.toggle('warning', warning);
@@ -3413,15 +3532,17 @@
     const [width, height] = $('#resolution').value.split('x').map(Number);
     const fps = Number($('#fps').value);
     const detail = Number($('#exportDetail').value);
-    const mode = $('#exportMode').value;
+    const iterations = effectiveExportIterations(width, height, state.exportIterations);
+    const mode = 'offline';
     const duration = Math.max(.1, Number(durationOverride) || Number(audio.duration) || 0);
     const masterBitrate = exportEncoderEngine.offlineVideoBitrate(width, height, fps, detail);
     const result = await window.quarticDesktop.getExportPreflight({
       width, height, fps, detail, mode, duration, masterBitrate,
       format: $('#videoFormat').value,
+      hdrOutput: Boolean($('#exportHdrOutput')?.checked),
       refreshEncoder
     });
-    return { ...result, width, height, fps, detail, mode, duration, masterBitrate };
+    return { ...result, width, height, fps, detail, iterations, mode, duration, masterBitrate };
   }
 
   function updateEncoderStatus(preflight) {
@@ -3429,21 +3550,31 @@
     const status = $('#exportEncoderStatus');
     status.classList.add('ready');
     status.querySelector('strong').textContent = preflight.encoder.label.toUpperCase();
-    status.querySelector('small').textContent = preflight.encoder.hardware
-      ? 'Hardware acceleration verified; CPU x264 remains available as an automatic fallback'
-      : 'Universal CPU fallback selected for compatibility and consistent quality';
+    const hdrOutput = $('#videoFormat').value === 'youtube_hdr' && Boolean($('#exportHdrOutput')?.checked);
+    status.querySelector('small').textContent = preflight.encoder.id === 'ffv1'
+      ? 'Archive-grade exact RGB 4:4:4 with FLAC; optimized for preservation rather than playback'
+      : preflight.encoder.id === 'utvideo'
+      ? 'Playback-friendly exact RGB 4:4:4 with FLAC; very high storage bandwidth required'
+      : preflight.encoder.hardware
+      ? `NVIDIA HEVC Main 10 verified · ${hdrOutput ? 'Rec.2020 HLG HDR' : 'BT.709 SDR'} · quality-priority bitrate controls`
+      : `CPU HEVC Main 10 fallback selected · ${hdrOutput ? 'Rec.2020 HLG HDR' : 'BT.709 SDR'} · expect a long render`;
   }
 
   function populateExportPreflight(preflight) {
-    $('#preflightVideo').textContent = `${preflight.width}×${preflight.height} · ${preflight.fps} FPS · ${$('#videoFormat').value.toUpperCase()}`;
+    $('#preflightVideo').textContent = `${preflight.width}×${preflight.height} · ${preflight.fps} FPS · ${preflight.iterations} math iterations · ${$('#videoFormat').value.toUpperCase()}`;
     $('#preflightEncoder').textContent = preflight.encoder.label;
     $('#preflightOutput').textContent = `About ${formatByteSize(preflight.estimatedOutputBytes)}`;
     $('#preflightSpace').textContent = formatByteSize(preflight.requiredBytes);
     $('#preflightFree').textContent = preflight.freeBytes ? `${formatByteSize(preflight.freeBytes)} · Videos drive` : 'Checked after destination selection';
     $('#preflightDuration').textContent = formatTime(preflight.duration);
-    $('#exportPreflightSummary').textContent = preflight.mode === 'offline'
-      ? 'Exact-frame rendering with a high-quality master and verified final encoder.'
-      : 'Real-time capture requires Quartic Pulse to maintain the selected frame rate.';
+    const profile = $('#videoFormat').value;
+    $('#exportPreflightSummary').textContent = profile === 'youtube_hdr'
+      ? $('#exportHdrOutput').checked
+        ? 'Every frame is rendered offline into a 10-bit Rec.2020 HLG target, then encoded as a YouTube-ready HEVC Main 10 MP4.'
+        : 'Every frame is rendered offline in standard BT.709 color, then encoded as a broadly compatible YouTube HEVC Main 10 MP4.'
+      : profile === 'utvideo'
+      ? 'Exact RGB frames are stored in a playback-friendly Ut Video/FLAC Matroska master without a bitrate ceiling.'
+      : 'Exact RGB frames are stored in an archive-grade FFV1/FLAC Matroska master without a bitrate ceiling.';
     const lowSpace = preflight.freeBytes > 0 && preflight.freeBytes < preflight.requiredBytes;
     $('#preflightWarning').hidden = !lowSpace;
     $('#preflightWarning').textContent = lowSpace
@@ -4661,8 +4792,6 @@
     const numericInput = $('#iterations').closest('.slider-group')?.querySelector('.numeric-value-input');
     if (numericInput) numericInput.max = state.unleashedMode ? '800' : '500';
     $('#unleashedExportDetail').disabled = !state.unleashedMode;
-    const liveOption = $('#exportMode').querySelector('option[value="live"]');
-    liveOption.disabled = !state.unleashedMode;
     if (!state.unleashedMode) {
       if (Number($('#iterations').value) > 500) {
         $('#iterations').value = '500';
@@ -4670,7 +4799,6 @@
         $('#iterations')._syncNumericValue?.();
       }
       if (Number($('#exportDetail').value) > 2.3) $('#exportDetail').value = '2.3';
-      if ($('#exportMode').value === 'live') $('#exportMode').value = 'offline';
     }
     updateExportPerformanceNote();
     persistPerformanceMode();
@@ -5409,7 +5537,7 @@
       setCustomColor(index, state.customColors[index].map((value) => value * 255));
     }
     $('#resetCustomPaletteButton').addEventListener('click', () => {
-      const defaults = [[20, 15, 45], [123, 44, 255], [241, 75, 203], [92, 245, 220]];
+      const defaults = [[9, 17, 37], [32, 70, 110], [99, 85, 142], [107, 168, 181]];
       defaults.forEach((rgb, index) => setCustomColor(index, rgb));
       showToast('Custom palette reset to default colors');
     });
@@ -5432,7 +5560,7 @@
     'bulbPower', 'bulbDetail', 'bulbAudio', 'bulbOrbit', 'bulbFold', 'bulbGlow', 'bulbCamera',
     'zoom', 'flow', 'autoReactivity', 'reactivity', 'motion', 'spin', 'equationSmoothing', 'equationMod',
     'adaptiveQuality', 'beatPulse', 'autoDrift',
-    'iterations', 'resolution', 'fps', 'videoFormat', 'exportDetail', 'showExportPreview', 'exportCompleteSound',
+    'iterations', 'exportIterations', 'resolution', 'fps', 'videoFormat', 'exportDetail', 'exportHdrOutput', 'showExportPreview', 'exportCompleteSound',
     'obsResolution', 'obsFps', 'obsAlwaysOnTop', 'obsChromaKey', 'obsChromaThreshold',
     'musicPersonality', 'songDirectorStyle', 'songDirectorBehavior', 'songDirectorIntensity'
   ];
@@ -7618,18 +7746,22 @@
     const [width, height] = $('#resolution').value.split('x').map(Number);
     const fps = Number($('#fps').value);
     const format = $('#videoFormat').value;
+    const hdrProfile = format === 'youtube_hdr' && Boolean($('#exportHdrOutput').checked);
     const exportDetail = Number($('#exportDetail').value);
+    const exportIterations = effectiveExportIterations(width, height, state.exportIterations);
     $('#exportLabel').textContent = 'PREPARING OFFLINE AUDIO…';
     $('#exportButton').disabled = true;
     createAudioGraph();
     const audioBuffer = await audioContext.decodeAudioData((await item.file.arrayBuffer()).slice(0));
     const duration = Math.min(audioBuffer.duration, Math.max(.1, Number(options.durationLimit) || audioBuffer.duration));
     const frameCount = Math.max(1, Math.ceil(duration * fps));
-    const encoderChoice = await exportEncoderEngine.chooseOfflineConfig(width, height, fps, exportDetail);
+    if (hdrProfile && !ensureHdrExportTarget(width, height)) {
+      throw new Error('This GPU/driver could not create the required 10-bit RGB export framebuffer. Use a lossless RGB profile or update the graphics driver.');
+    }
     const session = await window.quarticDesktop.beginOfflineExport({
       suggestedName: `${state.audioName || 'quartic-pulse'}${options.test ? '-5-second-test' : ''}`,
       format, width, height, fps, frameCount,
-      codec: encoderChoice.codecName, audioPath: item.filePath,
+      pixelFormat: hdrProfile ? 'x2bgr10le' : 'rgba', hdrOutput: hdrProfile, audioPath: item.filePath,
       requiredBytes: options.preflight?.requiredBytes,
       finalEncoder: options.preflight?.encoder?.id
     });
@@ -7643,15 +7775,20 @@
     state.loopBeforeExport = audio.loop;
     const previousVisualTime = state.visualTime;
     const previousModulationRotationPhase = state.modulationRotationPhase;
-    let offlineEncoder = null;
+    const rawFrame = hdrProfile
+      ? new Uint32Array(width * height)
+      : new Uint8Array(width * height * 4);
+    const rawFrameBytes = hdrProfile ? new Uint8Array(rawFrame.buffer) : rawFrame;
     let exportCompleted = false;
     let renderedFrameCount = 0;
     try {
       state.exportWidth = width;
       state.exportHeight = height;
       state.exportDetail = exportDetail;
+      state.exportIterationTarget = exportIterations;
       state.offlineFps = fps;
       state.offlineExporting = true;
+      state.offlineHdrExport = hdrProfile;
       state.exporting = true;
       state.visualTime = 0;
       state.modulationRotationPhase = 0;
@@ -7670,20 +7807,20 @@
       $('#exportButton').classList.add('recording');
       $('#exportLabel').textContent = 'END & FINISH';
       $('#exportIcon').textContent = '■';
-      for (const id of ['resolution', 'fps', 'videoFormat', 'exportDetail', 'exportMode']) $(`#${id}`).disabled = true;
+      for (const id of ['resolution', 'fps', 'videoFormat', 'exportIterations', 'exportDetail', 'exportHdrOutput', 'exportMode']) $(`#${id}`).disabled = true;
       $('#unleashedMode').disabled = true;
       $('#performanceMode').disabled = true;
       audioController.renderLiveStatus('OFFLINE RENDER', true);
       setCanvasSize();
       const analyzeFrame = createOfflineAudioAnalyzer(audioBuffer, fps);
-      offlineEncoder = exportEncoderEngine.createOffline({
-        encoderConfig: encoderChoice.config,
-        onChunk: (bytes) => window.quarticDesktop.appendOfflineFrame(session.id, bytes)
-      });
       setExportProgress(
         0,
-        `Quality master ready | ${Math.round(encoderChoice.bitrate / 1000000)} Mb/s | rendering frames next`,
-        `Quality master ready | ${Math.round(encoderChoice.bitrate / 1000000)} Mb/s`
+        hdrProfile
+          ? '10-bit Rec.2020 HLG target ready | HEVC Main 10 pipeline | rendering next'
+          : `${format === 'utvideo' ? 'Ut Video playback' : 'FFV1 archive'} master ready | exact RGB frames | rendering next`,
+        hdrProfile
+          ? 'YouTube HDR master ready | quality-priority HEVC'
+          : 'Lossless RGB master ready | no bitrate ceiling'
       );
 
       for (let frameIndex = 0; frameIndex < frameCount; frameIndex++) {
@@ -7694,19 +7831,18 @@
         }
         if (exportSessionEngine.cancelRequested) throw new DOMException('Offline export cancelled.', 'AbortError');
         if (exportSessionEngine.finishRequested && frameIndex > 0) break;
-        if (offlineEncoder.error) throw offlineEncoder.error;
         const time = frameIndex / fps;
         state.offlineCurrentTime = time;
         state.visualTime = time;
         analyzeFrame(time);
         await requestOfflineVisualFrame();
-        offlineEncoder.encode(canvas, {
-          timestamp: Math.round(time * 1000000),
-          duration: Math.round(1000000 / fps),
-          keyFrame: frameIndex % Math.max(1, fps * 2) === 0
-        });
+        gl.readPixels(
+          0, 0, width, height, gl.RGBA,
+          hdrProfile ? gl.UNSIGNED_INT_2_10_10_10_REV : gl.UNSIGNED_BYTE,
+          rawFrame
+        );
+        await window.quarticDesktop.appendOfflineFrame(session.id, rawFrameBytes);
         renderedFrameCount = frameIndex + 1;
-        await offlineEncoder.flushIfBackpressured(5);
         const progress = (frameIndex + 1) / frameCount;
         if (frameIndex % Math.max(1, Math.floor(fps / 5)) === 0 || frameIndex + 1 === frameCount) {
           const overall = progress * .80;
@@ -7717,14 +7853,18 @@
           );
         }
       }
-      setExportProgress(.80, 'Frames rendered | flushing the video encoder | overall 80%', 'Frames rendered | flushing encoder | overall 80%');
-      await offlineEncoder.finish();
-      offlineEncoder = null;
+      setExportProgress(
+        .80,
+        'Frames rendered | closing the quality master and audio | overall 80%',
+        'Frames rendered | finalizing master | overall 80%'
+      );
       if (exportSessionEngine.cancelRequested) throw new DOMException('Offline export cancelled.', 'AbortError');
       setExportProgress(.85, 'Encoded frames written | preparing final video | overall 85%', 'Encoded frames written | finalizing next | overall 85%');
       state.offlineExporting = false;
       setExportActionButtons(false, true);
-      $('#exportLabel').textContent = exportSessionEngine.finishRequested ? 'FINISHING SHORT EXPORT…' : 'MUXING AUDIO…';
+      $('#exportLabel').textContent = exportSessionEngine.finishRequested
+        ? 'FINISHING SHORT EXPORT…'
+        : 'FINALIZING QUALITY MASTER…';
       $('#exportButton').disabled = true;
       setExportProgress(.85, 'Frames complete | finalizing and saving | overall 85%', 'Frames complete | finalizing 0% | overall 85%');
       const result = await window.quarticDesktop.finishOfflineExport(session.id, {
@@ -7739,7 +7879,6 @@
       $('#revealButton').hidden = false;
       showToast(result.warning || `${result.partial ? 'Shortened export' : 'Offline export'} complete: ${result.outputPath}`, Boolean(result.warning));
     } catch (error) {
-      await offlineEncoder?.abort();
       pendingOfflineRender = null;
       if (exportSessionEngine.session?.id) await window.quarticDesktop.abortOfflineExport(exportSessionEngine.session.id).catch(() => {});
       exportSessionEngine.clear();
@@ -7747,7 +7886,11 @@
       else throw error;
     } finally {
       state.offlineExporting = false;
+      state.offlineHdrExport = false;
       state.exporting = false;
+      state.exportIterationTarget = 0;
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      if (hdrProfile) releaseHdrExportTarget();
       state.visualTime = previousVisualTime;
       state.modulationRotationPhase = previousModulationRotationPhase;
       exportSessionEngine.resetRequests();
@@ -7757,7 +7900,7 @@
       $('#exportButton').disabled = false;
       $('#exportLabel').textContent = 'EXPORT VIDEO';
       $('#exportIcon').textContent = '●';
-      for (const id of ['resolution', 'fps', 'videoFormat', 'exportDetail', 'exportMode']) $(`#${id}`).disabled = false;
+      for (const id of ['resolution', 'fps', 'videoFormat', 'exportIterations', 'exportDetail', 'exportHdrOutput', 'exportMode']) $(`#${id}`).disabled = false;
       $('#unleashedMode').disabled = false;
       $('#performanceMode').disabled = false;
       updateUnleashedMode(state.unleashedMode);
@@ -7779,7 +7922,6 @@
         durationLimit: Math.min(5, choice.preflight.duration),
         test: true
       });
-      if ($('#exportMode').value === 'live') return await startLiveExport({ preflight: choice.preflight });
       return await startOfflineExport({ preflight: choice.preflight });
     } catch (error) {
       if (!state.exporting) {
@@ -8072,6 +8214,11 @@
     state.iterations = Number(event.target.value);
     $('#iterationsValue').value = state.iterations;
   });
+  $('#exportIterations').addEventListener('input', (event) => {
+    state.exportIterations = Number(event.target.value);
+    $('#exportIterationsValue').value = state.exportIterations;
+    updateExportPerformanceNote();
+  });
   $('#visualStyle').addEventListener('change', (event) => {
     state.visualStyle = Number(event.target.value);
     document.body.dataset.visualStyle = String(state.visualStyle);
@@ -8223,6 +8370,15 @@
   $('#fps').addEventListener('change', updateExportPerformanceNote);
   $('#exportMode').addEventListener('change', updateExportPerformanceNote);
   $('#exportDetail').addEventListener('change', updateExportPerformanceNote);
+  function updateExportHdrAvailability() {
+    const available = $('#videoFormat').value === 'youtube_hdr';
+    $('#exportHdrOutput').disabled = !available;
+    $('#exportHdrOutput').closest('.toggle-row')?.classList.toggle('disabled', !available);
+    updateExportPerformanceNote();
+  }
+  $('#videoFormat').addEventListener('change', updateExportHdrAvailability);
+  $('#exportHdrOutput').addEventListener('change', updateExportPerformanceNote);
+  updateExportHdrAvailability();
   $('#obsOutputButton').addEventListener('click', () => toggleObsOutput().catch((error) => showToast(`OBS output: ${error.message}`, true)));
   $('#obsResolution').addEventListener('change', () => applyObsWindowOptions().catch((error) => showToast(error.message, true)));
   $('#obsFps').addEventListener('change', () => applyObsWindowOptions().catch((error) => showToast(error.message, true)));

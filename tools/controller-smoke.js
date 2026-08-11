@@ -102,10 +102,15 @@ function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
 
-assert(exportFormatPolicy.orderedFormatIds('webm')[0] === 'webm', 'WebM was not the default save-dialog format.');
-assert(exportFormatPolicy.saveDialogFilters('mov')[0].extensions[0] === 'mov', 'MOV was not the default save-dialog filter.');
-assert(exportFormatPolicy.resolveOutputSelection('C:/Exports/visual', 'webm').outputPath.endsWith('.webm'), 'WebM extension was not preserved.');
-assert(exportFormatPolicy.resolveOutputSelection('C:/Exports/visual.mkv', 'webm').format === 'mkv', 'An explicitly selected save-dialog format was not respected.');
+assert(exportFormatPolicy.orderedFormatIds('youtube_hdr')[0] === 'youtube_hdr', 'YouTube HDR was not the requested save-dialog profile.');
+assert(exportFormatPolicy.saveDialogFilters('youtube_hdr')[0].extensions[0] === 'mp4', 'YouTube HDR did not use the MP4 save filter.');
+assert(exportFormatPolicy.resolveOutputSelection('C:/Exports/visual', 'youtube_hdr').outputPath.endsWith('.mp4'), 'YouTube HDR extension was not applied.');
+assert(exportFormatPolicy.resolveOutputSelection('C:/Exports/visual.mkv', 'youtube_hdr').format === 'youtube_hdr', 'The selected quality profile changed with the typed extension.');
+assert(exportFormatPolicy.saveDialogFilters('ffv1')[0].extensions[0] === 'mkv', 'FFV1 master did not use the Matroska save filter.');
+assert(exportFormatPolicy.resolveOutputSelection('C:/Exports/lossless-master', 'ffv1').outputPath.endsWith('.mkv'), 'FFV1 master did not receive an MKV extension.');
+assert(exportFormatPolicy.resolveOutputSelection('C:/Exports/lossless-master.mkv', 'ffv1').format === 'ffv1', 'FFV1 identity was lost when resolving its MKV destination.');
+assert(exportFormatPolicy.resolveOutputSelection('C:/Exports/youtube-master.webm', 'youtube_hdr').outputPath.endsWith('.mp4'), 'YouTube HDR master did not enforce its MP4 container.');
+assert(exportFormatPolicy.resolveOutputSelection('C:/Exports/playback-master.mkv', 'utvideo').format === 'utvideo', 'Ut Video profile identity was lost when resolving its MKV destination.');
 
 const audio = { duration: 120, currentTime: 0 };
 let exporting = false;

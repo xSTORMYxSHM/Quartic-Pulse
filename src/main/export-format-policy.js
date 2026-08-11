@@ -3,14 +3,13 @@
 const path = require('path');
 
 const videoFormats = Object.freeze({
-  mp4: Object.freeze({ name: 'MP4 video', extension: 'mp4' }),
-  webm: Object.freeze({ name: 'WebM video', extension: 'webm' }),
-  mov: Object.freeze({ name: 'QuickTime MOV video', extension: 'mov' }),
-  mkv: Object.freeze({ name: 'Matroska MKV video', extension: 'mkv' })
+  youtube_hdr: Object.freeze({ name: 'YouTube quality master (HEVC Main 10)', extension: 'mp4' }),
+  utvideo: Object.freeze({ name: 'Lossless playback master (Ut Video RGB)', extension: 'mkv' }),
+  ffv1: Object.freeze({ name: 'Lossless archive master (FFV1 RGB)', extension: 'mkv' })
 });
 
 function normalizeRequestedFormat(value) {
-  return videoFormats[value] ? value : 'mp4';
+  return videoFormats[value] ? value : 'youtube_hdr';
 }
 
 function orderedFormatIds(requestedValue) {
@@ -19,18 +18,18 @@ function orderedFormatIds(requestedValue) {
 }
 
 function saveDialogFilters(requestedValue) {
-  return orderedFormatIds(requestedValue).map((format) => ({
-    name: videoFormats[format].name,
-    extensions: [format]
-  }));
+  const format = normalizeRequestedFormat(requestedValue);
+  return [{ name: videoFormats[format].name, extensions: [videoFormats[format].extension] }];
 }
 
 function resolveOutputSelection(filePath, requestedValue) {
   const requestedFormat = normalizeRequestedFormat(requestedValue);
-  const chosenExtension = path.extname(String(filePath || '')).slice(1).toLowerCase();
-  const format = videoFormats[chosenExtension] ? chosenExtension : requestedFormat;
-  const outputPath = videoFormats[chosenExtension] ? filePath : `${filePath}.${format}`;
-  return { format, outputPath };
+  const requiredExtension = videoFormats[requestedFormat].extension;
+  const suppliedExtension = path.extname(String(filePath || '')).slice(1).toLowerCase();
+  const outputPath = suppliedExtension === requiredExtension
+    ? filePath
+    : `${filePath.replace(/\.[^.\\/]+$/u, '')}.${requiredExtension}`;
+  return { format: requestedFormat, outputPath };
 }
 
 module.exports = Object.freeze({

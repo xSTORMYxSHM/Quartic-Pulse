@@ -477,18 +477,13 @@ function createWindow() {
               && typeof window.quarticDesktop?.printReport === 'function';
             const performanceAutomationStandbyReady = document.querySelector('#showStatus')?.textContent === 'STOPPED'
               && !document.querySelector('#songDirectorEnabled')?.checked;
-            let offlineEncoderQualityReady = false;
-            try {
-              const qualitySupport = await VideoEncoder.isConfigSupported({
-                codec: 'vp09.00.10.08', width: 1920, height: 1080, framerate: 60,
-                bitrate: 89579520, bitrateMode: 'variable', latencyMode: 'quality',
-                hardwareAcceleration: 'prefer-software'
-              });
-              offlineEncoderQualityReady = Boolean(qualitySupport.supported)
-                && Number(qualitySupport.config?.bitrate || 0) >= 80000000;
-            } catch (_) { /* Report the quality path as unavailable. */ }
             const offlineExportReady = Boolean(document.querySelector('#exportMode option[value="offline"]'))
-              && Boolean(document.querySelector('#exportMode option[value="live"]'))
+              && !document.querySelector('#exportMode option[value="live"]')
+              && Boolean(document.querySelector('#videoFormat option[value="youtube_hdr"]'))
+              && Boolean(document.querySelector('#videoFormat option[value="utvideo"]'))
+              && Boolean(document.querySelector('#videoFormat option[value="ffv1"]'))
+              && Boolean(document.querySelector('#exportHdrOutput'))
+              && window.__quarticHdrExportReady === true
               && Boolean(document.querySelector('#unleashedExportDetail'))
               && typeof window.quarticDesktop?.getPathForFile === 'function'
               && typeof window.quarticDesktop?.beginOfflineExport === 'function'
@@ -505,8 +500,7 @@ function createWindow() {
               && Boolean(document.querySelector('#pauseExportButton'))
               && Boolean(document.querySelector('#exportPreflightDialog'))
               && Boolean(document.querySelector('#preflightTestButton'))
-              && Boolean(document.querySelector('#exportEncoderStatus'))
-              && offlineEncoderQualityReady;
+              && Boolean(document.querySelector('#exportEncoderStatus'));
             const exportQolReady = Boolean(document.querySelector('#exportHistoryList'))
               && Boolean(document.querySelector('#exportRecoveryList'))
               && Boolean(document.querySelector('#stageRenderMeta'))
@@ -1366,7 +1360,10 @@ function createWindow() {
 
 function ffmpegExecutable() {
   const bundled = path.join(process.resourcesPath, 'bin', 'ffmpeg.exe');
-  return fs.existsSync(bundled) ? bundled : 'ffmpeg';
+  const development = path.join(__dirname, '..', '..', 'assets', 'bin', 'ffmpeg.exe');
+  if (fs.existsSync(bundled)) return bundled;
+  if (fs.existsSync(development)) return development;
+  return 'ffmpeg';
 }
 
 function verifyFfmpeg() {
@@ -1379,6 +1376,22 @@ function verifyFfmpeg() {
 }
 
 const exportEncoderProfiles = {
+  ffv1: {
+    id: 'ffv1', label: 'FFV1 Lossless · RGB 4:4:4 + FLAC', hardware: false,
+    args: ['-c:v', 'ffv1', '-level', '3', '-coder', '1', '-context', '1', '-slicecrc', '1']
+  },
+  utvideo: {
+    id: 'utvideo', label: 'Ut Video Lossless - RGB 4:4:4 + FLAC', hardware: false,
+    args: ['-c:v', 'utvideo', '-pix_fmt', 'gbrp']
+  },
+  hevc_nvenc_hdr: {
+    id: 'hevc_nvenc_hdr', label: 'NVIDIA NVENC - HEVC Main 10 HLG', hardware: true,
+    args: ['-c:v', 'hevc_nvenc', '-profile:v', 'main10', '-preset', 'p7', '-tune', 'hq']
+  },
+  libx265_hdr: {
+    id: 'libx265_hdr', label: 'CPU Software - HEVC Main 10 HLG', hardware: false,
+    args: ['-c:v', 'libx265', '-preset', 'slow']
+  },
   h264_nvenc: {
     id: 'h264_nvenc', label: 'NVIDIA NVENC · H.264 High Quality', hardware: true,
     args: ['-c:v', 'h264_nvenc', '-preset', 'p7', '-tune', 'hq', '-rc', 'vbr', '-cq', '14', '-b:v', '0']
@@ -1434,6 +1447,34 @@ function validatedEncoderProfile(id) {
   return exportEncoderProfiles[id] || exportEncoderProfiles.libx264;
 }
 
+let cachedHdrEncoder = null;
+
+function probeHdrExportEncoder(profile) {
+  return new Promise((resolve) => {
+    const args = [
+      '-hide_banner', '-loglevel', 'error',
+      '-f', 'lavfi', '-i', 'color=c=black:s=256x256:d=0.1:r=30',
+      '-vf', 'format=p010le', '-frames:v', '1', ...profile.args, '-f', 'null', '-'
+    ];
+    execFile(ffmpegExecutable(), args, { windowsHide: true, timeout: 15000 }, (error) => resolve(!error));
+  });
+}
+
+async function recommendedHdrExportEncoder() {
+  if (cachedHdrEncoder) return cachedHdrEncoder;
+  const hardware = await detectHardware();
+  const gpuText = hardware.gpuDevices.map((device) => `${device.vendorString} ${device.deviceString} ${device.driverVendor}`).join(' ').toLowerCase();
+  if (/nvidia|geforce|quadro/.test(gpuText) && await probeHdrExportEncoder(exportEncoderProfiles.hevc_nvenc_hdr)) {
+    cachedHdrEncoder = exportEncoderProfiles.hevc_nvenc_hdr;
+    return cachedHdrEncoder;
+  }
+  if (await probeHdrExportEncoder(exportEncoderProfiles.libx265_hdr)) {
+    cachedHdrEncoder = exportEncoderProfiles.libx265_hdr;
+    return cachedHdrEncoder;
+  }
+  throw new Error('FFmpeg could not initialize an HEVC Main 10 encoder for the YouTube HDR profile.');
+}
+
 async function availableDiskBytes(targetPath) {
   const directory = path.extname(targetPath) ? path.dirname(targetPath) : targetPath;
   const stats = await fs.promises.statfs(directory);
@@ -1468,6 +1509,7 @@ async function writeRecoveryManifest(session, extra = {}) {
     tempPath: session.tempPath,
     audioPath: session.audioPath,
     format: session.format,
+    pipeline: session.pipeline,
     width: session.width,
     height: session.height,
     fps: session.fps,
@@ -1545,6 +1587,163 @@ function closeSession(session) {
     if (!session.stream) return resolve();
     session.stream.once('error', reject);
     session.stream.end(resolve);
+  });
+}
+
+function losslessPartialPath(outputPath, id) {
+  const extension = path.extname(outputPath) || '.mkv';
+  const base = path.basename(outputPath, extension);
+  return path.join(path.dirname(outputPath), `.${base}.quartic-${id}.partial${extension}`);
+}
+
+function rawProfileEncoderArguments(session) {
+  const commonInput = [
+    '-y', '-hide_banner',
+    '-f', 'rawvideo', '-pixel_format', session.pixelFormat,
+    '-video_size', `${session.width}x${session.height}`,
+    '-framerate', String(session.fps), '-i', 'pipe:0',
+    '-i', session.audioPath,
+    '-map', '0:v:0', '-map', '1:a:0?'
+  ];
+  if (session.format === 'utvideo') {
+    return [
+      ...commonInput,
+      '-vf', 'vflip,format=gbrp',
+      '-c:v', 'utvideo', '-pix_fmt', 'gbrp', '-threads', '0',
+      '-c:a', 'flac', '-shortest',
+      '-metadata', 'encoding_tool=Quartic Pulse Ut Video Lossless Playback Master',
+      '-f', 'matroska', session.tempPath
+    ];
+  }
+  if (session.format === 'youtube_hdr') {
+    const colorFilter = session.hdrOutput
+      ? 'vflip,zscale=primariesin=bt2020:transferin=arib-std-b67:matrixin=gbr:rangein=full:primaries=bt2020:transfer=arib-std-b67:matrix=bt2020nc:range=limited,format=p010le'
+      : 'vflip,zscale=primariesin=bt709:transferin=bt709:matrixin=gbr:rangein=full:primaries=bt709:transfer=bt709:matrix=bt709:range=limited,format=p010le';
+    const encoderArgs = session.finalEncoder === 'hevc_nvenc_hdr'
+      ? [
+          '-c:v', 'hevc_nvenc', '-profile:v', 'main10', '-preset', 'p7', '-tune', 'hq',
+          '-rc', 'vbr', '-cq', '4', '-b:v', '180M', '-maxrate', '300M', '-bufsize', '600M',
+          '-multipass', 'fullres', '-spatial_aq', '1', '-temporal_aq', '1', '-aq-strength', '10',
+          '-rc-lookahead', '32', '-bf', '4'
+        ]
+      : [
+          '-c:v', 'libx265', '-profile:v', 'main10', '-preset', 'slow',
+          '-x265-params', 'crf=6:vbv-maxrate=300000:vbv-bufsize=600000:aq-mode=3'
+        ];
+    return [
+      ...commonInput,
+      '-vf', colorFilter,
+      ...encoderArgs,
+      '-color_primaries', session.hdrOutput ? 'bt2020' : 'bt709',
+      '-color_trc', session.hdrOutput ? 'arib-std-b67' : 'bt709',
+      '-colorspace', session.hdrOutput ? 'bt2020nc' : 'bt709', '-color_range', 'tv',
+      '-c:a', 'aac', '-b:a', '320k', '-ar', '48000', '-shortest',
+      '-tag:v', 'hvc1', '-movflags', '+faststart',
+      '-metadata', `encoding_tool=Quartic Pulse YouTube ${session.hdrOutput ? 'HDR' : 'SDR'} Master`,
+      '-f', 'mp4', session.tempPath
+    ];
+  }
+  return [
+    ...commonInput,
+    '-vf', 'vflip',
+    '-c:v', 'ffv1', '-level', '3', '-coder', '1', '-context', '1',
+    '-slicecrc', '1', '-slices', '16', '-threads', '0', '-pix_fmt', 'bgr0',
+    '-c:a', 'flac', '-shortest',
+    '-metadata', 'encoding_tool=Quartic Pulse FFV1 Lossless Archive Master',
+    '-f', 'matroska', session.tempPath
+  ];
+}
+
+function startRawProfileEncoder(session) {
+  const args = rawProfileEncoderArguments(session);
+  const child = spawn(ffmpegExecutable(), args, { windowsHide: true, stdio: ['pipe', 'ignore', 'pipe'] });
+  session.child = child;
+  session.encoderErrorText = '';
+  session.encoderResult = null;
+  child.stderr.on('data', (chunk) => {
+    session.encoderErrorText = (session.encoderErrorText + chunk.toString()).slice(-12000);
+  });
+  child.stdin.on('error', (error) => {
+    session.encoderInputError = error;
+  });
+  session.encoderDone = new Promise((resolve) => {
+    child.once('error', (error) => {
+      session.encoderResult = { code: -1, error };
+      resolve(session.encoderResult);
+    });
+    child.once('close', (code) => {
+      session.child = null;
+      session.encoderResult = { code: Number(code), error: null };
+      resolve(session.encoderResult);
+    });
+  });
+}
+
+async function appendRawProfileFrame(session, frame) {
+  const expectedBytes = session.width * session.height * 4;
+  if (frame.length !== expectedBytes) {
+    throw new Error(`Raw frame size mismatch (${frame.length} bytes received; ${expectedBytes} expected).`);
+  }
+  if (session.encoderResult || session.encoderInputError || !session.child?.stdin?.writable) {
+    const detail = session.encoderInputError?.message || session.encoderResult?.error?.message || session.encoderErrorText;
+    throw new Error(`${validatedEncoderProfile(session.finalEncoder).label} stopped before the export completed.${detail ? `\n${detail}` : ''}`);
+  }
+  if (!session.child.stdin.write(frame)) {
+    await new Promise((resolve, reject) => {
+      const input = session.child?.stdin;
+      const child = session.child;
+      if (!input || !child) return reject(new Error('The offline encoder stopped while receiving a frame.'));
+      const cleanup = () => {
+        input.removeListener('drain', drained);
+        input.removeListener('error', failed);
+        child.removeListener('close', closed);
+      };
+      const drained = () => { cleanup(); resolve(); };
+      const failed = (error) => { cleanup(); reject(error); };
+      const closed = () => { cleanup(); reject(new Error(`The offline encoder closed while receiving a frame.\n${session.encoderErrorText}`)); };
+      input.once('drain', drained);
+      input.once('error', failed);
+      child.once('close', closed);
+    });
+  }
+  session.frameIndex += 1;
+  return session.frameIndex;
+}
+
+async function finishRawProfileEncoder(session) {
+  if (session.child?.stdin && !session.child.stdin.destroyed) session.child.stdin.end();
+  const result = await session.encoderDone;
+  if (result?.code !== 0) {
+    const detail = result?.error?.message || session.encoderErrorText || `FFmpeg exited with code ${result?.code}.`;
+    throw new Error(`The ${videoFormats[session.format]?.name || 'offline master'} could not be finalized.\n${detail}`);
+  }
+}
+
+function recoverLosslessFfv1Master(session, onProgress = () => {}) {
+  return new Promise((resolve, reject) => {
+    const args = [
+      '-y', '-hide_banner', '-err_detect', 'ignore_err', '-i', session.tempPath,
+      '-map', '0', '-c', 'copy', '-f', 'matroska', session.outputPath
+    ];
+    const child = spawn(ffmpegExecutable(), args, { windowsHide: true });
+    session.child = child;
+    let errorText = '';
+    const duration = Math.max(.001, Number(session.frameIndex || session.frameCount) / Math.max(1, Number(session.fps) || 60));
+    onProgress(0);
+    child.stderr.on('data', (chunk) => {
+      const text = chunk.toString();
+      errorText = (errorText + text).slice(-12000);
+      const matches = [...text.matchAll(/time=(\d+:\d+:\d+(?:\.\d+)?)/g)];
+      if (matches.length) onProgress(Math.max(0, Math.min(.995, ffmpegTimestampSeconds(matches.at(-1)[1]) / duration)));
+    });
+    child.once('error', (error) => reject(new Error(`Could not start FFmpeg recovery: ${error.message}`)));
+    child.once('close', (code) => {
+      session.child = null;
+      if (code === 0) {
+        onProgress(1);
+        resolve();
+      } else reject(new Error(`FFV1 recovery exited with code ${code}.\n${errorText}`));
+    });
   });
 }
 
@@ -1869,18 +2068,26 @@ app.whenReady().then(() => {
   ipcMain.handle('output:get-capabilities', async () => advancedOutputCapabilities());
   ipcMain.handle('performance:get-hardware', async () => detectHardware());
   ipcMain.handle('export:preflight', async (_event, options) => {
-    const encoder = await recommendedExportEncoder({ refresh: options?.refreshEncoder === true });
+    const format = normalizeRequestedFormat(options?.format);
+    if (options?.refreshEncoder === true) cachedHdrEncoder = null;
+    const encoder = format === 'youtube_hdr'
+      ? await recommendedHdrExportEncoder()
+      : exportEncoderProfiles[format];
     const duration = Math.max(0, Number(options?.duration) || 0);
     const masterBitrate = Math.max(1000000, Number(options?.masterBitrate) || 12000000);
-    const offline = options?.mode !== 'live';
-    const masterBytes = offline ? duration * masterBitrate / 8 : 0;
-    const estimatedOutputBytes = duration * masterBitrate * (options?.format === 'webm' ? 0.72 : 0.48) / 8;
-    const requiredBytes = Math.ceil((masterBytes + estimatedOutputBytes) * 1.18 + 268435456);
+    const width = Math.max(320, Math.min(7680, Math.round(Number(options?.width) || 1920)));
+    const height = Math.max(240, Math.min(4320, Math.round(Number(options?.height) || 1080)));
+    const fps = Math.max(1, Math.min(120, Math.round(Number(options?.fps) || 60)));
+    const rawBytes = duration * width * height * fps * 4;
+    const estimatedOutputBytes = format === 'youtube_hdr'
+      ? duration * Math.max(180000000, masterBitrate) / 8
+      : rawBytes * (format === 'utvideo' ? 0.62 : 0.58) + duration * 300000;
+    const requiredBytes = Math.ceil(estimatedOutputBytes * 1.2 + 536870912);
     const defaultDestination = app.getPath('videos');
     const freeBytes = await availableDiskBytes(defaultDestination).catch(() => 0);
     return {
       encoder: { id: encoder.id, label: encoder.label, hardware: encoder.hardware },
-      masterBytes: Math.ceil(masterBytes),
+      masterBytes: Math.ceil(rawBytes),
       estimatedOutputBytes: Math.ceil(estimatedOutputBytes),
       requiredBytes,
       freeBytes,
@@ -1897,6 +2104,7 @@ app.whenReady().then(() => {
       height: item.height,
       fps: item.fps,
       encodedFrames: item.encodedFrames,
+      pipeline: item.pipeline,
       tempBytes: item.tempBytes
     }));
   });
@@ -1911,15 +2119,26 @@ app.whenReady().then(() => {
     const manifests = await readRecoveryManifests();
     const manifest = manifests.find((item) => item.id === String(id));
     if (!manifest) throw new Error('The interrupted export is no longer available.');
-    const frames = await inspectAndRepairIvf(manifest.tempPath);
-    const encoder = await recommendedExportEncoder();
+    const rawProfile = manifest.pipeline === 'raw-profile';
+    const recoverableRawMaster = rawProfile && ['ffv1', 'utvideo'].includes(manifest.format);
+    if (rawProfile && manifest.format === 'youtube_hdr') {
+      throw new Error('This interrupted YouTube HDR MP4 was stopped before FFmpeg could write its final MP4 index. It cannot be safely recovered; discard it and run the export again.');
+    }
+    const lossless = manifest.pipeline === 'ffv1-raw' || manifest.format === 'ffv1' || recoverableRawMaster;
+    const frames = lossless
+      ? Math.max(1, Math.round(Number(manifest.encodedFrames) || 1))
+      : await inspectAndRepairIvf(manifest.tempPath);
+    const encoder = recoverableRawMaster
+      ? exportEncoderProfiles[manifest.format]
+      : (lossless ? exportEncoderProfiles.ffv1 : await recommendedExportEncoder());
     const session = {
       ...manifest,
       type: 'offline',
       frameCount: frames,
       frameIndex: frames,
-      format: videoFormats[manifest.format] ? manifest.format : 'mp4',
-      codec: manifest.codec === 'vp8' ? 'vp8' : 'vp9',
+      format: videoFormats[manifest.format] ? manifest.format : 'youtube_hdr',
+      pipeline: rawProfile ? 'raw-profile' : (lossless ? 'ffv1-raw' : 'webcodecs-ivf'),
+      codec: lossless ? 'raw-rgba' : (manifest.codec === 'vp8' ? 'vp8' : 'vp9'),
       finalEncoder: encoder.id,
       child: null,
       cancelled: false,
@@ -1931,12 +2150,16 @@ app.whenReady().then(() => {
     };
     await ensureExportDiskSpace(session.outputPath, Math.max(268435456, Number(manifest.tempBytes) || 0));
     try {
-      try {
-        await muxOfflineVideo(session, session.finalEncoder, (progress) => notify('finalize', progress, `Recovering with ${validatedEncoderProfile(session.finalEncoder).label}...`));
-      } catch (hardwareError) {
-        if (session.format === 'webm' || session.finalEncoder === 'libx264') throw hardwareError;
-        session.finalEncoder = 'libx264';
-        await muxOfflineVideo(session, 'libx264', (progress) => notify('finalize', progress, 'Recovering with CPU x264 fallback...'));
+      if (lossless) {
+        await recoverLosslessFfv1Master(session, (progress) => notify('finalize', progress, `Recovering the ${videoFormats[session.format]?.name || 'lossless master'}...`));
+      } else {
+        try {
+          await muxOfflineVideo(session, session.finalEncoder, (progress) => notify('finalize', progress, `Recovering with ${validatedEncoderProfile(session.finalEncoder).label}...`));
+        } catch (hardwareError) {
+          if (session.format === 'webm' || session.finalEncoder === 'libx264') throw hardwareError;
+          session.finalEncoder = 'libx264';
+          await muxOfflineVideo(session, 'libx264', (progress) => notify('finalize', progress, 'Recovering with CPU x264 fallback...'));
+        }
       }
       session.completed = true;
       notify('saving', 1, 'Recovered export saved');
@@ -2102,7 +2325,6 @@ app.whenReady().then(() => {
     const height = Math.max(240, Math.min(4320, Math.round(Number(options?.height) || 1080)));
     const fps = [30, 60, 90, 120].includes(Number(options?.fps)) ? Number(options.fps) : 60;
     const frameCount = Math.max(1, Math.min(10000000, Math.round(Number(options?.frameCount) || fps)));
-    const codec = options?.codec === 'vp8' ? 'vp8' : 'vp9';
     const audioPath = path.resolve(String(options?.audioPath || ''));
     const audioStat = await fs.promises.stat(audioPath).catch(() => null);
     if (!audioStat?.isFile()) throw new Error('The selected local audio file could not be opened for offline export.');
@@ -2110,40 +2332,46 @@ app.whenReady().then(() => {
     const requestedFormat = normalizeRequestedFormat(options?.format);
     const result = await dialog.showSaveDialog({
       title: 'Export offline music visualizer',
-      defaultPath: `${suggested}.${requestedFormat}`,
+      defaultPath: `${suggested}.${videoFormats[requestedFormat].extension}`,
       filters: saveDialogFilters(requestedFormat)
     });
     if (result.canceled || !result.filePath) return null;
     const { format, outputPath } = resolveOutputSelection(result.filePath, requestedFormat);
     const id = crypto.randomUUID();
-    const tempPath = path.join(os.tmpdir(), `quartic-pulse-offline-${id}.ivf`);
+    const tempPath = losslessPartialPath(outputPath, id);
     await ensureExportDiskSpace(outputPath, options?.requiredBytes);
-    const encoder = await recommendedExportEncoder();
-    const requestedEncoder = options?.finalEncoder ? validatedEncoderProfile(options.finalEncoder) : null;
-    const finalEncoder = requestedEncoder && (requestedEncoder.id === encoder.id || requestedEncoder.id === 'libx264') ? requestedEncoder.id : encoder.id;
-    const stream = fs.createWriteStream(tempPath);
-    const session = { id, type: 'offline', outputPath, format, tempPath, audioPath, width, height, fps, frameCount, codec, frameIndex: 0, stream, child: null, finishing: false, cancelled: false, completed: false, finalEncoder, createdAt: new Date().toISOString() };
-    stream.write(createIvfHeader(session));
+    const finalEncoder = format === 'youtube_hdr'
+      ? (await recommendedHdrExportEncoder()).id
+      : format;
+    const hdrOutput = format === 'youtube_hdr' && options?.hdrOutput === true;
+    const pixelFormat = hdrOutput && options?.pixelFormat === 'x2bgr10le'
+      ? 'x2bgr10le'
+      : 'rgba';
+    if (hdrOutput && pixelFormat !== 'x2bgr10le') {
+      throw new Error('The YouTube HDR profile requires the 10-bit WebGL export framebuffer.');
+    }
+    const session = {
+      id, type: 'offline', pipeline: 'raw-profile',
+      outputPath, format, tempPath, audioPath, width, height, fps, frameCount, pixelFormat, hdrOutput,
+      frameIndex: 0, stream: null, child: null, finishing: false, cancelled: false,
+      completed: false, finalEncoder, createdAt: new Date().toISOString()
+    };
+    startRawProfileEncoder(session);
     exportSessions.set(id, session);
     await writeRecoveryManifest(session, { status: 'rendering' });
-    return { id, outputPath, format };
+    return { id, outputPath, format, pipeline: session.pipeline };
   });
 
   ipcMain.handle('export:offline-frame', async (_event, id, bytes) => {
     const session = exportSessions.get(id);
     if (!session || session.type !== 'offline') throw new Error('Offline export session was not found.');
     const frame = Buffer.from(bytes || []);
-    if (!frame.length || frame.length > 64 * 1024 * 1024) throw new Error('An encoded offline frame was invalid.');
-    const frameHeader = Buffer.alloc(12);
-    frameHeader.writeUInt32LE(frame.length, 0);
-    frameHeader.writeBigUInt64LE(BigInt(session.frameIndex++), 4);
-    if (!session.stream.write(frameHeader) || !session.stream.write(frame)) {
-      await new Promise((resolve) => session.stream.once('drain', resolve));
-    }
-    if (session.frameIndex === 1 || session.frameIndex % Math.max(1, session.fps) === 0) {
+    if (!frame.length || frame.length > 160 * 1024 * 1024) throw new Error('An offline frame was invalid.');
+    const frameIndex = await appendRawProfileFrame(session, frame);
+    if (frameIndex === 1 || frameIndex % Math.max(1, session.fps) === 0) {
       await writeRecoveryManifest(session, { status: 'rendering' });
     }
-    return session.frameIndex;
+    return frameIndex;
   });
 
   ipcMain.handle('export:offline-finish', async (event, id, options) => {
@@ -2155,9 +2383,6 @@ app.whenReady().then(() => {
     };
     const destinationName = /onedrive/i.test(session.outputPath) ? 'OneDrive' : 'the selected folder';
     try {
-      notify('finalize', 0, 'Closing the encoded frame stream...');
-      await closeSession(session);
-      if (session.cancelled) throw new Error('Offline export cancelled.');
       const expectedFrameCount = session.frameCount;
       const requestedFrameCount = Math.max(0, Math.round(Number(options?.renderedFrameCount) || 0));
       const allowPartial = options?.allowPartial === true;
@@ -2166,39 +2391,23 @@ app.whenReady().then(() => {
           throw new Error(`Offline export frame count mismatch (${session.frameIndex} encoded, ${requestedFrameCount} rendered).`);
         }
         session.frameCount = session.frameIndex;
-        await updateIvfFrameCount(session.tempPath, session.frameCount);
         notify('finalize', 0, `Finishing shortened export at ${(session.frameCount / session.fps).toFixed(1)} seconds...`);
       } else if (session.frameIndex !== expectedFrameCount) {
         throw new Error(`Offline export received ${session.frameIndex} of ${expectedFrameCount} frames.`);
       }
-      try {
-        try {
-          await muxOfflineVideo(session, session.finalEncoder, (progress) => {
-            notify('finalize', progress, `Encoding with ${validatedEncoderProfile(session.finalEncoder).label} and writing to ${destinationName}...`);
-          });
-        } catch (hardwareError) {
-          if (session.format === 'webm' || session.finalEncoder === 'libx264' || session.cancelled) throw hardwareError;
-          notify('finalize', 0, 'Hardware encoding failed; retrying safely with CPU x264...');
-          session.finalEncoder = 'libx264';
-          await muxOfflineVideo(session, 'libx264', (progress) => {
-            notify('finalize', progress, `CPU fallback encoding and writing the final video to ${destinationName}...`);
-          });
-        }
-        if (session.cancelled) throw new Error('Offline export cancelled.');
-        notify('saving', 1, 'Final file saved');
-        session.completed = true;
-        return completedExportDetails(session.outputPath, session.finalEncoder, { partial: session.frameCount < expectedFrameCount });
-      } catch (error) {
-        if (session.cancelled) throw error;
-        const fallbackPath = session.outputPath.replace(/\.[^.]+$/i, '.video-only.ivf');
-        await copyFileWithProgress(session.tempPath, fallbackPath, (progress) => {
-          notify('saving', progress, 'Saving the video-only fallback...');
-        });
-        session.completed = true;
-        return completedExportDetails(fallbackPath, session.finalEncoder, {
-          warning: `${error.message} The complete encoded video stream was preserved without audio.`
-        });
-      }
+      notify('finalize', 0, `Closing ${videoFormats[session.format].name} and its audio...`);
+      await finishRawProfileEncoder(session);
+      if (session.cancelled) throw new Error('Offline export cancelled.');
+      await fs.promises.unlink(session.outputPath).catch((error) => {
+        if (error.code !== 'ENOENT') throw error;
+      });
+      await fs.promises.rename(session.tempPath, session.outputPath);
+      notify('saving', 1, `Final file saved to ${destinationName}`);
+      session.completed = true;
+      return completedExportDetails(session.outputPath, session.finalEncoder, {
+        format: session.format,
+        partial: session.frameCount < expectedFrameCount
+      });
     } finally {
       if (session.cancelled) await fs.promises.unlink(session.outputPath).catch(() => {});
       exportSessions.delete(id);
@@ -2211,8 +2420,10 @@ app.whenReady().then(() => {
     const session = exportSessions.get(id);
     if (!session || session.type !== 'offline') return false;
     session.cancelled = true;
+    session.child?.stdin?.destroy();
     session.child?.kill();
     if (session.finishing) return true;
+    if (session.pipeline === 'raw-profile') await session.encoderDone?.catch(() => {});
     session.stream?.destroy();
     exportSessions.delete(id);
     await removeRecoveryFiles(session);
