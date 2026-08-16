@@ -26,9 +26,106 @@
   }
 
   const $ = (selector) => document.querySelector(selector);
+  const appMetadata = window.QuarticAppMetadata;
+  if (!appMetadata) throw new Error('Quartic application metadata failed to load.');
+  const appVersionText = $('#appVersionText');
+  if (appVersionText) {
+    const channelLabel = appMetadata.releaseChannel === 'stable'
+      ? 'Stable Release'
+      : appMetadata.releaseChannel === 'release-candidate' ? 'Release Candidate' : 'Testing Build';
+    appVersionText.textContent = `Version ${appMetadata.version} ${channelLabel}`;
+  }
+  const exportProfileCatalog = window.QuarticExportProfiles;
+  if (!exportProfileCatalog) throw new Error('Quartic export profile catalog failed to load.');
+  const workspaceShell = window.QuarticWorkspaceShell;
+  if (!workspaceShell) throw new Error('Quartic workspace shell failed to load.');
+  const visualCatalog = window.QuarticVisualCatalog;
+  if (!visualCatalog) throw new Error('Quartic visual catalog failed to load.');
+  const audioControllerFactory = window.QuarticAudioController;
+  if (!audioControllerFactory) throw new Error('Quartic audio controller failed to load.');
+  const audioAnalysisEngineFactory = window.QuarticAudioAnalysisEngine;
+  if (!audioAnalysisEngineFactory) throw new Error('Quartic audio analysis engine failed to load.');
+  const performanceControllerFactory = window.QuarticPerformanceController;
+  if (!performanceControllerFactory) throw new Error('Quartic performance controller failed to load.');
+  const performanceSequencerEngineFactory = window.QuarticPerformanceSequencerEngine;
+  if (!performanceSequencerEngineFactory) throw new Error('Quartic performance sequencer engine failed to load.');
+  const performanceShowDataEngineFactory = window.QuarticPerformanceShowDataEngine;
+  if (!performanceShowDataEngineFactory) throw new Error('Quartic performance show data engine failed to load.');
+  const performanceShowComposerControllerFactory = window.QuarticPerformanceShowComposerController;
+  if (!performanceShowComposerControllerFactory) throw new Error('Quartic performance show composer controller failed to load.');
+  const profileManagerControllerFactory = window.QuarticProfileManagerController;
+  if (!profileManagerControllerFactory) throw new Error('Quartic profile manager controller failed to load.');
+  const songMapDataEngineFactory = window.QuarticSongMapDataEngine;
+  if (!songMapDataEngineFactory) throw new Error('Quartic Song Map data engine failed to load.');
+  const songDirectorEngineFactory = window.QuarticSongDirectorEngine;
+  if (!songDirectorEngineFactory) throw new Error('Quartic Song Director engine failed to load.');
+  const songDirectorControllerFactory = window.QuarticSongDirectorController;
+  if (!songDirectorControllerFactory) throw new Error('Quartic Song Director controller failed to load.');
+  const performancePackageEngineFactory = window.QuarticPerformancePackageEngine;
+  if (!performancePackageEngineFactory) throw new Error('Quartic performance package engine failed to load.');
+  const exportControllerFactory = window.QuarticExportController;
+  if (!exportControllerFactory) throw new Error('Quartic export controller failed to load.');
+  const exportSessionEngineFactory = window.QuarticExportSessionEngine;
+  if (!exportSessionEngineFactory) throw new Error('Quartic export session engine failed to load.');
+  const exportProgressWorkflowEngineFactory = window.QuarticExportProgressWorkflowEngine;
+  if (!exportProgressWorkflowEngineFactory) throw new Error('Quartic export progress workflow engine failed to load.');
+  const exportProgressCoordinatorFactory = window.QuarticExportProgressCoordinator;
+  if (!exportProgressCoordinatorFactory) throw new Error('Quartic export progress coordinator failed to load.');
+  const exportCommandCoordinatorFactory = window.QuarticExportCommandCoordinator;
+  if (!exportCommandCoordinatorFactory) throw new Error('Quartic export command coordinator failed to load.');
+  const exportJobCoordinatorFactory = window.QuarticExportJobCoordinator;
+  if (!exportJobCoordinatorFactory) throw new Error('Quartic export job coordinator failed to load.');
+  const exportResultWorkflowEngineFactory = window.QuarticExportResultWorkflowEngine;
+  if (!exportResultWorkflowEngineFactory) throw new Error('Quartic export result workflow engine failed to load.');
+  const exportEncoderEngineFactory = window.QuarticExportEncoderEngine;
+  if (!exportEncoderEngineFactory) throw new Error('Quartic export encoder engine failed to load.');
+  const exportLiveCaptureEngineFactory = window.QuarticExportLiveCaptureEngine;
+  if (!exportLiveCaptureEngineFactory) throw new Error('Quartic Live Capture Engine failed to load.');
+  const exportQuickClipWorkflowEngineFactory = window.QuarticExportQuickClipWorkflowEngine;
+  if (!exportQuickClipWorkflowEngineFactory) throw new Error('Quartic Quick Clip Workflow Engine failed to load.');
+  const exportSamplingEngineFactory = window.QuarticExportSamplingEngine;
+  if (!exportSamplingEngineFactory) throw new Error('Quartic export sampling engine failed to load.');
+  const exportSettingsSnapshotEngineFactory = window.QuarticExportSettingsSnapshotEngine;
+  if (!exportSettingsSnapshotEngineFactory) throw new Error('Quartic export settings snapshot engine failed to load.');
+  const exportPreparationEngineFactory = window.QuarticExportPreparationEngine;
+  if (!exportPreparationEngineFactory) throw new Error('Quartic export preparation engine failed to load.');
+  const exportFrameCaptureEngineFactory = window.QuarticExportFrameCaptureEngine;
+  if (!exportFrameCaptureEngineFactory) throw new Error('Quartic export frame capture engine failed to load.');
+  const exportPlanningEngineFactory = window.QuarticExportPlanningEngine;
+  if (!exportPlanningEngineFactory) throw new Error('Quartic export planning engine failed to load.');
+  const exportPresentationEngineFactory = window.QuarticExportPresentationEngine;
+  if (!exportPresentationEngineFactory) throw new Error('Quartic export presentation engine failed to load.');
+  const exportPreflightEngineFactory = window.QuarticExportPreflightEngine;
+  if (!exportPreflightEngineFactory) throw new Error('Quartic export preflight engine failed to load.');
+  const exportAdvisorEngineFactory = window.QuarticExportAdvisorEngine;
+  if (!exportAdvisorEngineFactory) throw new Error('Quartic export advisor engine failed to load.');
+  const exportSettingsCoordinatorEngineFactory = window.QuarticExportSettingsCoordinatorEngine;
+  if (!exportSettingsCoordinatorEngineFactory) throw new Error('Quartic export settings coordinator failed to load.');
+  const exportRuntimeStateCoordinatorFactory = window.QuarticExportRuntimeStateCoordinator;
+  if (!exportRuntimeStateCoordinatorFactory) throw new Error('Quartic export runtime state coordinator failed to load.');
+  const exportEncoderScanEngineFactory = window.QuarticExportEncoderScanEngine;
+  if (!exportEncoderScanEngineFactory) throw new Error('Quartic export encoder scan engine failed to load.');
+  const exportBenchmarkEngineFactory = window.QuarticExportBenchmarkEngine;
+  if (!exportBenchmarkEngineFactory) throw new Error('Quartic export benchmark engine failed to load.');
+  const exportHistoryEngineFactory = window.QuarticExportHistoryEngine;
+  if (!exportHistoryEngineFactory) throw new Error('Quartic export history engine failed to load.');
+  const exportHistoryActionEngineFactory = window.QuarticExportHistoryActionEngine;
+  if (!exportHistoryActionEngineFactory) throw new Error('Quartic export history action engine failed to load.');
+  const exportRecoveryEngineFactory = window.QuarticExportRecoveryEngine;
+  if (!exportRecoveryEngineFactory) throw new Error('Quartic export recovery engine failed to load.');
+  const exportRenderCoordinatorFactory = window.QuarticExportRenderCoordinator;
+  if (!exportRenderCoordinatorFactory) throw new Error('Quartic export render coordinator failed to load.');
+  const exportWorkflowEngineFactory = window.QuarticExportWorkflowEngine;
+  if (!exportWorkflowEngineFactory) throw new Error('Quartic export workflow engine failed to load.');
+  const exportOfflineLifecycleFactory = window.QuarticExportOfflineLifecycle;
+  if (!exportOfflineLifecycleFactory) throw new Error('Quartic offline export lifecycle failed to load.');
+  const exportLiveLifecycleFactory = window.QuarticExportLiveLifecycle;
+  if (!exportLiveLifecycleFactory) throw new Error('Quartic live export lifecycle failed to load.');
   const canvas = $('#fractalCanvas');
   const stage = $('#stage');
   const audio = $('#audio');
+  const deckOutputStorageKey = 'quarticPulseDeckOutputDevice';
+  let deckOutputDeviceId = localStorage.getItem(deckOutputStorageKey) || '';
   const gl = canvas.getContext('webgl2', {
     antialias: false,
     alpha: false,
@@ -36,7 +133,7 @@
   });
 
   if (!gl) {
-    document.body.innerHTML = '<div style="padding:40px;font-family:Segoe UI;color:white">Quartic Pulse requires a WebGL2-capable graphics driver.</div>';
+    document.body.innerHTML = '<div class="webgl-error">Quartic Pulse requires a WebGL2-capable graphics driver.</div>';
     return;
   }
 
@@ -52,6 +149,7 @@
 
     out vec4 fragColor;
     uniform vec2 uResolution;
+    uniform vec2 uSubpixelOffset;
     uniform vec2 uCenter;
     uniform float uScale;
     uniform float uTime;
@@ -64,6 +162,11 @@
     uniform float uEquationMids;
     uniform float uEquationHighs;
     uniform float uEquationBeat;
+    uniform float uMusicMotionBass;
+    uniform float uMusicMotionMids;
+    uniform float uMusicMotionHighs;
+    uniform float uMusicMotionBeat;
+    uniform float uMappedEquation;
     uniform float uFlow;
     uniform float uMotion;
     uniform float uFractalDimensional;
@@ -132,11 +235,40 @@
     uniform int uPalette;
     uniform float uChromaKey;
     uniform float uChromaThreshold;
-    uniform sampler2D uMainframeRoom;
-    uniform float uMainframeReady;
+    uniform float uHdrExport;
 
     vec3 cosinePalette(float t, vec3 a, vec3 b, vec3 c, vec3 d) {
       return a + b * cos(6.2831853 * (c * t + d));
+    }
+
+    vec3 fourStopPalette(float t, vec3 shadow, vec3 field, vec3 accent, vec3 detail) {
+      float position = fract(t) * 4.0;
+      float blend = smoothstep(0.0, 1.0, fract(position));
+      if (position < 1.0) return mix(shadow, field, blend);
+      if (position < 2.0) return mix(field, accent, blend);
+      if (position < 3.0) return mix(accent, detail, blend);
+      return mix(detail, shadow, blend);
+    }
+
+    float hlgEncode(float linearLight) {
+      const float a = 0.17883277;
+      const float b = 0.28466892;
+      const float c = 0.55991073;
+      float value = clamp(linearLight, 0.0, 1.0);
+      return value <= (1.0 / 12.0)
+        ? sqrt(3.0 * value)
+        : a * log(12.0 * value - b) + c;
+    }
+
+    vec3 encodeRec2020Hlg(vec3 displayColor) {
+      vec3 linear709 = pow(max(displayColor, 0.0), vec3(2.2));
+      linear709 = clamp((linear709 / (1.0 + .35 * linear709)) / .74074074, 0.0, 1.0);
+      vec3 linear2020 = vec3(
+        dot(linear709, vec3(.627404, .329283, .0433136)),
+        dot(linear709, vec3(.069097, .919540, .0113612)),
+        dot(linear709, vec3(.0163916, .0880132, .895595))
+      );
+      return vec3(hlgEncode(linear2020.r), hlgEncode(linear2020.g), hlgEncode(linear2020.b));
     }
 
     vec2 complexMultiply(vec2 a, vec2 b) {
@@ -153,17 +285,24 @@
 
     vec3 palette(float t) {
       if (uPalette == 0) {
-        return cosinePalette(t, vec3(.48,.42,.56), vec3(.52,.48,.50), vec3(1.0,.82,.64), vec3(.62,.12,.90));
+        return fourStopPalette(t,
+          vec3(.035,.067,.145), vec3(.125,.275,.430),
+          vec3(.390,.335,.555), vec3(.420,.660,.710));
       }
       if (uPalette == 1) {
-        return cosinePalette(t, vec3(.52,.34,.23), vec3(.48,.42,.30), vec3(1.0,.88,.62), vec3(.02,.06,.12));
+        return fourStopPalette(t,
+          vec3(.075,.043,.055), vec3(.300,.130,.145),
+          vec3(.610,.315,.220), vec3(.790,.585,.345));
       }
       if (uPalette == 2) {
-        return cosinePalette(t, vec3(.36,.52,.38), vec3(.34,.48,.40), vec3(.72,1.0,.68), vec3(.48,.08,.30));
+        return fourStopPalette(t,
+          vec3(.025,.090,.100), vec3(.070,.280,.285),
+          vec3(.250,.465,.380), vec3(.555,.680,.500));
       }
       if (uPalette == 3) {
-        float mono = .12 + .88 * pow(.5 + .5 * cos(6.2831853 * t), 1.45);
-        return vec3(mono * .88, mono * .93, mono);
+        return fourStopPalette(t,
+          vec3(.030,.040,.060), vec3(.145,.175,.215),
+          vec3(.350,.390,.435), vec3(.680,.705,.730));
       }
       float customPosition = fract(t) * 4.0;
       if (customPosition < 1.0) return mix(uCustom0, uCustom1, customPosition);
@@ -465,164 +604,226 @@
       return mix(color, background, fog);
     }
 
-    float mainframeEllipse(vec2 uv, vec2 center, vec2 stretch, float radius, float sharpness) {
-      return exp(-abs(length((uv - center) * stretch) - radius) * sharpness);
+    float mainframeHash21(vec2 point) {
+      point = fract(point * vec2(123.34, 456.21));
+      point += dot(point, point + 45.32);
+      return fract(point.x * point.y);
     }
 
-    vec3 renderMainframeRoom(vec2 screenUv, float frequencyShift) {
-      vec2 uv = screenUv;
-      float sourceAspect = 1672.0 / 939.0;
+    float mainframeNoise(vec2 point) {
+      vec2 cell = floor(point);
+      vec2 local = fract(point);
+      local = local * local * (3.0 - 2.0 * local);
+      return mix(
+        mix(mainframeHash21(cell), mainframeHash21(cell + vec2(1.0, 0.0)), local.x),
+        mix(mainframeHash21(cell + vec2(0.0, 1.0)), mainframeHash21(cell + vec2(1.0)), local.x),
+        local.y
+      );
+    }
+
+    vec3 mainframeNeonColor(float position) {
+      vec3 source = palette(position);
+      float luminance = dot(source, vec3(.2126, .7152, .0722));
+      return max(vec3(0.0), vec3(luminance) + (source - vec3(luminance)) * 1.72) * 1.82;
+    }
+
+    float mainframeTerrainHeight(vec2 position, float bassDrive, float midDrive) {
+      float x = position.x;
+      float z = position.y;
+      float rolling = sin(x * .54 + sin(z * .19) * 1.6) * .24;
+      rolling += sin(x * 1.17 - z * .21) * .13;
+      rolling += sin(x * 2.31 + z * .08) * .055;
+      float ridge = pow(.5 + .5 * sin(x * .39 + z * .27 + sin(z * .085) * 2.1), 5.0) * .48;
+      float centerPeak = exp(-length(vec2(x * .19, (z - 14.0) * .15))) * 3.15;
+      float leftPeak = exp(-length(vec2((x + 8.6) * .34, (z - 11.0) * .21))) * 1.55;
+      float rightPeak = exp(-length(vec2((x - 8.2) * .38, (z - 10.5) * .22))) * 1.40;
+      float audioRelief = sin(x * 1.8 + z * .42 - uTime * .45) * (.035 * midDrive);
+      return .08 + rolling + ridge + centerPeak + leftPeak + rightPeak + audioRelief + bassDrive * .035;
+    }
+
+    float mainframeSdBox(vec2 point, vec2 bounds) {
+      vec2 distance = abs(point) - bounds;
+      return length(max(distance, 0.0)) + min(max(distance.x, distance.y), 0.0);
+    }
+
+    vec3 renderMainframeLandscape(vec2 screenUv, float frequencyShift) {
       float outputAspect = uResolution.x / max(1.0, uResolution.y);
-      if (outputAspect > sourceAspect) uv.y = (uv.y - .5) * sourceAspect / outputAspect + .5;
-      else uv.x = (uv.x - .5) * outputAspect / sourceAspect + .5;
+      vec2 view = (screenUv - .5) * vec2(outputAspect, 1.0);
+      float bassDrive = pow(clamp(uEquationBass * 1.45 + uBass * .68 + uRms * .16, 0.0, 1.0), .62);
+      float midDrive = pow(clamp(uEquationMids * 1.42 + uMids * .65 + uRms * .12, 0.0, 1.0), .65);
+      float highDrive = pow(clamp(uEquationHighs * 1.40 + uHighs * .64, 0.0, 1.0), .68);
+      float beatDrive = pow(clamp(max(uEquationBeat, uBeat) * 1.22, 0.0, 1.0), .72);
+      vec3 lowColor = mainframeNeonColor(.82 + frequencyShift);
+      vec3 midColor = mainframeNeonColor(.46 + frequencyShift);
+      vec3 highColor = mainframeNeonColor(.66 + frequencyShift);
 
-      float bassDrive = pow(clamp(uEquationBass * 1.55 + uBass * .72 + uRms * .16, 0.0, 1.0), .58);
-      float midDrive = pow(clamp(uEquationMids * 1.50 + uMids * .68 + uRms * .13, 0.0, 1.0), .62);
-      float highDrive = pow(clamp(uEquationHighs * 1.45 + uHighs * .66, 0.0, 1.0), .64);
-      float beatDrive = pow(clamp(max(uEquationBeat, uBeat) * 1.25, 0.0, 1.0), .70);
-      vec2 perspectiveOrigin = vec2(.5, .47);
-      float cameraPush = (.006 * bassDrive + .011 * beatDrive) * clamp(uMotion, 0.0, 2.0);
-      uv = perspectiveOrigin + (uv - perspectiveOrigin) * (1.0 - cameraPush);
+      float cameraSway = sin(uTime * .085) * (.10 + .16 * uMotion) + sin(uTime * .031) * .12;
+      vec3 rayOrigin = vec3(cameraSway, 2.05 + beatDrive * .045, -4.2);
+      vec3 rayDirection = normalize(vec3(view.x * 1.18, view.y - .075, 1.32));
 
-      vec2 cameraDrift = vec2(
-        sin(uTime * .113) + .38 * sin(uTime * .047),
-        cos(uTime * .091) + .31 * sin(uTime * .061)
-      ) * (.0015 + .0028 * uMotion + .0028 * midDrive);
-      float floorDepth = smoothstep(.57, .02, uv.y);
-      float sideDepth = smoothstep(.30, .49, abs(uv.x - .5));
-      float ceilingDepth = smoothstep(.70, .98, uv.y);
-      float parallaxDepth = clamp(floorDepth * .72 + sideDepth * .48 + ceilingDepth * .24, 0.0, 1.0);
-      vec2 textureUv = clamp(uv + cameraDrift * parallaxDepth, vec2(.001), vec2(.999));
+      float skyFade = smoothstep(-.20, .55, rayDirection.y);
+      vec3 color = vec3(.0015, .004, .011);
+      color += mix(lowColor, highColor, skyFade) * (.012 + .024 * skyFade + .026 * uRms);
+      float horizonGlow = exp(-abs(rayDirection.y) * 23.0);
+      color += midColor * horizonGlow * (.05 + .12 * midDrive);
 
-      vec3 room = uMainframeReady > .5
-        ? texture(uMainframeRoom, textureUv).rgb
-        : palette(.57 + uv.y * .16 + frequencyShift) * (.05 + .18 * (1.0 - uv.y));
-      float roomLuma = dot(room, vec3(.2126, .7152, .0722));
-      float blueCircuit = smoothstep(.015, .34, room.b - room.r * .42);
-      vec2 sourceTexel = vec2(1.0 / 1672.0, 1.0 / 939.0);
-      vec3 roomLeft = texture(uMainframeRoom, clamp(textureUv - vec2(sourceTexel.x, 0.0), vec2(.001), vec2(.999))).rgb;
-      vec3 roomRight = texture(uMainframeRoom, clamp(textureUv + vec2(sourceTexel.x, 0.0), vec2(.001), vec2(.999))).rgb;
-      vec3 roomDown = texture(uMainframeRoom, clamp(textureUv - vec2(0.0, sourceTexel.y), vec2(.001), vec2(.999))).rgb;
-      vec3 roomUp = texture(uMainframeRoom, clamp(textureUv + vec2(0.0, sourceTexel.y), vec2(.001), vec2(.999))).rgb;
-      vec3 lumaWeights = vec3(.2126, .7152, .0722);
-      vec2 lumaGradient = vec2(dot(roomRight - roomLeft, lumaWeights), dot(roomUp - roomDown, lumaWeights));
-      vec2 blueGradient = vec2(roomRight.b - roomLeft.b, roomUp.b - roomDown.b);
-      float structuralContour = smoothstep(.055, .32,
-        length(lumaGradient) * 4.4 + length(blueGradient) * 1.7);
-      float primaryContour = pow(structuralContour, 1.55);
-      float energizedContour = clamp(primaryContour * 1.10 + blueCircuit * .08, 0.0, 1.0);
-      float contourGate = .055 + energizedContour * 1.20;
-      vec3 lowColor = palette(.10 + frequencyShift);
-      vec3 midColor = palette(.46 + frequencyShift);
-      vec3 highColor = palette(.80 + frequencyShift);
-      vec3 color = room * (.74 + .16 * uRms + .05 * bassDrive);
-      color += midColor * blueCircuit * (.045 + .24 * midDrive);
+      vec2 starCell = floor(screenUv * vec2(420.0, 240.0));
+      float starRandom = mainframeHash21(starCell);
+      float star = pow(starRandom, 92.0) * smoothstep(.52, .68, screenUv.y);
+      float starPulse = .55 + .45 * sin(uTime * (1.0 + starRandom * 2.6) + starRandom * 30.0);
+      color += mix(vec3(.56, .75, 1.0), highColor, starRandom) * star * starPulse * (.38 + .52 * highDrive);
+      vec2 nebulaPoint = vec2(view.x * .62 + view.y * .34, view.y * 1.9);
+      float nebulaBand = exp(-abs(nebulaPoint.x - .17) * 5.2) * smoothstep(.57, .96, screenUv.y);
+      float nebulaDust = mainframeNoise(nebulaPoint * 6.0 + vec2(uTime * .004, 0.0));
+      color += mix(lowColor, vec3(.32, .40, .72), .55) * nebulaBand * nebulaDust * .028;
 
-      float perspectiveWidth = .085 + floorDepth * .91;
-      float lanePosition = (uv.x - .5) / max(.025, perspectiveWidth);
-      float laneLines = pow(.5 + .5 * cos(lanePosition * 31.4159), 14.0);
-      float lanePackets = pow(.5 + .5 * cos(
-        floorDepth * 78.0 - uTime * (3.8 + 4.6 * uFlow + 6.5 * bassDrive) + lanePosition * 2.1
-      ), 9.0);
-      float laneSurge = pow(.5 + .5 * cos(
-        floorDepth * 31.0 - uTime * (2.4 + 4.2 * uFlow + 3.2 * midDrive)
-      ), 8.0);
-      float laneBounds = 1.0 - smoothstep(.82, 1.10, abs(lanePosition));
-      float floorData = floorDepth * laneBounds
-        * laneLines * (.16 + .84 * lanePackets + .24 * laneSurge)
-        * contourGate;
-      color += lowColor * floorData * (.14 + .96 * bassDrive + .42 * beatDrive);
+      float skylineX = (screenUv.x - .5) * 96.0;
+      float towerCell = floor(skylineX);
+      float towerRandom = mainframeHash21(vec2(towerCell, 17.0));
+      float towerLocal = abs(fract(skylineX) - .5);
+      float towerHeight = .018 + pow(towerRandom, 2.4) * .15;
+      towerHeight *= .60 + .65 * spectrumAt(fract(towerCell * .071));
+      float towerBody = (1.0 - smoothstep(.30, .47, towerLocal))
+        * step(.535, screenUv.y) * step(screenUv.y, .535 + towerHeight);
+      float towerEdge = smoothstep(.35, .47, towerLocal) * towerBody;
+      float towerScan = pow(.5 + .5 * cos((screenUv.y - .535) * 430.0 - uTime * (2.0 + 4.0 * uFlow)), 14.0);
+      color += lowColor * towerBody * (.07 + .15 * towerScan + .10 * highDrive);
+      color += highColor * towerEdge * (.17 + .30 * highDrive);
 
-      float wallMask = sideDepth
-        * smoothstep(.12, .24, uv.y)
-        * (1.0 - smoothstep(.79, .94, uv.y));
-      float wallTracks = pow(.5 + .5 * cos((uv.x - .5) * 285.0), 17.0);
-      float wallPackets = pow(.5 + .5 * cos(
-        uv.y * 112.0 + sign(uv.x - .5) * uTime * (2.8 + 4.8 * uFlow + 7.0 * highDrive)
-      ), 10.0);
-      float wallData = wallMask * wallTracks * (.20 + .80 * wallPackets) * contourGate;
-      vec2 rackCell = floor(vec2(uv.x * 188.0, uv.y * 104.0));
-      float rackRandom = fract(sin(dot(rackCell, vec2(12.9898, 78.233))) * 43758.5453);
-      float rackBlink = step(.82, rackRandom)
-        * pow(.5 + .5 * cos(uTime * (3.0 + 9.0 * highDrive) + rackRandom * 6.2831853), 12.0)
-        * wallMask * energizedContour;
-      color += highColor * wallData * (.12 + .90 * highDrive + .30 * beatDrive);
-      color += mix(midColor, highColor, rackRandom) * rackBlink * (.08 + .82 * highDrive);
+      float summitY = clamp((screenUv.y - .535) / .255, 0.0, 1.0);
+      float summitHalfWidth = .155 * pow(1.0 - summitY, .78) + .006;
+      float summitX = abs(screenUv.x - .5);
+      float summitMask = step(.535, screenUv.y) * step(screenUv.y, .79)
+        * (1.0 - smoothstep(summitHalfWidth - .006, summitHalfWidth, summitX));
+      float summitEdge = exp(-abs(summitX - summitHalfWidth) * 720.0) * step(.535, screenUv.y) * step(screenUv.y, .79);
+      float summitContours = pow(.5 + .5 * cos((screenUv.y - .535) * 198.0 + summitX * 48.0), 24.0);
+      float summitRibs = pow(.5 + .5 * cos(summitX / max(.008, summitHalfWidth) * 25.0), 28.0);
+      color += mix(lowColor, highColor, summitY) * summitMask
+        * (.018 + .16 * summitContours + .11 * summitRibs) * (1.0 + midDrive * .55);
+      color += highColor * summitEdge * (.20 + .42 * beatDrive);
+      float summitBeacon = exp(-abs(screenUv.x - .5) * 760.0)
+        * step(.785, screenUv.y) * step(screenUv.y, .86);
+      color += lowColor * summitBeacon * (.17 + .52 * beatDrive);
 
-      float reactorBeam = exp(-abs(uv.x - .5) * (72.0 - 16.0 * bassDrive))
-        * smoothstep(.20, .31, uv.y)
-        * (1.0 - smoothstep(.82, .98, uv.y));
-      float reactorPackets = pow(.5 + .5 * cos(
-        uv.y * 62.0 - uTime * (4.0 + 8.0 * midDrive)
-      ), 9.0);
-      float reactorCore = exp(-abs(uv.x - .5) * (22.0 - 6.0 * midDrive))
-        * smoothstep(.23, .37, uv.y)
-        * (1.0 - smoothstep(.63, .78, uv.y));
-      float ringExpansion = .0045 * bassDrive + .0090 * beatDrive;
-      float reactorRings = mainframeEllipse(uv, vec2(.5, .282), vec2(1.0, 3.15), .135 + ringExpansion, 145.0)
-        + mainframeEllipse(uv, vec2(.5, .497), vec2(1.0, 3.85), .128 + ringExpansion * .82, 150.0)
-        + mainframeEllipse(uv, vec2(.5, .731), vec2(1.0, 3.10), .143 + ringExpansion * 1.12, 145.0);
-      float reactorEnergy = .20 + .92 * bassDrive + .54 * midDrive + .72 * beatDrive;
-      float reactorContour = clamp(energizedContour + blueCircuit * .18, 0.0, 1.0);
-      color += midColor * reactorBeam * (.08 + .34 * reactorEnergy)
-        * (.48 + .52 * reactorPackets) * (.18 + 1.08 * reactorContour);
-      color += highColor * reactorCore * (.055 + .32 * midDrive + .14 * highDrive)
-        * (.16 + 1.02 * reactorContour);
-      color += mix(lowColor, highColor, .58) * reactorRings * (.15 + .76 * reactorEnergy)
-        * (.12 + 1.18 * reactorContour);
-
-      vec2 wavePoint = (uv - vec2(.5, .49)) * vec2(1.0, outputAspect);
-      float waveDistance = length(wavePoint);
-      vec3 eventWaves = vec3(0.0);
-      for (int eventIndex = 0; eventIndex < 16; eventIndex++) {
-        if (eventIndex >= uPulseEventCount) break;
-        float age = max(0.0, uPulseEventAge[eventIndex]);
-        float strength = uPulseEventStrength[eventIndex];
-        float band = uPulseEventBand[eventIndex];
-        float waveRadius = .035 + age * (.13 + band * .018);
-        float wave = exp(-abs(waveDistance - waveRadius) * (84.0 - band * 8.0));
-        float echo = exp(-abs(waveDistance - max(.0, waveRadius - .028)) * (68.0 - band * 6.0));
-        float life = exp(-age * .82) * (1.0 - smoothstep(.72, .96, waveRadius));
-        eventWaves += palette(.10 + band * .34 + frequencyShift)
-          * (wave + echo * .42) * life * strength * (.52 + .95 * uMotion);
+      float travel = .35;
+      float hit = 0.0;
+      vec3 terrainPoint = rayOrigin;
+      for (int march = 0; march < 72; march++) {
+        terrainPoint = rayOrigin + rayDirection * travel;
+        float height = mainframeTerrainHeight(terrainPoint.xz, bassDrive, midDrive);
+        float clearance = terrainPoint.y - height;
+        if (clearance < .006) {
+          hit = 1.0;
+          break;
+        }
+        travel += clamp(clearance * .34, .03, .30);
+        if (travel > 38.0) break;
       }
-      color += eventWaves * contourGate;
 
-      float stormRegion = smoothstep(.69, .91, uv.y)
-        * (1.0 - smoothstep(.18, .46, abs(uv.x - .5)));
-      float sourceLightning = pow(clamp(room.b * 1.20 - room.r * .32 - roomLuma * .18, 0.0, 1.0), 1.45);
-      float stormFlicker = .04 + .32 * highDrive + .44 * beatDrive + .08 * uRms;
-      color += highColor * stormRegion * sourceLightning * stormFlicker;
+      if (hit > .5) {
+        for (int refine = 0; refine < 4; refine++) {
+          float height = mainframeTerrainHeight(terrainPoint.xz, bassDrive, midDrive);
+          travel -= (terrainPoint.y - height) * .36;
+          terrainPoint = rayOrigin + rayDirection * travel;
+        }
+        float epsilon = .035;
+        float height = mainframeTerrainHeight(terrainPoint.xz, bassDrive, midDrive);
+        float heightX = mainframeTerrainHeight(terrainPoint.xz + vec2(epsilon, 0.0), bassDrive, midDrive);
+        float heightZ = mainframeTerrainHeight(terrainPoint.xz + vec2(0.0, epsilon), bassDrive, midDrive);
+        vec3 normal = normalize(vec3(height - heightX, epsilon, height - heightZ));
+        float diffuse = .22 + .78 * max(0.0, dot(normal, normalize(vec3(-.45, .86, -.28))));
+        float rim = pow(1.0 - max(0.0, dot(normal, -rayDirection)), 2.2);
 
-      float consoleMask = smoothstep(.25, .34, uv.x)
-        * (1.0 - smoothstep(.66, .75, uv.x))
-        * smoothstep(.025, .075, uv.y)
-        * (1.0 - smoothstep(.16, .22, uv.y));
-      float consoleSweep = pow(.5 + .5 * cos(
-        uv.x * 74.0 - uTime * (2.0 + 5.0 * midDrive)
-      ), 11.0);
-      color += mix(lowColor, midColor, .58) * consoleMask * consoleSweep
-        * energizedContour * (.06 + .58 * midDrive);
+        float distanceFade = exp(-travel * .038);
+        vec3 terrainColor = vec3(.014, .034, .088) * (.72 + diffuse * 1.02);
+        terrainColor += mix(lowColor, highColor, clamp(.22 + height * .16, 0.0, 1.0))
+          * (.035 + diffuse * .042);
+        terrainColor += mix(lowColor, midColor, clamp(height * .22, 0.0, 1.0)) * rim * .28;
 
-      float reactorZone = (1.0 - smoothstep(.10, .30, abs(uv.x - .5)))
-        * smoothstep(.18, .30, uv.y) * (1.0 - smoothstep(.77, .90, uv.y));
-      float contourEnergy = floorDepth * bassDrive
-        + wallMask * highDrive
-        + reactorZone * (midDrive + beatDrive * .72)
-        + stormRegion * highDrive * .55;
-      vec3 routedContourColor = mix(lowColor, highColor, clamp(uv.y, 0.0, 1.0));
-      color += routedContourColor * primaryContour * contourEnergy * (.20 + .62 * uMotion);
+        float gridX = pow(.5 + .5 * cos(terrainPoint.x * 6.2831853), 26.0);
+        float gridZ = pow(.5 + .5 * cos(terrainPoint.z * 6.2831853), 24.0);
+        float majorX = pow(.5 + .5 * cos(terrainPoint.x * 1.5707963), 42.0);
+        float majorZ = pow(.5 + .5 * cos(terrainPoint.z * 1.5707963), 40.0);
+        float contours = pow(.5 + .5 * cos(height * 15.5), 34.0);
+        float wireGrid = max(max(gridX, gridZ) * .34, max(majorX, majorZ) * .78);
+        terrainColor += lowColor * wireGrid * (.68 + .56 * highDrive) * distanceFade;
+        terrainColor += midColor * contours * (.30 + .36 * midDrive) * distanceFade;
 
-      float depthShade = 1.0 - parallaxDepth * (.05 - .025 * uEquationBass);
-      color *= depthShade;
-      color += midColor * blueCircuit * blueCircuit * (.028 + .09 * uFrequencyColor + .06 * midDrive);
-      float peakLuma = dot(color, vec3(.2126, .7152, .0722));
-      color *= 1.0 / (1.0 + max(0.0, peakLuma - .68) * .78);
-      return color / (1.0 + color * .16);
+        float centerPath = exp(-abs(terrainPoint.x - sin(terrainPoint.z * .18) * 1.15) * 2.8);
+        float leftPath = exp(-abs(terrainPoint.x + 4.4 + sin(terrainPoint.z * .24 + 1.7) * 1.5) * 3.2);
+        float rightPath = exp(-abs(terrainPoint.x - 4.8 - sin(terrainPoint.z * .20 + .8) * 1.25) * 3.0);
+        float packetClock = uTime * (4.0 + 7.0 * uFlow + 3.5 * bassDrive);
+        float centerPackets = pow(.5 + .5 * cos(terrainPoint.z * 4.7 - packetClock), 17.0);
+        float sidePackets = pow(.5 + .5 * cos(terrainPoint.z * 5.6 - packetClock * 1.18), 20.0);
+        terrainColor += lowColor * centerPath * (.44 + 1.28 * centerPackets) * (1.0 + bassDrive * .82);
+        terrainColor += midColor * leftPath * (.36 + 1.24 * sidePackets) * (1.0 + midDrive * .78);
+        terrainColor += highColor * rightPath * (.36 + 1.24 * sidePackets) * (1.0 + highDrive * .80);
+
+        vec2 dataCell = floor(vec2(terrainPoint.x * 2.2, (terrainPoint.z - uTime * (2.2 + 3.0 * uFlow)) * 2.6));
+        vec2 dataLocal = fract(vec2(terrainPoint.x * 2.2, (terrainPoint.z - uTime * (2.2 + 3.0 * uFlow)) * 2.6));
+        float bitRandom = mainframeHash21(dataCell);
+        float bit = step(.58, bitRandom)
+          * smoothstep(.42, .30, abs(dataLocal.x - .5))
+          * smoothstep(.38, .25, abs(dataLocal.y - .5));
+        float dataField = max(centerPath, max(leftPath, rightPath));
+        terrainColor += mix(lowColor, highColor, bitRandom) * bit * dataField * (.34 + .72 * highDrive);
+
+        for (int eventIndex = 0; eventIndex < 16; eventIndex++) {
+          if (eventIndex >= uPulseEventCount) break;
+          float age = max(0.0, uPulseEventAge[eventIndex]);
+          float strength = uPulseEventStrength[eventIndex];
+          float band = uPulseEventBand[eventIndex];
+          float radius = 1.2 + age * (3.7 + band * .55);
+          float ring = exp(-abs(length(terrainPoint.xz - vec2(0.0, 3.0)) - radius) * 3.4);
+          terrainColor += palette(.08 + band * .34 + frequencyShift) * ring * strength * exp(-age * .65) * .55;
+        }
+
+        float peakBeacon = exp(-abs(terrainPoint.x) * 2.2) * exp(-abs(terrainPoint.z - 14.0) * .8);
+        terrainColor += highColor * peakBeacon * (.34 + .86 * beatDrive);
+        float fog = 1.0 - exp(-travel * .055);
+        vec3 fogColor = mix(vec3(.004, .010, .026), midColor * .09, horizonGlow);
+        color = mix(terrainColor, fogColor, fog) + terrainColor * distanceFade * .28;
+      }
+
+      float rainSide = smoothstep(.10, .015, screenUv.x) + smoothstep(.90, .985, screenUv.x);
+      vec2 rainCell = floor(vec2(screenUv.x * 150.0, (screenUv.y + uTime * (.10 + .22 * uFlow)) * 94.0));
+      vec2 rainLocal = fract(vec2(screenUv.x * 150.0, (screenUv.y + uTime * (.10 + .22 * uFlow)) * 94.0));
+      float rainRandom = mainframeHash21(vec2(rainCell.x, floor(rainCell.y * .13)));
+      float rainGlyph = step(.42, rainRandom) * smoothstep(.40, .25, abs(rainLocal.x - .5))
+        * smoothstep(.43, .26, abs(rainLocal.y - .5));
+      color += mix(lowColor, highColor, rainRandom) * rainGlyph * rainSide * (.20 + .52 * highDrive);
+
+      float leftPanel = exp(-abs(mainframeSdBox((screenUv - vec2(.205, .795)) * vec2(outputAspect, 1.0), vec2(.145, .078))) * 520.0);
+      float rightPanel = exp(-abs(mainframeSdBox((screenUv - vec2(.805, .805)) * vec2(outputAspect, 1.0), vec2(.13, .088))) * 520.0);
+      float panelMask = leftPanel + rightPanel;
+      color += lowColor * panelMask * (.20 + .24 * highDrive);
+      float panelWaveX = clamp((screenUv.x - .105) / .20, 0.0, 1.0);
+      float panelWave = waveformAt(panelWaveX) * (.020 + .022 * uRms);
+      float panelTrace = exp(-abs(screenUv.y - (.795 + panelWave)) * 390.0)
+        * step(.105, screenUv.x) * step(screenUv.x, .305)
+        * step(.735, screenUv.y) * step(screenUv.y, .855);
+      color += midColor * panelTrace * (.24 + .62 * midDrive);
+      float panelRows = pow(.5 + .5 * cos(screenUv.y * 520.0), 20.0)
+        * step(.725, screenUv.x) * step(screenUv.x, .885)
+        * step(.75, screenUv.y) * step(screenUv.y, .86);
+      color += highColor * panelRows * (.035 + .11 * highDrive);
+
+      vec2 reticlePoint = (screenUv - vec2(.69, .72)) * vec2(outputAspect, 1.0);
+      float reticleRadius = length(reticlePoint);
+      float reticle = exp(-abs(reticleRadius - .045 - beatDrive * .004) * 440.0)
+        + exp(-abs(reticleRadius - .027) * 390.0) * .55;
+      float reticleCross = exp(-abs(reticlePoint.x) * 700.0) * step(abs(reticlePoint.y), .062)
+        + exp(-abs(reticlePoint.y) * 700.0) * step(abs(reticlePoint.x), .062);
+      color += lowColor * (reticle + reticleCross * .24) * (.14 + .34 * beatDrive);
+
+      float scanline = pow(.5 + .5 * cos(screenUv.y * uResolution.y * 3.1415926), 26.0);
+      color *= .985 + scanline * .015;
+      return color / (1.0 + color * .22);
     }
 
     void main() {
-      vec2 p = (gl_FragCoord.xy - .5 * uResolution.xy) / uResolution.y;
+      vec2 sampleCoord = gl_FragCoord.xy + uSubpixelOffset;
+      vec2 p = (sampleCoord - .5 * uResolution.xy) / uResolution.y;
       float cs = cos(uRotation);
       float sn = sin(uRotation);
       p = mat2(cs, -sn, sn, cs) * p;
@@ -669,6 +870,18 @@
       vec2 c = uCenter + dimensionalPlane * uScale * pulse;
       float coreCScale = mix(.35, 1.65, uCoreCStrength);
       vec2 recurrenceC = c * coreCScale + uCoreBias;
+      // Musical motion is kept separate from the slower equation/color
+      // envelopes. It follows rhythmic contrast without turning each onset
+      // into a full-frame brightness flash.
+      vec2 musicalRecurrenceDrift = uEquation * vec2(
+        (.010 * uMusicMotionBass + .006 * uMusicMotionBeat) * sin(uTime * .71),
+        (.008 * uMusicMotionMids - .003 * uMusicMotionHighs) * cos(uTime * .89)
+      );
+      musicalRecurrenceDrift += uMappedEquation * vec2(
+        .014 * sin(uTime * .79),
+        .011 * cos(uTime * 1.03)
+      );
+      recurrenceC += musicalRecurrenceDrift;
       float frequencyShift = uFrequencyHue * uFrequencyColor;
       vec3 color = vec3(0.0);
       if (uVisualStyle == 0) {
@@ -683,11 +896,20 @@
       float convergenceHit = 0.0;
       int escapedAt = uIterations;
 
-      float trapAngle = uTime * (.12 + .12 * uEquationHighs) * uMotion;
+      float trapAngle = uTime * (.12 + .12 * uEquationHighs) * uMotion
+        + .09 * uMusicMotionHighs;
       vec2 trapDir = vec2(cos(trapAngle), sin(trapAngle));
       vec2 equationMu = uEquation * vec2(
-        (.070 * uEquationBass + .025 * uEquationBeat) * cos(uTime * .43),
+        (.070 * uEquationBass + .025 * uEquationBeat) * cos(uTime * .43)
+          + .040 * uMusicMotionBass * sin(uTime * 1.13)
+          + .018 * uMusicMotionBeat * cos(uTime * .83),
         .060 * uEquationMids * sin(uTime * .59)
+          + .034 * uMusicMotionMids * cos(uTime * .97)
+          + .014 * uMusicMotionHighs * sin(uTime * 1.71)
+      );
+      equationMu += uMappedEquation * vec2(
+        .065 * cos(uTime * .73),
+        .052 * sin(uTime * .91)
       );
 
       mat2 equationFoldRotation = mat2(1.0, 0.0, 0.0, 1.0);
@@ -884,8 +1106,8 @@
       color += palette(.18 + dimensionalPoint.z * .22 + frequencyShift) * depthSheen;
       }
 
-      vec2 screenUv = gl_FragCoord.xy / uResolution.xy;
-      vec2 visualPoint = (gl_FragCoord.xy - .5 * uResolution.xy) / uResolution.y;
+      vec2 screenUv = sampleCoord / uResolution.xy;
+      vec2 visualPoint = (sampleCoord - .5 * uResolution.xy) / uResolution.y;
       if (uVisualStyle == 1) {
         float style = floor(uBarStyle + .5);
         float warpedX = screenUv.x + sin(screenUv.y * 7.0 - uTime * (1.1 + uMids))
@@ -1120,7 +1342,7 @@
       } else if (uVisualStyle == 5) {
         color = renderMandelbulb(visualPoint * 2.0, frequencyShift);
       } else if (uVisualStyle == 6) {
-        color = renderMainframeRoom(screenUv, frequencyShift);
+        color = renderMainframeLandscape(screenUv, frequencyShift);
       }
 
       float vignette = 1.0 - .48 * dot(p, p);
@@ -1142,6 +1364,7 @@
           color.g = min(color.g, max(color.r, color.b) * .62);
         }
       }
+      if (uHdrExport > .5) color = encodeRec2020Hlg(color);
       fragColor = vec4(color, 1.0);
     }
   `;
@@ -1171,10 +1394,10 @@
   gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
 
   const uniforms = {};
-  for (const name of ['uResolution','uCenter','uScale','uTime','uBass','uMids','uHighs','uRms','uBeat','uFlow','uMotion','uFractalDimensional','uFractalTilt','uFractalDepthSpeed','uFractalPerspective','uFractalSlice','uFractalLighting','uFractalAudioDepth','uEquationFolding','uEquationFold','uEquationWarp','uEquationFoldMotion','uEquationFoldOffset','uEquationWarpScale','uEquationFoldAudio','uCoreCStrength','uCoreBias','uBarWidth','uBarGlow','uBarReflection','uBarMotion','uBarEcho','uBarGrid','uBarStyle','uRadialSize','uRadialGlow','uRadialWaves','uRadialTwist','uRadialSpokes','uRadialAtmosphere','uPulseJagged','uPulseTrail','uPulseDetail','uPulseSize','uPulseEventCount','uBulbPower','uBulbWarp','uBulbDetail','uBulbAudio','uBulbOrbit','uBulbFold','uBulbGlow','uBulbCamera','uBulbYaw','uBulbPitch','uBulbSteps','uRotation','uEquation','uFrequencyHue','uFrequencyColor','uFractalType','uVisualStyle','uCustom0','uCustom1','uCustom2','uCustom3','uIterations','uPalette','uChromaKey','uChromaThreshold','uMainframeReady']) {
+  for (const name of ['uResolution','uSubpixelOffset','uCenter','uScale','uTime','uBass','uMids','uHighs','uRms','uBeat','uFlow','uMotion','uFractalDimensional','uFractalTilt','uFractalDepthSpeed','uFractalPerspective','uFractalSlice','uFractalLighting','uFractalAudioDepth','uEquationFolding','uEquationFold','uEquationWarp','uEquationFoldMotion','uEquationFoldOffset','uEquationWarpScale','uEquationFoldAudio','uCoreCStrength','uCoreBias','uBarWidth','uBarGlow','uBarReflection','uBarMotion','uBarEcho','uBarGrid','uBarStyle','uRadialSize','uRadialGlow','uRadialWaves','uRadialTwist','uRadialSpokes','uRadialAtmosphere','uPulseJagged','uPulseTrail','uPulseDetail','uPulseSize','uPulseEventCount','uBulbPower','uBulbWarp','uBulbDetail','uBulbAudio','uBulbOrbit','uBulbFold','uBulbGlow','uBulbCamera','uBulbYaw','uBulbPitch','uBulbSteps','uRotation','uEquation','uFrequencyHue','uFrequencyColor','uFractalType','uVisualStyle','uCustom0','uCustom1','uCustom2','uCustom3','uIterations','uPalette','uChromaKey','uChromaThreshold','uHdrExport']) {
     uniforms[name] = gl.getUniformLocation(program, name);
   }
-  for (const name of ['uEquationBass','uEquationMids','uEquationHighs','uEquationBeat']) {
+  for (const name of ['uEquationBass','uEquationMids','uEquationHighs','uEquationBeat','uMusicMotionBass','uMusicMotionMids','uMusicMotionHighs','uMusicMotionBeat','uMappedEquation']) {
     uniforms[name] = gl.getUniformLocation(program, name);
   }
   uniforms.uSpectrum = gl.getUniformLocation(program, 'uSpectrum[0]');
@@ -1184,34 +1407,6 @@
   uniforms.uPulseEventBand = gl.getUniformLocation(program, 'uPulseEventBand[0]');
   uniforms.uPulseEventSeed = gl.getUniformLocation(program, 'uPulseEventSeed[0]');
   uniforms.uBulbHotspots = gl.getUniformLocation(program, 'uBulbHotspots[0]');
-  uniforms.uMainframeRoom = gl.getUniformLocation(program, 'uMainframeRoom');
-
-  const mainframeRoomTexture = gl.createTexture();
-  let mainframeRoomReady = false;
-  gl.activeTexture(gl.TEXTURE0);
-  gl.bindTexture(gl.TEXTURE_2D, mainframeRoomTexture);
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE,
-    new Uint8Array([2, 5, 12, 255]));
-  gl.generateMipmap(gl.TEXTURE_2D);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-  const mainframeRoomImage = new Image();
-  mainframeRoomImage.addEventListener('load', () => {
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, mainframeRoomTexture);
-    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, mainframeRoomImage);
-    gl.generateMipmap(gl.TEXTURE_2D);
-    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
-    mainframeRoomReady = true;
-  });
-  mainframeRoomImage.addEventListener('error', () => {
-    console.warn('Tempest Mainframe Room texture could not be loaded.');
-  });
-  mainframeRoomImage.src = new URL('../../assets/tempest-mainframe-room.png', window.location.href).href;
-
   const defaultFrequencyBands = Object.freeze({
     floor: 25,
     lowMid: 180,
@@ -1330,6 +1525,7 @@
     songDirectorEnabled: false,
     songDirectorStyle: 'cinematic',
     songDirectorBehavior: 'auto',
+    songDirectorTransition: 'auto',
     songDirectorIntensity: .55,
     songDirectorValues: {},
     analysisBassGain: 1,
@@ -1351,6 +1547,13 @@
     equationMids: 0,
     equationHighs: 0,
     equationBeat: 0,
+    musicMotionBass: 0,
+    musicMotionMids: 0,
+    musicMotionHighs: 0,
+    musicMotionBeat: 0,
+    musicBaselineBass: 0,
+    musicBaselineMids: 0,
+    musicBaselineHighs: 0,
     equationSmoothing: .9,
     beatAverage: 0.05,
     beatFastEnvelope: 0,
@@ -1393,6 +1596,14 @@
     exportWidth: 1920,
     exportHeight: 1080,
     exportDetail: 1.6,
+    exportIterations: 600,
+    exportIterationTarget: 0,
+    exportMatchLive: true,
+    exportSupersampling: false,
+    offlineSamplePass: 0,
+    exportSampleOffsetX: 0,
+    exportSampleOffsetY: 0,
+    offlineBaseModulation: null,
     autoDrift: true,
     beatPulse: true,
     drag: null,
@@ -1400,10 +1611,10 @@
     audioName: '',
     playlist: [],
     playlistIndex: -1,
+    playlistLoadedId: null,
     playlistId: 0,
     audioMode: 'deck',
     liveAudioLabel: '',
-    exportedPath: null,
     obsChromaKey: false,
     obsChromaThreshold: .08,
     modulationEnabled: true,
@@ -1417,16 +1628,18 @@
     hardwareInfo: null,
     hardwareRecommendation: 'balanced',
     offlineExporting: false,
+    offlineHdrExport: false,
+    offlineTenBitExport: false,
     offlineFps: 60,
     nowPlayingEnabled: false,
     nowPlayingTitle: '',
     nowPlayingArtist: 'Tempest Mainframe',
     nowPlayingPosition: 'bottom-left',
     customColors: [
-      [20 / 255, 15 / 255, 45 / 255],
-      [123 / 255, 44 / 255, 1],
-      [241 / 255, 75 / 255, 203 / 255],
-      [92 / 255, 245 / 255, 220 / 255]
+      [9 / 255, 17 / 255, 37 / 255],
+      [32 / 255, 70 / 255, 110 / 255],
+      [99 / 255, 85 / 255, 142 / 255],
+      [107 / 255, 168 / 255, 181 / 255]
     ],
     lastUiUpdate: 0
   };
@@ -1441,10 +1654,14 @@
     'pulseDensity', 'pulseSize', 'pulseCooldown', 'pulseJagged', 'pulseTrail', 'pulseDetail',
     'bulbPower', 'bulbDetail', 'bulbAudio', 'bulbOrbit', 'bulbFold', 'bulbGlow', 'bulbCamera', 'bulbYaw', 'bulbPitch',
     'spin', 'modulationRotationPhase', 'equation', 'equationSmoothing', 'visualTime', 'palette', 'reactivity', 'frequencyColorEnabled', 'frequencyColorAmount', 'frequencyHue',
-    'bass', 'mids', 'highs', 'rms', 'beat', 'autoDrift', 'beatPulse', 'obsChromaKey', 'obsChromaThreshold',
+    'bass', 'mids', 'highs', 'rms', 'beat',
+    'equationBass', 'equationMids', 'equationHighs', 'equationBeat',
+    'musicMotionBass', 'musicMotionMids', 'musicMotionHighs', 'musicMotionBeat',
+    'musicBaselineBass', 'musicBaselineMids', 'musicBaselineHighs',
+    'autoDrift', 'beatPulse', 'obsChromaKey', 'obsChromaThreshold',
     'modulationEnabled', 'showTransitionBlack', 'performanceBlackout',
     'nowPlayingEnabled', 'nowPlayingTitle', 'nowPlayingArtist', 'nowPlayingPosition', 'cameraMotionPreset'
-    ,'songDirectorEnabled', 'songDirectorStyle', 'songDirectorBehavior', 'songDirectorIntensity'
+    ,'songDirectorEnabled', 'songDirectorStyle', 'songDirectorBehavior', 'songDirectorTransition', 'songDirectorIntensity'
   ];
   let obsSyncFps = Number(pageParameters.get('fps')) === 30 ? 30 : 60;
   let obsLastStateSent = 0;
@@ -1459,6 +1676,7 @@
     snapshot.waveformData = Array.from(state.waveformData);
     snapshot.pulseEvents = state.pulseEvents.map((event) => ({ ...event }));
     snapshot.modulationValues = { ...state.modulationValues };
+    snapshot.modulationMappings = state.modulationMappings.map((mapping) => ({ ...mapping }));
     snapshot.songDirectorValues = { ...state.songDirectorValues };
     snapshot.audioActive = audioIsActive();
     snapshot.nowPlayingTitle = currentNowPlayingTitle();
@@ -1476,6 +1694,7 @@
     if (Array.isArray(snapshot.waveformData)) state.waveformData.set(snapshot.waveformData.slice(0, 64));
     if (Array.isArray(snapshot.pulseEvents)) state.pulseEvents = snapshot.pulseEvents.map((event) => ({ ...event }));
     if (snapshot.modulationValues && typeof snapshot.modulationValues === 'object') state.modulationValues = { ...snapshot.modulationValues };
+    if (Array.isArray(snapshot.modulationMappings)) state.modulationMappings = snapshot.modulationMappings.slice(0, 8).map(createModulationMapping);
     if (snapshot.songDirectorValues && typeof snapshot.songDirectorValues === 'object') state.songDirectorValues = { ...snapshot.songDirectorValues };
     obsRemoteAudioActive = Boolean(snapshot.audioActive);
     if (isObsOutput) {
@@ -1495,21 +1714,25 @@
     rms: { label: 'Overall Level', stateKey: 'rms' }
   });
   const modulationTargets = Object.freeze({
-    equation: { label: 'Equation Modulation', scale: .35 },
+    equation: { label: 'Equation Modulation', scale: .35, bipolar: true },
     equationFold: { label: 'Equation Fold', scale: .75 },
     equationWarp: { label: 'Equation Warp', scale: 1.0 },
     fractalTilt: { label: 'Dimensional Tilt', scale: .7 },
     fractalSlice: { label: 'Dimensional Slice', scale: .7 },
-    zoom: { label: 'Camera Zoom', scale: .45 },
-    rotation: { label: 'Rotation', scale: .8 },
-    frequencyHue: { label: 'Color Position', scale: .55 },
-    flow: { label: 'Color Flow', scale: .55 },
+    zoom: { label: 'Camera Zoom', scale: .45, bipolar: true },
+    rotation: { label: 'Rotation', scale: .8, bipolar: true },
+    frequencyHue: { label: 'Color Position', scale: .55, bipolar: true },
+    flow: { label: 'Color Flow', scale: .55, bipolar: true },
     motion: { label: 'Visual Motion', scale: 1.0 },
     pulseJagged: { label: 'Pulse Jaggedness', scale: .9 },
-    bulbPower: { label: '3D Recurrence Warp', scale: 1.5 },
+    bulbPower: { label: '3D Recurrence Warp', scale: 1.5, bipolar: true },
     bulbFold: { label: '3D Volumetric Fold', scale: .7 },
     bulbGlow: { label: '3D Surface Glow', scale: 1.0 }
   });
+
+  function modulationAmountMinimum(target) {
+    return modulationTargets[target]?.bipolar ? -100 : 0;
+  }
   const modulationPresets = Object.freeze({
     math: [
       { source: 'bass', target: 'equation', amount: 22, attack: 36, release: 22 },
@@ -1541,7 +1764,7 @@
       id: String(values.id || crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`),
       source,
       target,
-      amount: clamp(finiteOr(values.amount, 35), -100, 100),
+      amount: clamp(finiteOr(values.amount, 35), modulationAmountMinimum(target), 100),
       attack: clamp(finiteOr(values.attack, 70), 0, 100),
       release: clamp(finiteOr(values.release, 35), 0, 100),
       floor,
@@ -1580,6 +1803,13 @@
     }
     state.modulationValues = values;
     return values;
+  }
+
+  function modulationTargetIsRouted(...targets) {
+    if (!state.modulationEnabled) return false;
+    return state.modulationMappings.some((mapping) => mapping.enabled
+      && mapping.amount !== 0
+      && targets.includes(mapping.target));
   }
 
   const fractalEquationProfiles = Object.freeze({
@@ -1727,6 +1957,7 @@
     beatSensitivity: { defaultRange: .65, min: 0, max: 100, step: 1, decimals: 0, fromRange: (value) => value * 100, toRange: (value) => value / 100, tip: 'Controls the independent adaptive onset detector. Higher values recognize quieter and less bass-heavy beats without changing visual or equation smoothing.' },
     beatCooldown: { defaultRange: 150, min: 80, max: 300, step: 5, decimals: 0, tip: 'Minimum time between detected beats. Raise it if a single drum hit triggers twice; lower it for very fast music.' },
     iterations: { defaultRange: 220, min: 80, max: 500, step: 10, decimals: 0, tip: 'Higher iteration counts reveal finer boundaries but require more GPU work.' },
+    exportIterations: { defaultRange: 600, min: 240, max: 1200, step: 20, decimals: 0, tip: 'Alternate-look mathematical depth for offline export. It applies only when Match Live Mathematics is off; higher values change the fractal set rather than simply sharpening it.' },
     obsChromaThreshold: { defaultRange: .08, min: 0, max: 100, step: 1, decimals: 0, fromRange: (value) => value / .5 * 100, toRange: (value) => value / 100 * .5, tip: 'Higher values replace more dark pixels with pure key green. Chroma-safe mode automatically shifts green subject colors away from the OBS key.' }
     ,beatBpm: { defaultRange: 120, min: 60, max: 200, step: .1, decimals: 1, tip: 'Manual tempo used when Automatic BPM is off or has not found a reliable beat.' }
     ,beatOffset: { defaultRange: 0, min: -500, max: 500, step: 5, decimals: 0, tip: 'Moves the beat grid earlier or later in milliseconds so visual changes land on the music.' }
@@ -1737,14 +1968,15 @@
     frequencyBandMode: { defaultValue: 'basic', tip: 'Basic uses the recommended frequency bands. Advanced enables custom continuous boundaries for low, mid, and high analysis.' },
     visualStyle: { defaultValue: '0', tip: 'Chooses the GPU-rendered visual composition. Every style uses the active palette and music analysis and is included in video exports.' },
     fractalType: { defaultValue: '0', tip: 'Selects the equation used for the live view and exported video.' },
-    resolution: { defaultValue: '1920x1080', tip: 'Sets exported frame size. Higher resolutions require substantially more GPU work.' },
+    resolution: { defaultValue: '1920x1080', tip: 'Sets exported frame size and loads a visible recommended iteration starting point. You can adjust the iteration value afterward.' },
     fps: { defaultValue: '60', tip: 'Sets captured frames per second. 90 and 120 FPS require a fast GPU and storage.' },
-    videoFormat: { defaultValue: 'mp4', tip: 'Offline export uses FFmpeg to combine exact video frames with the selected song.' },
-    exportMode: { defaultValue: 'offline', tip: 'Offline completes every requested frame before advancing. Live records wall-clock playback and is available only in Unleashed mode.' },
-    exportDetail: { defaultValue: '1.6', tip: 'Multiplies iteration detail during export without changing live preview quality.' },
+    videoFormat: { defaultValue: 'gpu_auto', tip: 'Automatic GPU Master chooses hardware AV1 when supported or hardware HEVC Main 10 on GPUs such as the RTX 3080. Manual HEVC, H.264, VP9, AV1, editing, and lossless profiles remain available.' },
+    exportMode: { defaultValue: 'offline', tip: 'Offline rendering completes and submits every exact frame before advancing the music timeline.' },
+    exportDetail: { defaultValue: '1.6', tip: 'Multiplies the selected base detail. Offline export also applies a resolution-aware minimum so 1440p and 4K receive enough mathematical definition.' },
     obsResolution: { defaultValue: '1920x1080', tip: 'Sets the exact client size of the clean window selected by OBS Window Capture.' },
     obsFps: { defaultValue: '60', tip: 'Sets how often the control window sends visual and music-analysis state to the OBS output.' }
     ,songDirectorBehavior: { defaultValue: 'auto', tip: 'Auto follows the Music Personality stored with the Song Map. An override changes directing behavior without changing analyzer bands or the visual preset.' }
+    ,songDirectorTransition: { defaultValue: 'auto', tip: 'Controls how sections blend. Every option remains continuous: Gentle uses longer blends, while Theatrical concentrates the change without creating a hard cut.' }
     ,songDirectorCueEmphasis: { defaultValue: 'auto', tip: 'Focuses this section on one family of visual controls while retaining a smaller amount of the other automatically generated cues.' }
     ,showAdvanceMode: { defaultValue: 'beats', tip: 'Advance each show entry after musical beats or elapsed seconds.' }
     ,showTransition: { defaultValue: 'black', tip: 'Cut immediately or briefly fade through black without layering conventional and fractal visuals.' }
@@ -1764,6 +1996,9 @@
     autoDrift: true,
     fractalDimensional: false,
     equationFolding: false,
+    exportMatchLive: true,
+    exportSupersampling: false,
+    exportHdrOutput: false,
     showExportPreview: false,
     exportCompleteSound: true,
     obsAlwaysOnTop: false,
@@ -1794,27 +2029,292 @@
   let windowsOutputScanGeneration = 0;
   let monitorGain;
   let recordingDestination;
-  let frequencyData;
-  let beatFrequencyData;
-  let timeData;
-  let mediaRecorder;
-  let exportSession;
-  let exportProgressHideTimer;
-  let exportProgressOverall = 0;
-  let liveExportCompleted = false;
-  let appendQueue = Promise.resolve();
+  let liveExportCapture;
   let pendingOfflineRender = null;
-  let offlineExportCancelled = false;
-  let offlineExportFinishRequested = false;
-  let offlineExportPaused = false;
-  let liveExportCancelled = false;
-  let exportStartedAt = 0;
-  let exportPauseStartedAt = 0;
-  let exportPausedDuration = 0;
+  let hdrExportFramebuffer = null;
+  let hdrExportTexture = null;
+  let hdrExportWidth = 0;
+  let hdrExportHeight = 0;
   let lastExportPreflight = null;
   let toastTimer;
   const applyingEffectPreset = { fractal: false, fold: false, spectrum: false, radial: false, bulb: false };
   let applyingPulsePreset = false;
+
+  const performanceController = performanceControllerFactory.create({
+    query: $,
+    onPrevious: () => advanceShow(-1),
+    onPlayPause: () => $('#showPlayButton').click(),
+    onNext: () => advanceShow(1),
+    onToggleBlackout: () => setPerformanceBlackout(!state.performanceBlackout)
+  });
+  const exportController = exportControllerFactory.create({
+    query: $,
+    root: document.body,
+    onEnd: endAndFinishExport,
+    onCancel: cancelExport,
+    onPause: togglePauseExport,
+    onResolutionChange: (event) => coordinateExportSettingsChange('resolution', { announce: event.isTrusted }),
+    onIterationsInput: (event) => coordinateExportSettingsChange('iterations', { value: event.target.value }),
+    onFpsChange: () => coordinateExportSettingsChange('fps'),
+    onModeChange: () => coordinateExportSettingsChange('mode'),
+    onDetailChange: () => coordinateExportSettingsChange('detail'),
+    onMatchLiveChange: (event) => coordinateExportSettingsChange('parity', { checked: event.target.checked }),
+    onSupersamplingChange: (event) => coordinateExportSettingsChange('supersampling', { checked: event.target.checked }),
+    onFormatChange: () => coordinateExportSettingsChange('format'),
+    onHdrChange: () => coordinateExportSettingsChange('hdr'),
+    onScanEncoders: scanExportEncoderCapabilities,
+    onBenchmark: benchmarkSelectedExportSettings,
+    onAdvisorApply: applyExportAdvisorRecommendation,
+    onClearHistory: clearExportHistory,
+    onHistoryAction: handleExportHistoryAction,
+    onRecoveryAction: handleExportRecoveryAction
+  });
+  const audioController = audioControllerFactory.create({
+    query: $,
+    audio,
+    formatTime,
+    getState: () => state,
+    reportError: (error) => showToast(error?.message || String(error), true),
+    onTogglePlayback: togglePlayback,
+    onRestart: () => {
+      audio.currentTime = 0;
+      resetPulseEvents();
+    },
+    onSkip: (seconds) => {
+      if (Number.isFinite(audio.duration) && !state.exporting) {
+        audio.currentTime = Math.max(0, Math.min(audio.duration, audio.currentTime + seconds));
+      }
+    },
+    onSeek: (time) => updateSongMapPlayhead(time),
+    onVolume: (value) => {
+      state.monitorVolume = value;
+      $('#volumeValue').value = `${Math.round(state.monitorVolume * 100)}%`;
+      updateMonitorGain();
+    },
+    onMute: () => {
+      state.monitorMuted = !state.monitorMuted;
+      $('#muteButton').setAttribute('aria-pressed', String(state.monitorMuted));
+      $('#muteButton').textContent = state.monitorMuted ? 'UNMUTE MONITOR' : 'MUTE MONITOR';
+      updateMonitorGain();
+    },
+    onPlaybackRate: (value) => {
+      audio.playbackRate = value;
+      audio.defaultPlaybackRate = value;
+    },
+    onLoop: (enabled) => { audio.loop = enabled; }
+  });
+  const audioAnalysisEngine = audioAnalysisEngineFactory.create();
+  const performanceSequencerEngine = performanceSequencerEngineFactory.create();
+  const performanceShowDataEngine = performanceShowDataEngineFactory.create({
+    createId: () => crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`
+  });
+  const showComposerController = performanceShowComposerControllerFactory.create({
+    query: $,
+    documentRef: document,
+    getModel: () => ({
+      entries: state.showSequence,
+      profiles: savedProfiles,
+      currentIndex: state.showIndex,
+      playing: state.showPlaying,
+      hasSongMap: Boolean(activeSongMap?.sections?.length)
+    }),
+    formatTime,
+    entryDuration: showEntrySeconds,
+    sequenceDuration: showSequenceDuration,
+    entryStart: showEntryStartSeconds,
+    profileForEntry: showProfileForEntry,
+    sanitizeAutomation: serializeShowAutomation,
+    escapeMarkup: escapeShowMarkup,
+    onBuild: buildShowFromSongMap,
+    onPlay: () => $('#showPlayButton').click(),
+    onAdd: addComposerCue,
+    onSelect: handleComposerCueSelection,
+    onCommit: commitComposerCue,
+    onMove: moveComposerCue,
+    onSnap: snapComposerCueToSection,
+    onDelete: deleteComposerCue,
+    onReorder: reorderComposerCue,
+    onRecordingChange: (recording) => showToast(recording ? 'Automation recording armed. Live control changes will update the selected cue.' : 'Automation recording stopped.'),
+    onRecordAutomation: recordComposerAutomation,
+    onRecordCamera: recordComposerCamera,
+    onOpenChange: () => requestAnimationFrame(setCanvasSize)
+  });
+  const profileManagerController = profileManagerControllerFactory.create({
+    query: $,
+    documentRef: document,
+    getProfiles: () => savedProfiles,
+    findProfile: (profiles, id) => performanceShowDataEngine.findProfile(profiles, id),
+    onSave: saveCurrentProfile,
+    onQuickSave: quickSaveCurrentVisualProfile,
+    onReset: resetActiveVisual,
+    onApply: applySavedProfile,
+    onFavorite: favoriteSavedProfile,
+    onDelete: deleteSavedProfile,
+    onExport: exportSelectedProfile,
+    onImport: importProfileFile,
+    onRendered: () => {
+      renderShowProfileOptions();
+      renderObsProfileOptions();
+    },
+    onError: (message) => showToast(message, true)
+  });
+  const songMapDataEngine = songMapDataEngineFactory.create();
+  const songDirectorEngine = songDirectorEngineFactory.create({ hashText: songMapDataEngine.hashText });
+  const songDirectorController = songDirectorControllerFactory.create({
+    query: $,
+    documentRef: document,
+    state,
+    audio,
+    styles: songDirectorEngine.styles,
+    behaviors: songDirectorEngine.behaviors,
+    transitions: songDirectorEngine.transitions,
+    clamp,
+    formatTime,
+    getActiveMap: () => activeSongMap,
+    getPlan: () => activeSongDirectorPlan,
+    setPlan: (plan) => { activeSongDirectorPlan = plan; },
+    generatePlan: generateSongDirectorPlan,
+    resolveBehavior: resolveSongDirectorBehavior,
+    getOverride: songDirectorOverrideFor,
+    writeOverride: writeSongDirectorOverride,
+    updateSongMapPlayhead,
+    updateDirector: updateSongDirector,
+    getDirectorTime: () => state.offlineExporting ? (state.offlineCurrentTime || 0) : audio.currentTime,
+    showToast
+  });
+  const performancePackageEngine = performancePackageEngineFactory.create({
+    appVersion: appMetadata.version,
+    hashText: songMapDataEngine.hashText,
+    sanitizeEntry: serializeShowEntry,
+    isValidProfile: validProfile,
+    isValidSongMap: validSongMap,
+    createId: () => crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`
+  });
+  const exportSessionEngine = exportSessionEngineFactory.create();
+  const exportProgressWorkflowEngine = exportProgressWorkflowEngineFactory.create({
+    sessionEngine: exportSessionEngine,
+    formatTime,
+    fileName: exportedFileName
+  });
+  const exportProgressCoordinator = exportProgressCoordinatorFactory.create({
+    workflow: exportProgressWorkflowEngine,
+    controller: exportController,
+    shouldPlayStinger: () => Boolean($('#exportCompleteSound')?.checked),
+    playStinger: playExportCompleteStinger,
+    isExporting: () => state.exporting
+  });
+  exportProgressCoordinator.bindNative((callback) => window.quarticDesktop.onExportProgress?.(callback));
+  const exportEncoderEngine = exportEncoderEngineFactory.create();
+  const exportLiveCaptureEngine = exportLiveCaptureEngineFactory.create({ encoderEngine: exportEncoderEngine });
+  const exportQuickClipWorkflowEngine = exportQuickClipWorkflowEngineFactory.create();
+  const exportSamplingEngine = exportSamplingEngineFactory.create();
+  const exportSettingsSnapshotEngine = exportSettingsSnapshotEngineFactory.create({
+    profiles: exportProfileCatalog,
+    samplingEngine: exportSamplingEngine
+  });
+  const exportPreparationEngine = exportPreparationEngineFactory.create();
+  const exportFrameCaptureEngine = exportFrameCaptureEngineFactory.create({
+    gl,
+    samplingEngine: exportSamplingEngine,
+    requestFrame: requestOfflineVisualFrame,
+    onSampleState: ({ sampleIndex, offset }) => {
+      state.offlineSamplePass = sampleIndex;
+      state.exportSampleOffsetX = offset[0];
+      state.exportSampleOffsetY = offset[1];
+    }
+  });
+  const exportPlanningEngine = exportPlanningEngineFactory.create({ profiles: exportProfileCatalog });
+  const exportPresentationEngine = exportPresentationEngineFactory.create({
+    profiles: exportProfileCatalog,
+    planningEngine: exportPlanningEngine,
+    formatTime,
+    fileName: exportedFileName
+  });
+  const exportPreflightEngine = exportPreflightEngineFactory.create({
+    encoderEngine: exportEncoderEngine,
+    samplingEngine: exportSamplingEngine
+  });
+  const exportAdvisorEngine = exportAdvisorEngineFactory.create();
+  const exportSettingsCoordinatorEngine = exportSettingsCoordinatorEngineFactory.create({
+    advisorEngine: exportAdvisorEngine
+  });
+  const exportRuntimeStateCoordinator = exportRuntimeStateCoordinatorFactory.create({ state });
+  const exportEncoderScanEngine = exportEncoderScanEngineFactory.create();
+  const exportBenchmarkEngine = exportBenchmarkEngineFactory.create({ planningEngine: exportPlanningEngine });
+  const exportHistoryEngine = exportHistoryEngineFactory.create({
+    storage: localStorage,
+    createId: () => crypto.randomUUID(),
+    now: () => new Date().toISOString()
+  });
+  const exportResultWorkflowEngine = exportResultWorkflowEngineFactory.create({
+    historyEngine: exportHistoryEngine,
+    sessionEngine: exportSessionEngine
+  });
+  const exportHistoryActionEngine = exportHistoryActionEngineFactory.create({ historyEngine: exportHistoryEngine });
+  const exportRecoveryEngine = exportRecoveryEngineFactory.create({ sessionEngine: exportSessionEngine });
+  const exportRenderCoordinator = exportRenderCoordinatorFactory.create();
+  const exportWorkflowEngine = exportWorkflowEngineFactory.create();
+  const exportOfflineLifecycle = exportOfflineLifecycleFactory.create({
+    sessionEngine: exportSessionEngine,
+    finishOfflineExport: (...args) => window.quarticDesktop.finishOfflineExport(...args),
+    abortOfflineExport: (...args) => window.quarticDesktop.abortOfflineExport(...args)
+  });
+  const exportLiveLifecycle = exportLiveLifecycleFactory.create({
+    sessionEngine: exportSessionEngine,
+    abortExport: (...args) => window.quarticDesktop.abortExport(...args)
+  });
+  const exportCommandCoordinator = exportCommandCoordinatorFactory.create({
+    sessionEngine: exportSessionEngine,
+    progressWorkflow: exportProgressWorkflowEngine,
+    liveLifecycle: exportLiveLifecycle
+  });
+  const exportJobCoordinator = exportJobCoordinatorFactory.create({
+    offlineLifecycle: exportOfflineLifecycle,
+    liveLifecycle: exportLiveLifecycle,
+    buildOfflineJob: createOfflineExportJob,
+    buildLiveJob: createLiveExportJob,
+    validateLive: () => {
+      if (!state.unleashedMode) throw new Error('Live export requires Unleashed mode. Use Offline export for exact frames.');
+      return Boolean(audio.src);
+    }
+  });
+  window.__quarticControllers = Object.freeze({ audio: audioController, performance: performanceController, showComposer: showComposerController, profileManager: profileManagerController, songDirector: songDirectorController, export: exportController });
+  window.__quarticEngines = Object.freeze({
+    audioAnalysis: audioAnalysisEngine,
+    performanceSequencer: performanceSequencerEngine,
+    performanceShowData: performanceShowDataEngine,
+    songMapData: songMapDataEngine,
+    songDirector: songDirectorEngine,
+    performancePackage: performancePackageEngine,
+    exportSession: exportSessionEngine,
+    exportProgressWorkflow: exportProgressWorkflowEngine,
+    exportProgressCoordinator,
+    exportCommandCoordinator,
+    exportJobCoordinator,
+    exportResultWorkflow: exportResultWorkflowEngine,
+    exportEncoder: exportEncoderEngine,
+    exportLiveCapture: exportLiveCaptureEngine,
+    exportQuickClipWorkflow: exportQuickClipWorkflowEngine,
+    exportSampling: exportSamplingEngine,
+    exportSettingsSnapshot: exportSettingsSnapshotEngine,
+    exportPreparation: exportPreparationEngine,
+    exportFrameCapture: exportFrameCaptureEngine,
+    exportPlanning: exportPlanningEngine,
+    exportPresentation: exportPresentationEngine,
+    exportPreflight: exportPreflightEngine,
+    exportAdvisor: exportAdvisorEngine,
+    exportSettingsCoordinator: exportSettingsCoordinatorEngine,
+    exportRuntimeState: exportRuntimeStateCoordinator,
+    exportEncoderScan: exportEncoderScanEngine,
+    exportBenchmark: exportBenchmarkEngine,
+    exportHistory: exportHistoryEngine,
+    exportHistoryAction: exportHistoryActionEngine,
+    exportRecovery: exportRecoveryEngine,
+    exportRenderCoordinator,
+    exportWorkflow: exportWorkflowEngine,
+    exportOfflineLifecycle,
+    exportLiveLifecycle
+  });
 
   function createAudioGraph() {
     if (audioContext) return;
@@ -1842,9 +2342,12 @@
     monitorGain.connect(audioContext.destination);
     analyser.connect(recordingDestination);
     updateMonitorGain();
-    frequencyData = new Uint8Array(analyser.frequencyBinCount);
-    beatFrequencyData = new Uint8Array(beatAnalyser.frequencyBinCount);
-    timeData = new Uint8Array(analyser.fftSize);
+    audioAnalysisEngine.attach(audioContext, analyser, beatAnalyser);
+    if (deckOutputDeviceId && typeof audioContext.setSinkId === 'function') {
+      audioContext.setSinkId(deckOutputDeviceId)
+        .then(() => $('#exportCompleteStinger')?.setSinkId?.(deckOutputDeviceId))
+        .catch(() => {});
+    }
   }
 
   function audioIsActive() {
@@ -1872,26 +2375,6 @@
     if (!monitorGain || !audioContext) return;
     const target = state.monitorMuted ? 0 : state.monitorVolume;
     monitorGain.gain.setTargetAtTime(target, audioContext.currentTime, .015);
-  }
-
-  function averageBand(lowHz, highHz) {
-    if (!frequencyData || !audioContext) return 0;
-    const nyquist = audioContext.sampleRate / 2;
-    const low = Math.max(0, Math.floor(lowHz / nyquist * frequencyData.length));
-    const high = Math.min(frequencyData.length - 1, Math.ceil(highHz / nyquist * frequencyData.length));
-    let total = 0;
-    for (let i = low; i <= high; i++) total += frequencyData[i];
-    return total / Math.max(1, high - low + 1) / 255;
-  }
-
-  function averageBeatBand(lowHz, highHz) {
-    if (!beatFrequencyData || !audioContext) return 0;
-    const nyquist = audioContext.sampleRate / 2;
-    const low = Math.max(0, Math.floor(lowHz / nyquist * beatFrequencyData.length));
-    const high = Math.min(beatFrequencyData.length - 1, Math.ceil(highHz / nyquist * beatFrequencyData.length));
-    let total = 0;
-    for (let index = low; index <= high; index++) total += beatFrequencyData[index];
-    return total / Math.max(1, high - low + 1) / 255;
   }
 
   function getActiveFrequencyBands() {
@@ -1927,7 +2410,7 @@
       <div class="music-personality-grid" role="radiogroup" aria-label="Music Personality profiles">
         ${Object.entries(musicPersonalityProfiles).map(([id, profile]) => `
           <button class="music-personality-card${state.musicPersonality === id ? ' active' : ''}" type="button" data-music-personality="${id}" role="radio" aria-checked="${state.musicPersonality === id}">
-            <span class="personality-icon" aria-hidden="true">${profile.icon.map((height) => `<i style="height:${height}%"></i>`).join('')}</span>
+            <span class="personality-icon" aria-hidden="true">${profile.icon.map((height) => `<i data-height="${height}"></i>`).join('')}</span>
             <span><strong>${profile.label}</strong><small>${profile.description}</small></span>
           </button>`).join('')}
         <button class="music-personality-card${state.musicPersonality === 'custom' ? ' active' : ''}" type="button" data-music-personality="custom" role="radio" aria-checked="${state.musicPersonality === 'custom'}">
@@ -2040,51 +2523,52 @@
     state.pulseCooldowns.fill(0);
     state.pulseGlobalCooldown = 0;
     state.pulseAcceptedTotal = 0;
+    resetEquationAudioEnvelope();
     resetBeatDetector();
   }
 
+  function resetExportAudioVisualState() {
+    state.bass = 0;
+    state.mids = 0;
+    state.highs = 0;
+    state.rms = 0;
+    state.beat = 0;
+    state.frequencyHue = 0;
+    state.dominantBand = 'silence';
+    state.autoReactivityGain = 1;
+    state.spectrumData.fill(0);
+    state.waveformData.fill(0);
+    resetPulseEvents();
+  }
+
+  function resetEquationAudioEnvelope() {
+    state.equationBass = 0;
+    state.equationMids = 0;
+    state.equationHighs = 0;
+    state.equationBeat = 0;
+    state.musicMotionBass = 0;
+    state.musicMotionMids = 0;
+    state.musicMotionHighs = 0;
+    state.musicMotionBeat = 0;
+    state.musicBaselineBass = 0;
+    state.musicBaselineMids = 0;
+    state.musicBaselineHighs = 0;
+  }
+
   function resetBeatDetector({ keepTotal = false } = {}) {
-    state.beatFastEnvelope = 0;
-    state.beatSlowEnvelope = 0;
-    state.beatOnsetAverage = .008;
-    state.beatCooldownRemaining = 0;
-    state.beatDetectorArmed = true;
-    if (!keepTotal) state.beatDetectedTotal = 0;
+    audioAnalysisEngine.resetBeatDetector(state, { keepTotal });
   }
 
   function updateAdaptiveBeatDetector(lowEnergy, lowMidEnergy, delta, { register = true } = {}) {
-    const frameDelta = clamp(Number(delta) || 1 / 60, 1 / 240, .1);
-    const sensitivity = clamp(Number(state.beatSensitivity) || 0, 0, 1);
-    const energy = clamp(lowEnergy * .72 + lowMidEnergy * .28, 0, 1);
-    const fastTime = energy > state.beatFastEnvelope ? .022 : .115;
-    const slowTime = energy > state.beatSlowEnvelope ? .46 : .78;
-    state.beatFastEnvelope += (energy - state.beatFastEnvelope) * (1 - Math.exp(-frameDelta / fastTime));
-    state.beatSlowEnvelope += (energy - state.beatSlowEnvelope) * (1 - Math.exp(-frameDelta / slowTime));
-    const onset = Math.max(0, state.beatFastEnvelope - state.beatSlowEnvelope);
-    state.beatOnsetAverage += (onset - state.beatOnsetAverage) * (1 - Math.exp(-frameDelta / .68));
-    state.beatCooldownRemaining = Math.max(0, state.beatCooldownRemaining - frameDelta);
-
-    const minimumEnergy = .13 - sensitivity * .095;
-    const thresholdFloor = .024 - sensitivity * .017;
-    const adaptiveThreshold = thresholdFloor + state.beatOnsetAverage * (2.45 - sensitivity * 1.55);
-    if (!state.beatDetectorArmed && (onset < adaptiveThreshold * .52 || energy < state.beatSlowEnvelope * 1.025)) {
-      state.beatDetectorArmed = true;
-    }
-    const detectedBeat = state.beatDetectorArmed
-      && state.beatCooldownRemaining <= 0
-      && energy >= minimumEnergy
-      && onset >= adaptiveThreshold;
-    if (detectedBeat) {
-      state.beatDetectorArmed = false;
-      state.beatCooldownRemaining = clamp(Number(state.beatCooldownMs) || 150, 80, 300) / 1000;
-      state.beatDetectedTotal += 1;
-      if (register) registerDetectedBeat();
-      if (state.beatPulse) state.beat = clamp(.28 + energy * .54 + onset * 3.2, .35, 1);
-    } else state.beat *= Math.exp(-frameDelta / .105);
+    const detectedBeat = audioAnalysisEngine.updateBeatDetector(state, lowEnergy, lowMidEnergy, delta, {
+      register,
+      onBeat: registerDetectedBeat
+    });
+    const diagnostics = audioAnalysisEngine.diagnostics.beat;
     window.__quarticPulseBeatDetectedTotal = state.beatDetectedTotal;
-    window.__quarticPulseBeatEnergy = energy;
-    window.__quarticPulseBeatOnset = onset;
-    window.__quarticPulseBeatThreshold = adaptiveThreshold;
+    window.__quarticPulseBeatEnergy = diagnostics.energy;
+    window.__quarticPulseBeatOnset = diagnostics.onset;
+    window.__quarticPulseBeatThreshold = diagnostics.threshold;
     return detectedBeat;
   }
 
@@ -2157,79 +2641,17 @@
   }
 
   function updateAudioAnalysis(delta) {
-    if (!analyser || !audioIsActive()) {
-      state.bass *= .94;
-      state.mids *= .94;
-      state.highs *= .94;
-      state.rms *= .94;
-      state.beat *= .86;
-      for (let band = 0; band < 3; band++) state.pulsePreviousLevels[band] *= .94;
-      for (let index = 0; index < 64; index++) {
-        state.spectrumData[index] *= .94;
-        state.waveformData[index] *= .88;
-      }
-      if (state.bass + state.mids + state.highs < .035) {
-        state.dominantBand = 'silence';
-        state.frequencyHue *= .97;
-      }
-      return;
-    }
-    analyser.getByteFrequencyData(frequencyData);
-    beatAnalyser?.getByteFrequencyData(beatFrequencyData);
-    analyser.getByteTimeDomainData(timeData);
-    let squareSum = 0;
-    for (const sample of timeData) {
-      const normalized = (sample - 128) / 128;
-      squareSum += normalized * normalized;
-    }
-    const rms = Math.sqrt(squareSum / timeData.length);
-    const manualGain = state.reactivity;
-    const bands = getActiveFrequencyBands();
-    const rawBass = averageBand(bands.floor, bands.lowMid) * 1.6 * state.analysisBassGain;
-    const rawMids = averageBand(bands.lowMid, bands.midHigh) * 1.45 * state.analysisMidGain;
-    const rawHighs = averageBand(bands.midHigh, bands.ceiling) * 1.8 * state.analysisHighGain;
-    const rawPeak = Math.max(rawBass, rawMids, rawHighs);
-    if (state.autoReactivity && rawPeak > .03) {
-      const desiredGain = clamp(state.autoReactivityTarget / Math.max(.03, rawPeak * manualGain), .25, 3);
-      const response = desiredGain < state.autoReactivityGain ? .18 : .015;
-      state.autoReactivityGain += (desiredGain - state.autoReactivityGain) * response;
-    } else if (!state.autoReactivity) {
-      state.autoReactivityGain += (1 - state.autoReactivityGain) * .08;
-    }
-    const effectiveGain = manualGain * (state.autoReactivity ? state.autoReactivityGain : 1);
-    const maximumLevel = state.autoReactivity ? .96 : 1;
-    const spectrumFloor = 20;
-    const spectrumCeiling = Math.min(20000, audioContext.sampleRate / 2);
-    for (let index = 0; index < 64; index++) {
-      const lowPosition = index / 64;
-      const highPosition = (index + 1) / 64;
-      const lowHz = spectrumFloor * Math.pow(spectrumCeiling / spectrumFloor, lowPosition);
-      const highHz = spectrumFloor * Math.pow(spectrumCeiling / spectrumFloor, highPosition);
-      const spectrumTarget = Math.min(maximumLevel, averageBand(lowHz, highHz) * 1.55 * effectiveGain);
-      state.spectrumData[index] += (spectrumTarget - state.spectrumData[index]) * .22;
-      const timeIndex = Math.min(timeData.length - 1, Math.round(index / 63 * (timeData.length - 1)));
-      const waveformTarget = clamp((timeData[timeIndex] - 128) / 128 * effectiveGain, -1, 1);
-      state.waveformData[index] += (waveformTarget - state.waveformData[index]) * .42;
-    }
-    const bass = Math.min(maximumLevel, rawBass * effectiveGain);
-    const mids = Math.min(maximumLevel, rawMids * effectiveGain);
-    const highs = Math.min(maximumLevel, rawHighs * effectiveGain);
-    state.bass += (bass - state.bass) * .24;
-    state.mids += (mids - state.mids) * .18;
-    state.highs += (highs - state.highs) * .2;
-    state.rms += (Math.min(maximumLevel, rms * 3.2 * effectiveGain) - state.rms) * .2;
-    const colorEnergy = state.bass + state.mids + state.highs;
-    if (colorEnergy > .035) {
-      const targetHue = (state.bass * .06 + state.mids * .45 + state.highs * .88) / colorEnergy;
-      const hueResponse = .04 + (1 - state.analysisSmoothing) * .28;
-      state.frequencyHue += (targetHue - state.frequencyHue) * hueResponse;
-      const strongest = Math.max(state.bass, state.mids, state.highs);
-      state.dominantBand = strongest === state.bass ? 'bass' : (strongest === state.mids ? 'mids' : 'highs');
-    } else state.dominantBand = 'silence';
-    const beatLow = averageBeatBand(30, 190) * 1.35;
-    const beatLowMid = averageBeatBand(150, 520) * 1.18;
-    updateAdaptiveBeatDetector(beatLow, beatLowMid, delta);
-    createMusicPulseEvents([bass, mids, highs]);
+    const result = audioAnalysisEngine.update(state, {
+      active: Boolean(analyser && audioIsActive()),
+      delta,
+      bands: getActiveFrequencyBands(),
+      onBeat: registerDetectedBeat,
+      onPulse: createMusicPulseEvents
+    });
+    window.__quarticPulseBeatDetectedTotal = state.beatDetectedTotal;
+    window.__quarticPulseBeatEnergy = result.beat.energy;
+    window.__quarticPulseBeatOnset = result.beat.onset;
+    window.__quarticPulseBeatThreshold = result.beat.threshold;
   }
 
   function updateEquationAudioEnvelope(delta) {
@@ -2237,16 +2659,48 @@
     const smoothingCurve = smoothing * smoothing;
     const frameDelta = clamp(Number(delta) || 0, 1 / 240, .1);
     const shaped = (value) => Math.pow(clamp(Number(value) || 0, 0, 1), 1.45);
+    const compressed = (value) => Math.pow(clamp(Number(value) || 0, 0, 1), .78);
     const follow = (current, target, attackBase, releaseBase) => {
       const timeConstant = target > current
         ? attackBase + .32 * smoothingCurve
         : releaseBase + .58 * smoothingCurve;
       return current + (target - current) * (1 - Math.exp(-frameDelta / timeConstant));
     };
+    const followMotion = (current, target, attackBase, releaseBase) => {
+      // Even at maximum equation smoothing, rhythmic motion remains legible.
+      // The release is deliberately longer than the attack so hits become
+      // flowing gestures instead of single-frame jumps.
+      const timeConstant = target > current
+        ? attackBase + .075 * smoothingCurve
+        : releaseBase + .20 * smoothingCurve;
+      return current + (target - current) * (1 - Math.exp(-frameDelta / timeConstant));
+    };
+    const followBaseline = (current, target, seconds) => current
+      + (target - current) * (1 - Math.exp(-frameDelta / seconds));
+
+    const bassBody = compressed(state.bass);
+    const midsBody = compressed(state.mids);
+    const highsBody = compressed(state.highs);
+    state.musicBaselineBass = followBaseline(state.musicBaselineBass, bassBody, 1.35);
+    state.musicBaselineMids = followBaseline(state.musicBaselineMids, midsBody, 1.55);
+    state.musicBaselineHighs = followBaseline(state.musicBaselineHighs, highsBody, 1.15);
+
+    const bassAccent = clamp((bassBody - state.musicBaselineBass) * 2.65, 0, 1);
+    const midsAccent = clamp((midsBody - state.musicBaselineMids) * 2.35, 0, 1);
+    const highsAccent = clamp((highsBody - state.musicBaselineHighs) * 2.15, 0, 1);
+    const bassMotionTarget = clamp(bassBody * .30 + bassAccent * .70, 0, 1);
+    const midsMotionTarget = clamp(midsBody * .34 + midsAccent * .66, 0, 1);
+    const highsMotionTarget = clamp(highsBody * .24 + highsAccent * .58, 0, .82);
+    const beatMotionTarget = clamp(Math.pow(clamp(state.beat, 0, 1), .82) * .72, 0, .72);
+
     state.equationBass = follow(state.equationBass, shaped(state.bass), .045, .12);
     state.equationMids = follow(state.equationMids, shaped(state.mids), .050, .14);
     state.equationHighs = follow(state.equationHighs, shaped(state.highs), .055, .16);
     state.equationBeat = follow(state.equationBeat, shaped(state.beat) * .55, .035, .18);
+    state.musicMotionBass = followMotion(state.musicMotionBass, bassMotionTarget, .040, .18);
+    state.musicMotionMids = followMotion(state.musicMotionMids, midsMotionTarget, .055, .24);
+    state.musicMotionHighs = followMotion(state.musicMotionHighs, highsMotionTarget, .045, .16);
+    state.musicMotionBeat = followMotion(state.musicMotionBeat, beatMotionTarget, .030, .20);
   }
 
   function beatClock() {
@@ -2296,20 +2750,7 @@
   }
 
   function serializeShowAutomation(automation) {
-    const source = automation && typeof automation === 'object' ? automation : {};
-    const result = {};
-    const numericRanges = {
-      director: [0, 1],
-      motion: [0, 2.5],
-      equation: [0, 1.5],
-      flow: [0, 1]
-    };
-    for (const [key, range] of Object.entries(numericRanges)) {
-      const value = Number(source[key]);
-      if (Number.isFinite(value)) result[key] = clamp(value, range[0], range[1]);
-    }
-    if (['off', 'orbit', 'drift', 'zoom'].includes(source.camera)) result.camera = source.camera;
-    return result;
+    return performanceShowDataEngine.sanitizeAutomation(automation);
   }
 
   function escapeShowMarkup(value) {
@@ -2319,40 +2760,19 @@
   }
 
   function serializeShowEntry(entry) {
-    const advance = entry.advance === 'time' ? 'time' : 'beats';
-    const numericValue = Number(entry.value) || 1;
-    return {
-      id: entry.id,
-      profileId: entry.profileId,
-      label: String(entry.label || '').replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, 50),
-      advance,
-      value: advance === 'time' ? clamp(Math.round(numericValue * 100) / 100, .1, 3600) : clamp(Math.round(numericValue), 1, 3600),
-      transition: entry.transition === 'cut' ? 'cut' : 'black',
-      automation: serializeShowAutomation(entry.automation)
-    };
+    return performanceShowDataEngine.sanitizeEntry(entry);
   }
 
-  let composerSelectedCueId = '';
-  let composerRecording = false;
-  let composerDragCueId = '';
-  let composerTimelineWidth = 960;
-  let composerInitialized = false;
-
   function showEntrySeconds(entry) {
-    const value = clamp(Number(entry?.value) || 1, 1, 3600);
-    return entry?.advance === 'time' ? value : value * 60 / Math.max(1, effectiveBpm());
+    return performanceSequencerEngine.entryDurationSeconds(entry, effectiveBpm());
   }
 
   function showSequenceDuration() {
-    return state.showSequence.reduce((total, entry) => total + showEntrySeconds(entry), 0);
+    return performanceSequencerEngine.sequenceDurationSeconds(state.showSequence, effectiveBpm());
   }
 
   function showEntryStartSeconds(index) {
-    return state.showSequence.slice(0, Math.max(0, index)).reduce((total, entry) => total + showEntrySeconds(entry), 0);
-  }
-
-  function selectedComposerIndex() {
-    return state.showSequence.findIndex((entry) => entry.id === composerSelectedCueId);
+    return performanceSequencerEngine.entryStartSeconds(state.showSequence, index, effectiveBpm());
   }
 
   function composerFullProfiles() {
@@ -2380,12 +2800,7 @@
   }
 
   function songMapSectionEnergy(map, section) {
-    if (!map?.energy?.length || !map.duration) return .45;
-    const startIndex = clamp(Math.floor(section.start / map.duration * map.energy.length), 0, map.energy.length - 1);
-    const endIndex = clamp(Math.ceil(section.end / map.duration * map.energy.length), startIndex + 1, map.energy.length);
-    let sum = 0;
-    for (let index = startIndex; index < endIndex; index += 1) sum += Number(map.energy[index]) || 0;
-    return clamp(sum / Math.max(1, endIndex - startIndex) / 255, 0, 1);
+    return songMapDataEngine.sectionEnergy(map, section);
   }
 
   function composerCameraForSection(section, energy) {
@@ -2429,163 +2844,39 @@
     state.showPlaying = false;
     state.showIndex = -1;
     state.showSequence = composeShowEntriesFromSongMap(activeSongMap, profiles);
-    composerSelectedCueId = state.showSequence[0]?.id || '';
+    showComposerController.setSelectedCueId(state.showSequence[0]?.id || '');
     persistShowSequence();
     renderShowSequence();
     renderShowComposer();
     showToast(`Built ${state.showSequence.length} cues from the Song Map.`);
   }
 
-  function composerPercent(value, maximum) {
-    return Number.isFinite(value) ? String(Math.round(value / maximum * 100)) : '';
-  }
-
-  function renderComposerInspector() {
-    if (!composerInitialized) return;
-    const index = selectedComposerIndex();
-    const entry = state.showSequence[index];
-    const controls = $('#composerInspector').querySelectorAll('input, select, button');
-    controls.forEach((control) => { control.disabled = !entry; });
-    $('#composerSelectedStatus').textContent = entry ? `CUE ${index + 1} OF ${state.showSequence.length}` : 'NONE';
-    const profileSelect = $('#composerCueProfile');
-    profileSelect.replaceChildren();
-    savedProfiles.forEach((profile) => {
-      const option = document.createElement('option');
-      option.value = profile.id;
-      option.textContent = `${profile.kind === 'colors' ? 'COLOR' : 'FULL'} · ${profile.name}`;
-      profileSelect.appendChild(option);
-    });
-    if (!entry) {
-      $('#composerCueLabel').value = '';
-      $('#composerCueDuration').value = '16';
-      ['composerCueDirector', 'composerCueMotion', 'composerCueEquation', 'composerCueFlow'].forEach((id) => { $(`#${id}`).value = ''; });
-      return;
-    }
-    const automation = serializeShowAutomation(entry.automation);
-    $('#composerCueLabel').value = entry.label || '';
-    profileSelect.value = entry.profileId;
-    $('#composerCueAdvance').value = entry.advance;
-    $('#composerCueDuration').value = entry.value;
-    $('#composerCueTransition').value = entry.transition;
-    $('#composerCueCamera').value = automation.camera || '';
-    $('#composerCueDirector').value = composerPercent(automation.director, 1);
-    $('#composerCueMotion').value = composerPercent(automation.motion, 2.5);
-    $('#composerCueEquation').value = composerPercent(automation.equation, 1.5);
-    $('#composerCueFlow').value = composerPercent(automation.flow, 1);
-    $('#composerMoveLeftButton').disabled = index <= 0;
-    $('#composerMoveRightButton').disabled = index < 0 || index >= state.showSequence.length - 1;
-    $('#composerSnapButton').disabled = !activeSongMap?.sections?.length;
-  }
-
-  function composerLaneValue(entry, key, maximum) {
-    const automation = serializeShowAutomation(entry.automation);
-    if (key === 'camera') return automation.camera ? automation.camera.toUpperCase() : 'PROFILE';
-    const value = automation[key];
-    return Number.isFinite(value) ? `${Math.round(value / maximum * 100)}%` : 'PROFILE';
-  }
-
   function updateComposerPlayhead(entryProgress = 0) {
-    if (!composerInitialized) return;
-    const total = showSequenceDuration();
-    const index = state.showIndex;
-    const seconds = index >= 0 ? showEntryStartSeconds(index) + showEntrySeconds(state.showSequence[index]) * clamp(entryProgress, 0, 1) : 0;
-    $('#composerPlayhead').style.left = `${total ? seconds / total * composerTimelineWidth : 0}px`;
+    showComposerController.updatePlayhead(entryProgress);
   }
 
   function renderShowComposer() {
-    if (!composerInitialized) return;
-    if (composerSelectedCueId && selectedComposerIndex() < 0) composerSelectedCueId = '';
-    if (!composerSelectedCueId && state.showSequence.length) composerSelectedCueId = state.showSequence[0].id;
-    const duration = showSequenceDuration();
-    const count = state.showSequence.length;
-    $('#composerCueCount').textContent = `${count} ${count === 1 ? 'CUE' : 'CUES'}`;
-    $('#composerDuration').textContent = formatTime(duration);
-    $('#composerPanelCueCount').textContent = String(count);
-    $('#composerPanelDuration').textContent = formatTime(duration);
-    $('#composerPanelStatus').textContent = activeSongMap ? 'SONG MAP READY' : 'MANUAL';
-    $('#composerSnapStatus').textContent = activeSongMap ? 'SECTION / BEAT READY' : 'BEAT GRID READY';
-    $('#composerPlayButton').textContent = state.showPlaying ? 'PAUSE SHOW' : 'PLAY SHOW';
-    $('#composerRecordButton').classList.toggle('active', composerRecording);
-    $('#composerRecordButton').textContent = composerRecording ? 'RECORDING AUTOMATION' : 'RECORD AUTOMATION';
-
-    composerTimelineWidth = Math.max(960, Math.round(duration * 18));
-    const ruler = $('#composerRuler');
-    const track = $('#composerCueTrack');
-    const lanes = $('#composerAutomationLanes');
-    [ruler, track, lanes].forEach((element) => { element.style.width = `${composerTimelineWidth}px`; });
-    ruler.replaceChildren();
-    const rulerStep = duration > 900 ? 120 : (duration > 360 ? 60 : (duration > 120 ? 30 : 10));
-    for (let second = 0; second <= Math.max(duration, rulerStep); second += rulerStep) {
-      const marker = document.createElement('span');
-      marker.style.left = `${duration ? second / duration * composerTimelineWidth : 0}px`;
-      marker.textContent = formatTime(second);
-      ruler.appendChild(marker);
-    }
-    track.replaceChildren();
-    const laneKeys = [['director', 1], ['motion', 2.5], ['equation', 1.5], ['flow', 1], ['camera', 1]];
-    lanes.replaceChildren(...laneKeys.map(([key, maximum]) => {
-      const lane = document.createElement('div');
-      lane.className = 'composer-automation-lane';
-      state.showSequence.forEach((entry, index) => {
-        const segment = document.createElement('span');
-        const width = duration ? showEntrySeconds(entry) / duration * composerTimelineWidth : composerTimelineWidth;
-        const automation = serializeShowAutomation(entry.automation);
-        const normalized = key === 'camera' ? (automation.camera ? .7 : .12) : (Number.isFinite(automation[key]) ? automation[key] / maximum : .12);
-        segment.style.width = `${Math.max(18, width)}px`;
-        const level = clamp(normalized, .08, 1);
-        segment.style.background = `linear-gradient(90deg, rgba(135,92,255,${(.05 + level * .18).toFixed(3)}), rgba(92,245,220,${(.025 + level * .11).toFixed(3)}))`;
-        segment.style.color = `rgba(207,215,229,${(.48 + level * .46).toFixed(3)})`;
-        segment.textContent = composerLaneValue(entry, key, maximum);
-        segment.dataset.index = String(index);
-        lane.appendChild(segment);
-      });
-      return lane;
-    }));
-    state.showSequence.forEach((entry, index) => {
-      const profile = showProfileForEntry(entry);
-      const cue = document.createElement('button');
-      cue.type = 'button';
-      cue.className = `composer-cue${entry.id === composerSelectedCueId ? ' selected' : ''}${index === state.showIndex ? ' active' : ''}`;
-      cue.dataset.cueId = entry.id;
-      cue.draggable = true;
-      cue.style.width = `${Math.max(18, duration ? showEntrySeconds(entry) / duration * composerTimelineWidth : composerTimelineWidth)}px`;
-      cue.innerHTML = `<strong>${escapeShowMarkup(entry.label || `Cue ${index + 1}`)}</strong><span>${escapeShowMarkup(profile?.name || 'Missing profile')}</span><small>${formatTime(showEntrySeconds(entry))}</small>`;
-      track.appendChild(cue);
-    });
-    renderComposerInspector();
-    updateComposerPlayhead();
+    showComposerController.render();
   }
 
-  function commitComposerCue() {
-    const index = selectedComposerIndex();
+  function commitComposerCue(cueId, draft) {
+    const index = state.showSequence.findIndex((entry) => entry.id === cueId);
     if (index < 0) return;
     const entry = state.showSequence[index];
-    const readPercent = (id, maximum) => {
-      const raw = $(`#${id}`).value.trim();
-      return raw === '' ? undefined : clamp(Number(raw) || 0, 0, 100) / 100 * maximum;
-    };
-    entry.label = $('#composerCueLabel').value;
-    entry.profileId = $('#composerCueProfile').value;
-    entry.advance = $('#composerCueAdvance').value;
-    const durationValue = Number($('#composerCueDuration').value) || 1;
+    entry.label = draft.label;
+    entry.profileId = draft.profileId;
+    entry.advance = draft.advance;
+    const durationValue = Number(draft.value) || 1;
     entry.value = entry.advance === 'time' ? clamp(Math.round(durationValue * 100) / 100, .1, 3600) : clamp(Math.round(durationValue), 1, 3600);
-    entry.transition = $('#composerCueTransition').value;
-    entry.automation = serializeShowAutomation({
-      camera: $('#composerCueCamera').value,
-      director: readPercent('composerCueDirector', 1),
-      motion: readPercent('composerCueMotion', 2.5),
-      equation: readPercent('composerCueEquation', 1.5),
-      flow: readPercent('composerCueFlow', 1)
-    });
+    entry.transition = draft.transition;
+    entry.automation = serializeShowAutomation(draft.automation);
     state.showSequence[index] = serializeShowEntry(entry);
-    composerSelectedCueId = state.showSequence[index].id;
     persistShowSequence();
     renderShowSequence();
-    renderShowComposer();
   }
 
-  function moveComposerCue(direction) {
-    const index = selectedComposerIndex();
+  function moveComposerCue(cueId, direction) {
+    const index = state.showSequence.findIndex((entry) => entry.id === cueId);
     const target = index + direction;
     if (index < 0 || target < 0 || target >= state.showSequence.length) return;
     [state.showSequence[index], state.showSequence[target]] = [state.showSequence[target], state.showSequence[index]];
@@ -2593,11 +2884,10 @@
     state.showIndex = -1;
     persistShowSequence();
     renderShowSequence();
-    renderShowComposer();
   }
 
-  function snapComposerCueToSection() {
-    const index = selectedComposerIndex();
+  function snapComposerCueToSection(cueId) {
+    const index = state.showSequence.findIndex((entry) => entry.id === cueId);
     const section = activeSongMap?.sections?.[index];
     if (index < 0 || !section) return showToast('This cue has no matching Song Map section.', true);
     const entry = state.showSequence[index];
@@ -2606,152 +2896,105 @@
     entry.value = Math.max(.1, Math.round((section.end - section.start) * 100) / 100);
     persistShowSequence();
     renderShowSequence();
-    renderShowComposer();
     showToast(`Cue snapped to ${section.label || `section ${index + 1}`}.`);
   }
 
-  function selectComposerCue(cueId, { apply = true, seek = true } = {}) {
-    composerSelectedCueId = cueId;
-    const index = selectedComposerIndex();
+  function handleComposerCueSelection(cueId, { apply = true, seek = true } = {}) {
+    const index = state.showSequence.findIndex((entry) => entry.id === cueId);
     if (index < 0) return;
     if (apply) applyShowEntry(index, true);
     if (seek && state.audioMode === 'deck' && Number.isFinite(audio.duration)) {
       audio.currentTime = clamp(showEntryStartSeconds(index), 0, audio.duration);
       updateSongMapPlayhead(audio.currentTime);
     }
-    renderShowComposer();
   }
 
-  function setShowComposerOpen(open) {
-    const workspace = $('#showComposerWorkspace');
-    workspace.hidden = !open;
-    document.body.classList.toggle('composer-mode', open);
-    if (open) renderShowComposer();
-    requestAnimationFrame(setCanvasSize);
+  function addComposerCue() {
+    const profile = ensureComposerBaseProfile()[0];
+    const entry = serializeShowEntry({
+      id: crypto.randomUUID?.() || `cue-${Date.now()}`,
+      profileId: profile.id,
+      label: `Cue ${state.showSequence.length + 1}`,
+      advance: 'beats', value: 16, transition: state.showSequence.length ? 'black' : 'cut', automation: {}
+    });
+    state.showSequence.push(entry);
+    persistShowSequence();
+    renderShowSequence();
+    return entry.id;
+  }
+
+  function reorderComposerCue(sourceId, targetId) {
+    const sourceIndex = state.showSequence.findIndex((entry) => entry.id === sourceId);
+    const targetIndex = state.showSequence.findIndex((entry) => entry.id === targetId);
+    if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) return;
+    const [entry] = state.showSequence.splice(sourceIndex, 1);
+    state.showSequence.splice(targetIndex, 0, entry);
+    state.showPlaying = false;
+    state.showIndex = -1;
+    persistShowSequence();
+    renderShowSequence();
+  }
+
+  function deleteComposerCue(cueId) {
+    const index = state.showSequence.findIndex((entry) => entry.id === cueId);
+    if (index < 0) return '';
+    state.showSequence.splice(index, 1);
+    state.showPlaying = false;
+    state.showIndex = -1;
+    persistShowSequence();
+    renderShowSequence();
+    return state.showSequence[Math.min(index, state.showSequence.length - 1)]?.id || '';
+  }
+
+  function recordComposerAutomation(cueId, key, value) {
+    const entry = state.showSequence.find((candidate) => candidate.id === cueId);
+    if (!entry) return;
+    entry.automation = { ...serializeShowAutomation(entry.automation), [key]: value };
+    persistShowSequence();
+  }
+
+  function recordComposerCamera(cueId, camera) {
+    const entry = state.showSequence.find((candidate) => candidate.id === cueId);
+    if (!entry) return;
+    entry.automation = { ...serializeShowAutomation(entry.automation), camera };
+    persistShowSequence();
   }
 
   function initializeShowComposer() {
-    composerInitialized = true;
-    $('#composerBuildButton').addEventListener('click', buildShowFromSongMap);
-    $('#composerPanelBuildButton').addEventListener('click', buildShowFromSongMap);
-    $('#openShowComposerButton').addEventListener('click', () => setShowComposerOpen(true));
-    $('#closeShowComposerButton').addEventListener('click', () => setShowComposerOpen(false));
-    $('#composerPlayButton').addEventListener('click', () => $('#showPlayButton').click());
-    $('#composerAddCueButton').addEventListener('click', () => {
-      const profile = ensureComposerBaseProfile()[0];
-      const entry = serializeShowEntry({
-        id: crypto.randomUUID?.() || `cue-${Date.now()}`,
-        profileId: profile.id,
-        label: `Cue ${state.showSequence.length + 1}`,
-        advance: 'beats', value: 16, transition: state.showSequence.length ? 'black' : 'cut', automation: {}
-      });
-      state.showSequence.push(entry);
-      composerSelectedCueId = entry.id;
-      persistShowSequence();
-      renderShowSequence();
-      renderShowComposer();
-    });
-    $('#composerRecordButton').addEventListener('click', () => {
-      composerRecording = !composerRecording;
-      renderShowComposer();
-      showToast(composerRecording ? 'Automation recording armed. Live control changes will update the selected cue.' : 'Automation recording stopped.');
-    });
-    $('#composerCueTrack').addEventListener('click', (event) => {
-      const cue = event.target.closest('[data-cue-id]');
-      if (cue) selectComposerCue(cue.dataset.cueId);
-    });
-    $('#composerCueTrack').addEventListener('dragstart', (event) => {
-      composerDragCueId = event.target.closest('[data-cue-id]')?.dataset.cueId || '';
-      if (composerDragCueId) event.dataTransfer.effectAllowed = 'move';
-    });
-    $('#composerCueTrack').addEventListener('dragover', (event) => { if (composerDragCueId) event.preventDefault(); });
-    $('#composerCueTrack').addEventListener('drop', (event) => {
-      event.preventDefault();
-      const targetId = event.target.closest('[data-cue-id]')?.dataset.cueId;
-      const sourceIndex = state.showSequence.findIndex((entry) => entry.id === composerDragCueId);
-      const targetIndex = state.showSequence.findIndex((entry) => entry.id === targetId);
-      if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) return;
-      const [entry] = state.showSequence.splice(sourceIndex, 1);
-      state.showSequence.splice(targetIndex, 0, entry);
-      state.showPlaying = false;
-      state.showIndex = -1;
-      persistShowSequence();
-      renderShowSequence();
-      renderShowComposer();
-    });
-    $('#composerApplyCueButton').addEventListener('click', commitComposerCue);
-    $('#composerMoveLeftButton').addEventListener('click', () => moveComposerCue(-1));
-    $('#composerMoveRightButton').addEventListener('click', () => moveComposerCue(1));
-    $('#composerSnapButton').addEventListener('click', snapComposerCueToSection);
-    $('#composerDeleteCueButton').addEventListener('click', () => {
-      const index = selectedComposerIndex();
-      if (index < 0) return;
-      state.showSequence.splice(index, 1);
-      composerSelectedCueId = state.showSequence[Math.min(index, state.showSequence.length - 1)]?.id || '';
-      state.showPlaying = false;
-      state.showIndex = -1;
-      persistShowSequence();
-      renderShowSequence();
-      renderShowComposer();
-    });
-    document.addEventListener('input', (event) => {
-      if (!composerRecording || selectedComposerIndex() < 0) return;
-      const mapping = {
-        songDirectorIntensity: ['director', 1], motion: ['motion', 2.5], equationMod: ['equation', 1.5], flow: ['flow', 1]
-      }[event.target.id];
-      if (!mapping) return;
-      const entry = state.showSequence[selectedComposerIndex()];
-      entry.automation = { ...serializeShowAutomation(entry.automation), [mapping[0]]: clamp(Number(event.target.value) || 0, 0, mapping[1]) };
-      persistShowSequence();
-      renderShowComposer();
-    });
-    document.addEventListener('click', (event) => {
-      if (!composerRecording || selectedComposerIndex() < 0) return;
-      const camera = event.target.closest('[data-camera-preset]')?.dataset.cameraPreset;
-      if (!camera) return;
-      const entry = state.showSequence[selectedComposerIndex()];
-      entry.automation = { ...serializeShowAutomation(entry.automation), camera };
-      persistShowSequence();
-      renderShowComposer();
-    });
+    showComposerController.initialize();
     if (isSmokeTest) window.__quarticPulseComposeShowEntries = composeShowEntriesFromSongMap;
-    renderShowComposer();
   }
 
   function applyShowCueAutomation(entry) {
-    const automation = serializeShowAutomation(entry?.automation);
-    const controlValues = {};
-    if (Number.isFinite(automation.director)) controlValues.songDirectorIntensity = automation.director;
-    if (Number.isFinite(automation.motion)) controlValues.motion = automation.motion;
-    if (Number.isFinite(automation.equation)) controlValues.equationMod = automation.equation;
-    if (Number.isFinite(automation.flow)) controlValues.flow = automation.flow;
-    applyControlValues(controlValues, fullProfileControlIds);
-    if (automation.camera) {
-      state.cameraMotionPreset = automation.camera;
-      document.querySelectorAll('[data-camera-preset]').forEach((button) => button.classList.toggle('active', button.dataset.cameraPreset === automation.camera));
+    const application = performanceShowDataEngine.automationApplication(entry);
+    applyControlValues(application.controls, fullProfileControlIds);
+    if (application.camera) {
+      state.cameraMotionPreset = application.camera;
+      document.querySelectorAll('[data-camera-preset]').forEach((button) => button.classList.toggle('active', button.dataset.cameraPreset === application.camera));
     }
   }
 
   function persistShowSequence() {
     try {
-      localStorage.setItem('quarticPulseShowSequenceV1', JSON.stringify({
+      localStorage.setItem('quarticPulseShowSequenceV1', JSON.stringify(performanceShowDataEngine.createShowDocument({
         entries: state.showSequence.map(serializeShowEntry),
         loop: state.showLoop,
         shuffle: state.showShuffle,
         autoBpm: state.autoBpm,
         manualBpm: state.manualBpm,
         beatOffsetMs: state.beatOffsetMs
-      }));
+      })));
     } catch (_) { /* Show persistence is optional. */ }
   }
 
   function showProfileForEntry(entry) {
-    return savedProfiles.find((profile) => profile.id === entry?.profileId) || null;
+    return performanceShowDataEngine.findProfile(savedProfiles, entry?.profileId);
   }
 
   function resetShowEntryClock() {
-    state.showEntryStartTime = beatClock();
-    state.showEntryStartBeat = state.beatGridIndex;
+    const snapshot = performanceSequencerEngine.clockSnapshot({ time: beatClock(), beat: state.beatGridIndex });
+    state.showEntryStartTime = snapshot.time;
+    state.showEntryStartBeat = snapshot.beat;
   }
 
   function updateShowUi() {
@@ -2768,12 +3011,8 @@
     document.querySelectorAll('.show-entry').forEach((element) => {
       element.classList.toggle('active', Number(element.dataset.index) === state.showIndex);
     });
-    if (composerInitialized) {
-      $('#composerPlayButton').textContent = state.showPlaying ? 'PAUSE SHOW' : 'PLAY SHOW';
-      document.querySelectorAll('.composer-cue').forEach((element) => {
-        const index = state.showSequence.findIndex((candidate) => candidate.id === element.dataset.cueId);
-        element.classList.toggle('active', index === state.showIndex);
-      });
+    if (showComposerController.initialized) {
+      showComposerController.renderPlaybackState();
     }
     updatePerformanceDock();
   }
@@ -2783,29 +3022,33 @@
   function nextShowProfileLabel() {
     if (!state.showSequence.length) return 'No show sequence queued';
     if (state.showShuffle && state.showPlaying) return 'Next: shuffled entry';
-    const nextIndex = state.showIndex < 0 ? 0 : state.showIndex + 1;
-    if (nextIndex >= state.showSequence.length && !state.showLoop) return 'Next: end of show';
-    const entry = state.showSequence[((nextIndex % state.showSequence.length) + state.showSequence.length) % state.showSequence.length];
+    const nextIndex = performanceSequencerEngine.previewNextIndex({
+      length: state.showSequence.length,
+      index: state.showIndex,
+      loop: state.showLoop
+    });
+    if (nextIndex < 0) return 'Next: end of show';
+    const entry = state.showSequence[nextIndex];
     return `Next: ${showProfileForEntry(entry)?.name || 'Missing profile'}`;
   }
 
   function updatePerformanceDock() {
-    const dock = $('#performanceDock');
-    if (!dock) return;
     const entry = state.showSequence[state.showIndex];
     const profile = showProfileForEntry(entry);
-    $('#performanceDockState').textContent = state.performanceBlackout
+    const stateLabel = state.performanceBlackout
       ? 'BLACKOUT ACTIVE'
       : (state.showPlaying ? 'SHOW PLAYING' : (state.showIndex >= 0 ? 'SHOW PAUSED' : 'PERFORMANCE MODE'));
-    $('#performanceDockCurrent').textContent = profile
+    const currentLabel = profile
       ? `${state.showIndex + 1}/${state.showSequence.length} · ${profile.name}`
       : (state.audioName || 'Manual visual');
-    $('#performanceDockNext').textContent = nextShowProfileLabel();
-    $('#performancePlayButton').textContent = state.showPlaying ? 'PAUSE' : (state.showIndex >= 0 ? 'RESUME' : 'START');
-    $('#performancePlayButton').disabled = state.showSequence.length === 0;
-    $('#performancePreviousButton').disabled = state.showSequence.length === 0;
-    $('#performanceNextButton').disabled = state.showSequence.length === 0;
-    $('#performanceBlackoutButton').textContent = state.performanceBlackout ? 'RESTORE' : 'BLACKOUT';
+    performanceController.renderDock({
+      stateLabel,
+      currentLabel,
+      nextLabel: nextShowProfileLabel(),
+      playLabel: state.showPlaying ? 'PAUSE' : (state.showIndex >= 0 ? 'RESUME' : 'START'),
+      hasEntries: state.showSequence.length > 0,
+      blackout: state.performanceBlackout
+    });
   }
 
   function setPerformanceBlackout(enabled) {
@@ -2821,7 +3064,7 @@
     const keepHud = $('#performanceShowHud').checked;
     document.body.classList.toggle('performance-mode', state.operatorMode);
     document.body.classList.toggle('performance-hide-hud', state.operatorMode && !keepHud);
-    $('#performanceDock').hidden = !state.operatorMode;
+    performanceController.setVisible(state.operatorMode);
     try {
       localStorage.setItem(performanceModeStorageKey, JSON.stringify({
         fullscreen: $('#performanceFullscreen').checked,
@@ -2852,10 +3095,7 @@
     $('#performanceShowHud').addEventListener('change', (event) => {
       if (state.operatorMode) document.body.classList.toggle('performance-hide-hud', !event.target.checked);
     });
-    $('#performancePreviousButton').addEventListener('click', () => advanceShow(-1));
-    $('#performancePlayButton').addEventListener('click', () => $('#showPlayButton').click());
-    $('#performanceNextButton').addEventListener('click', () => advanceShow(1));
-    $('#performanceBlackoutButton').addEventListener('click', () => setPerformanceBlackout(!state.performanceBlackout));
+    performanceController.bind();
     document.addEventListener('fullscreenchange', () => {
       if (state.operatorMode && $('#performanceFullscreen').checked && !document.fullscreenElement) {
         setPerformanceMode(false);
@@ -2868,7 +3108,7 @@
 
   function applyShowEntry(index, forceCut = false) {
     if (!state.showSequence.length || state.showTransitioning) return;
-    const safeIndex = ((index % state.showSequence.length) + state.showSequence.length) % state.showSequence.length;
+    const safeIndex = performanceSequencerEngine.wrapIndex(index, state.showSequence.length);
     const entry = state.showSequence[safeIndex];
     const profile = showProfileForEntry(entry);
     if (!profile) return;
@@ -2896,35 +3136,40 @@
 
   function advanceShow(direction = 1) {
     if (!state.showSequence.length) return;
-    if (state.showShuffle && state.showSequence.length > 1 && direction > 0) {
-      let next = state.showIndex;
-      while (next === state.showIndex) next = Math.floor(Math.random() * state.showSequence.length);
-      applyShowEntry(next);
-      return;
-    }
-    const next = state.showIndex + direction;
-    if (next >= state.showSequence.length && !state.showLoop) {
+    const decision = performanceSequencerEngine.decideAdvance({
+      length: state.showSequence.length,
+      index: state.showIndex,
+      direction,
+      loop: state.showLoop,
+      shuffle: state.showShuffle
+    });
+    if (decision.stop) {
       state.showPlaying = false;
       updateShowUi();
       return;
     }
-    applyShowEntry(next);
+    applyShowEntry(decision.index);
   }
 
   function updateShowSequencer(beatChanged) {
     if (!state.showPlaying || state.showIndex < 0 || state.showTransitioning) {
-      if (composerInitialized && state.showIndex < 0) updateComposerPlayhead(0);
+      if (showComposerController.initialized && state.showIndex < 0) updateComposerPlayhead(0);
       return;
     }
     const entry = state.showSequence[state.showIndex];
     if (!entry) return;
-    let progress = 0;
-    if (entry.advance === 'time') progress = (beatClock() - state.showEntryStartTime) / entry.value;
-    else progress = (state.beatGridIndex - state.showEntryStartBeat + state.beatGridPhase) / entry.value;
+    const progress = performanceSequencerEngine.calculateProgress({
+      entry,
+      startTime: state.showEntryStartTime,
+      startBeat: state.showEntryStartBeat,
+      currentTime: beatClock(),
+      beatIndex: state.beatGridIndex,
+      beatPhase: state.beatGridPhase
+    });
     $('#showProgressFill').style.width = `${clamp(progress * 100, 0, 100)}%`;
-    $('#performanceDockProgress').style.width = `${clamp(progress * 100, 0, 100)}%`;
+    performanceController.setProgress(progress);
     updateComposerPlayhead(progress);
-    if (progress >= 1 && (entry.advance === 'time' || beatChanged)) advanceShow(1);
+    if (performanceSequencerEngine.shouldAdvance(entry, progress, beatChanged)) advanceShow(1);
   }
 
   function setCanvasSize() {
@@ -2944,6 +3189,49 @@
       }
     }
     gl.viewport(0, 0, canvas.width, canvas.height);
+  }
+
+  function releaseHdrExportTarget() {
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    if (hdrExportTexture) gl.deleteTexture(hdrExportTexture);
+    if (hdrExportFramebuffer) gl.deleteFramebuffer(hdrExportFramebuffer);
+    hdrExportTexture = null;
+    hdrExportFramebuffer = null;
+    hdrExportWidth = 0;
+    hdrExportHeight = 0;
+  }
+
+  function ensureHdrExportTarget(width, height) {
+    if (hdrExportFramebuffer && hdrExportWidth === width && hdrExportHeight === height) return true;
+    releaseHdrExportTarget();
+    const framebuffer = gl.createFramebuffer();
+    const texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB10_A2, width, height, 0, gl.RGBA, gl.UNSIGNED_INT_2_10_10_10_REV, null);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
+    const complete = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.bindTexture(gl.TEXTURE_2D, null);
+    if (!complete) {
+      gl.deleteTexture(texture);
+      gl.deleteFramebuffer(framebuffer);
+      return false;
+    }
+    hdrExportFramebuffer = framebuffer;
+    hdrExportTexture = texture;
+    hdrExportWidth = width;
+    hdrExportHeight = height;
+    return true;
+  }
+
+  if (new URLSearchParams(window.location.search).get('smoke') === '1') {
+    window.__quarticHdrExportReady = ensureHdrExportTarget(64, 64);
+    releaseHdrExportTarget();
   }
 
   function bulbHotspotHash(seed) {
@@ -2986,7 +3274,7 @@
   function combinedRenderModulation(base = {}, director = {}) {
     const combined = { ...base };
     for (const [key, value] of Object.entries(director)) {
-      if (!Number.isFinite(value) || ['cueIndex', 'sectionProgress', 'rotationOffset', 'panX', 'panY'].includes(key)) continue;
+      if (!Number.isFinite(value) || ['cueIndex', 'sectionProgress', 'phraseEnergy', 'phraseContour', 'phraseProgress', 'rotationOffset', 'panX', 'panY'].includes(key)) continue;
       combined[key] = clamp((combined[key] || 0) + value, -2, 2);
     }
     combined.rotationOffset = Number(director.rotationOffset) || 0;
@@ -3002,7 +3290,10 @@
       requestAnimationFrame(render);
       return;
     }
-    const delta = state.offlineExporting ? 1 / state.offlineFps : Math.min(.05, rawDelta);
+    const secondaryOfflineSample = state.offlineExporting && state.offlineSamplePass > 0;
+    const delta = state.offlineExporting
+      ? (secondaryOfflineSample ? 0 : 1 / state.offlineFps)
+      : Math.min(.05, rawDelta);
     state.lastFrame = now;
     if (!state.offlineExporting) collectPerformanceSample(rawDelta * 1000, now);
     if (!isObsOutput && !state.offlineExporting) updateCameraPath(now);
@@ -3016,20 +3307,48 @@
       state.performanceScale = Math.min(1, state.performanceScale + delta * .8);
     }
     setCanvasSize();
-    advancePulseEvents(delta);
+    const renderingTenBitExport = state.offlineExporting && state.offlineTenBitExport && hdrExportFramebuffer;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, renderingTenBitExport ? hdrExportFramebuffer : null);
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    if (!secondaryOfflineSample) advancePulseEvents(delta);
     if (!isObsOutput && !state.offlineExporting) updateAudioAnalysis(delta);
-    updateEquationAudioEnvelope(delta);
+    if (!secondaryOfflineSample) updateEquationAudioEnvelope(delta);
 
-    if (!state.offlineExporting) state.visualTime = state.exporting
-      ? audio.currentTime
-      : state.visualTime + delta * ((isObsOutput ? obsRemoteAudioActive : audioIsActive()) ? 1 : .18);
-    const baseModulation = updateAudioModulation(delta);
+    if (!state.offlineExporting) {
+      const deckTimeAvailable = state.audioMode === 'deck'
+        && Boolean(currentPlaylistItem())
+        && Number.isFinite(audio.currentTime);
+      state.visualTime = deckTimeAvailable
+        ? audio.currentTime
+        : state.visualTime + delta * ((isObsOutput ? obsRemoteAudioActive : audioIsActive()) ? 1 : .18);
+    }
+    const baseModulation = secondaryOfflineSample && state.offlineBaseModulation
+      ? state.offlineBaseModulation
+      : updateAudioModulation(delta);
+    if (state.offlineExporting && !secondaryOfflineSample) state.offlineBaseModulation = baseModulation;
     const directorTime = state.offlineExporting
       ? (state.offlineCurrentTime || 0)
       : (state.audioMode === 'deck' && Number.isFinite(audio.currentTime) ? audio.currentTime : state.visualTime);
     const director = isObsOutput ? (state.songDirectorValues || {}) : updateSongDirector(directorTime);
     const modulation = combinedRenderModulation(baseModulation, director);
     const cameraMotion = cameraPresetTransform();
+    const matrixOwnsFractalAudio = state.modulationEnabled
+      && (state.visualStyle === 0 || state.visualStyle === 5);
+    const directBass = matrixOwnsFractalAudio ? 0 : state.bass;
+    const directMids = matrixOwnsFractalAudio ? 0 : state.mids;
+    const directHighs = matrixOwnsFractalAudio ? 0 : state.highs;
+    const directRms = matrixOwnsFractalAudio ? 0 : state.rms;
+    const directBeat = matrixOwnsFractalAudio ? 0 : state.beat;
+    const equationBass = matrixOwnsFractalAudio ? 0 : state.equationBass;
+    const equationMids = matrixOwnsFractalAudio ? 0 : state.equationMids;
+    const equationHighs = matrixOwnsFractalAudio ? 0 : state.equationHighs;
+    const equationBeat = matrixOwnsFractalAudio ? 0 : state.equationBeat;
+    const musicMotionBass = matrixOwnsFractalAudio ? 0 : state.musicMotionBass;
+    const musicMotionMids = matrixOwnsFractalAudio ? 0 : state.musicMotionMids;
+    const musicMotionHighs = matrixOwnsFractalAudio ? 0 : state.musicMotionHighs;
+    const musicMotionBeat = matrixOwnsFractalAudio ? 0 : state.musicMotionBeat;
+    const routedDimensional = modulationTargetIsRouted('fractalTilt', 'fractalSlice');
+    const routedFolding = modulationTargetIsRouted('equationFold', 'equationWarp');
     const beatChanged = (isObsOutput || state.offlineExporting) ? false : updateBeatGrid();
     if (!isObsOutput && !state.offlineExporting) updateShowSequencer(beatChanged);
     if (!isObsOutput && !state.offlineExporting && obsOutputOpen && now - obsLastStateSent >= 1000 / obsSyncFps) {
@@ -3038,17 +3357,17 @@
     }
     const modulatedMotion = clamp(state.motion + (modulation.motion || 0), 0, 4);
     const modulatedZoom = Math.max(.15, 1 + (modulation.zoom || 0));
-    const motionEnergy = modulatedMotion * (.32 + state.rms * .34 + state.mids * .26);
-    const orbitRadius = state.autoDrift ? (.012 + .022 * state.mids) * motionEnergy / Math.sqrt(state.zoom * modulatedZoom) : 0;
-    const orbitAngle = state.visualTime * (.21 + .12 * state.mids) * Math.sign(state.spin || 1);
+    const motionEnergy = modulatedMotion * (.32 + directRms * .34 + directMids * .26);
+    const orbitRadius = state.autoDrift ? (.012 + .022 * directMids) * motionEnergy / Math.sqrt(state.zoom * modulatedZoom) : 0;
+    const orbitAngle = state.visualTime * (.21 + .12 * directMids) * Math.sign(state.spin || 1);
     const renderCenterX = state.center.x + Math.cos(orbitAngle) * orbitRadius + cameraMotion.x + modulation.panX;
     const renderCenterY = state.center.y + Math.sin(orbitAngle * 1.17) * orbitRadius + cameraMotion.y + modulation.panY;
-    if (!isObsOutput) {
+    if (!isObsOutput && !secondaryOfflineSample) {
       const nextModulationRotationPhase = state.modulationRotationPhase + (modulation.rotation || 0) * delta;
       state.modulationRotationPhase = Math.atan2(Math.sin(nextModulationRotationPhase), Math.cos(nextModulationRotationPhase));
     }
     const rotation = state.visualTime * state.spin * modulatedMotion
-      + Math.sin(state.visualTime * .63) * .035 * state.mids * modulatedMotion
+      + Math.sin(state.visualTime * .63) * .035 * directMids * modulatedMotion
       + state.modulationRotationPhase
       + modulation.rotationOffset;
     if (Number.isFinite(window.__quarticPulseRotation)) {
@@ -3058,28 +3377,38 @@
     window.__quarticPulseRotation = rotation;
 
     gl.uniform2f(uniforms.uResolution, canvas.width, canvas.height);
+    gl.uniform2f(
+      uniforms.uSubpixelOffset,
+      state.offlineExporting ? state.exportSampleOffsetX : 0,
+      state.offlineExporting ? state.exportSampleOffsetY : 0
+    );
     gl.uniform2f(uniforms.uCenter, renderCenterX, renderCenterY);
     gl.uniform1f(uniforms.uScale, 3.15 / (state.zoom * modulatedZoom * cameraMotion.zoom));
     gl.uniform1f(uniforms.uTime, state.visualTime);
-    gl.uniform1f(uniforms.uBass, state.bass);
-    gl.uniform1f(uniforms.uMids, state.mids);
-    gl.uniform1f(uniforms.uHighs, state.highs);
-    gl.uniform1f(uniforms.uRms, state.rms);
-    gl.uniform1f(uniforms.uBeat, state.beatPulse ? state.beat : 0);
-    gl.uniform1f(uniforms.uEquationBass, state.equationBass);
-    gl.uniform1f(uniforms.uEquationMids, state.equationMids);
-    gl.uniform1f(uniforms.uEquationHighs, state.equationHighs);
-    gl.uniform1f(uniforms.uEquationBeat, state.beatPulse ? state.equationBeat : 0);
+    gl.uniform1f(uniforms.uBass, directBass);
+    gl.uniform1f(uniforms.uMids, directMids);
+    gl.uniform1f(uniforms.uHighs, directHighs);
+    gl.uniform1f(uniforms.uRms, directRms);
+    gl.uniform1f(uniforms.uBeat, state.beatPulse ? directBeat : 0);
+    gl.uniform1f(uniforms.uEquationBass, equationBass);
+    gl.uniform1f(uniforms.uEquationMids, equationMids);
+    gl.uniform1f(uniforms.uEquationHighs, equationHighs);
+    gl.uniform1f(uniforms.uEquationBeat, state.beatPulse ? equationBeat : 0);
+    gl.uniform1f(uniforms.uMusicMotionBass, musicMotionBass);
+    gl.uniform1f(uniforms.uMusicMotionMids, musicMotionMids);
+    gl.uniform1f(uniforms.uMusicMotionHighs, musicMotionHighs);
+    gl.uniform1f(uniforms.uMusicMotionBeat, state.beatPulse ? musicMotionBeat : 0);
+    gl.uniform1f(uniforms.uMappedEquation, Number(modulation.equation) || 0);
     gl.uniform1f(uniforms.uFlow, clamp(state.flow + (modulation.flow || 0), 0, 2));
     gl.uniform1f(uniforms.uMotion, modulatedMotion);
-    gl.uniform1f(uniforms.uFractalDimensional, state.fractalDimensional ? 1 : 0);
+    gl.uniform1f(uniforms.uFractalDimensional, state.fractalDimensional || routedDimensional ? 1 : 0);
     gl.uniform1f(uniforms.uFractalTilt, clamp(state.fractalTilt + (modulation.fractalTilt || 0), 0, 2));
     gl.uniform1f(uniforms.uFractalDepthSpeed, state.fractalDepthSpeed);
     gl.uniform1f(uniforms.uFractalPerspective, state.fractalPerspective);
     gl.uniform1f(uniforms.uFractalSlice, clamp(state.fractalSlice + (modulation.fractalSlice || 0), 0, 2));
     gl.uniform1f(uniforms.uFractalLighting, state.fractalLighting);
     gl.uniform1f(uniforms.uFractalAudioDepth, state.fractalAudioDepth);
-    gl.uniform1f(uniforms.uEquationFolding, state.equationFolding ? 1 : 0);
+    gl.uniform1f(uniforms.uEquationFolding, state.equationFolding || routedFolding ? 1 : 0);
     gl.uniform1f(uniforms.uEquationFold, clamp(state.equationFold + (modulation.equationFold || 0), 0, 2));
     gl.uniform1f(uniforms.uEquationWarp, clamp(state.equationWarp + (modulation.equationWarp || 0), 0, 2.5));
     gl.uniform1f(uniforms.uEquationFoldMotion, state.equationFoldMotion);
@@ -3115,10 +3444,6 @@
     gl.uniform1f(uniforms.uBulbCamera, state.bulbCamera);
     gl.uniform1f(uniforms.uBulbYaw, state.bulbYaw);
     gl.uniform1f(uniforms.uBulbPitch, state.bulbPitch);
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, mainframeRoomTexture);
-    gl.uniform1i(uniforms.uMainframeRoom, 0);
-    gl.uniform1f(uniforms.uMainframeReady, mainframeRoomReady ? 1 : 0);
     updateBulbHotspots(state.visualTime);
     let bulbSteps = 42 + state.bulbDetail * 54;
     if (state.exporting) bulbSteps *= 1.12 + Math.min(2.5, state.exportDetail) * .32;
@@ -3128,7 +3453,9 @@
     state.pulseEventStrengths.fill(0);
     state.pulseEventBands.fill(0);
     state.pulseEventSeeds.fill(0);
-    const pulseEventCount = Math.min(maximumPulseEvents, state.pulseEvents.length);
+    const pulseEventCount = matrixOwnsFractalAudio
+      ? 0
+      : Math.min(maximumPulseEvents, state.pulseEvents.length);
     for (let index = 0; index < pulseEventCount; index++) {
       const event = state.pulseEvents[index];
       state.pulseEventAges[index] = event.age;
@@ -3147,8 +3474,8 @@
     window.__quarticPulseEventLimit = activePulseEventLimit();
     window.__quarticPulseAcceptedTotal = state.pulseAcceptedTotal;
     gl.uniform1f(uniforms.uRotation, rotation);
-    gl.uniform1f(uniforms.uEquation, clamp(state.equation + (modulation.equation || 0), 0, 2.5));
-    gl.uniform1f(uniforms.uFrequencyHue, state.frequencyHue + (modulation.frequencyHue || 0));
+    gl.uniform1f(uniforms.uEquation, clamp(state.equation, 0, 2.5));
+    gl.uniform1f(uniforms.uFrequencyHue, (matrixOwnsFractalAudio ? 0 : state.frequencyHue) + (modulation.frequencyHue || 0));
     gl.uniform1f(uniforms.uFrequencyColor, state.frequencyColorEnabled ? state.frequencyColorAmount : 0);
     gl.uniform1i(uniforms.uFractalType, state.fractalType);
     gl.uniform1i(uniforms.uVisualStyle, state.visualStyle);
@@ -3159,11 +3486,22 @@
     gl.uniform3fv(uniforms.uCustom2, state.customColors[2]);
     gl.uniform3fv(uniforms.uCustom3, state.customColors[3]);
     const detailMultiplier = state.exporting ? state.exportDetail : 1;
-    gl.uniform1i(uniforms.uIterations, Math.min(state.unleashedMode ? 2400 : 1200, Math.round(state.iterations * detailMultiplier)));
+    const requestedIterations = state.exporting && state.exportIterationTarget > 0
+      ? state.exportIterationTarget
+      : Math.round(state.iterations * detailMultiplier);
+    gl.uniform1i(uniforms.uIterations, Math.min(state.unleashedMode ? 2400 : 1200, requestedIterations));
     gl.uniform1i(uniforms.uPalette, state.palette);
     gl.uniform1f(uniforms.uChromaKey, isObsOutput && state.obsChromaKey ? 1 : 0);
     gl.uniform1f(uniforms.uChromaThreshold, state.obsChromaThreshold);
+    gl.uniform1f(uniforms.uHdrExport, renderingTenBitExport && state.offlineHdrExport ? 1 : 0);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
+    if (renderingTenBitExport && $('#showExportPreview')?.checked) {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      gl.uniform1f(uniforms.uHdrExport, 0);
+      gl.drawArrays(gl.TRIANGLES, 0, 6);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, hdrExportFramebuffer);
+      gl.uniform1f(uniforms.uHdrExport, state.offlineHdrExport ? 1 : 0);
+    }
     if (pendingOfflineRender && state.offlineExporting) {
       gl.finish();
       const resolveOfflineRender = pendingOfflineRender;
@@ -3207,25 +3545,16 @@
     updatePerformanceAssistantUi();
     updateVisualIntensityMeter();
     if (state.audioMode === 'deck' && Number.isFinite(audio.duration)) {
-      const offlineSessionActive = state.exporting && exportSession?.mode === 'offline';
+      const offlineSessionActive = state.exporting && exportSessionEngine.mode === 'offline';
       const displayTime = offlineSessionActive ? (state.offlineCurrentTime || 0) : audio.currentTime;
-      const progress = audio.duration ? displayTime / audio.duration : 0;
-      $('#timelineFill').style.width = `${Math.min(100, progress * 100)}%`;
-      $('#timeReadout').textContent = `${formatTime(displayTime)} / ${formatTime(audio.duration)}`;
-      $('#timeline').setAttribute('aria-valuemax', String(Math.round(audio.duration)));
-      $('#timeline').setAttribute('aria-valuenow', String(Math.round(displayTime)));
-      $('#timeline').setAttribute('aria-valuetext', `${formatTime(displayTime)} of ${formatTime(audio.duration)}`);
+      const progress = audioController.renderTimeline(displayTime, audio.duration);
       updateSongMapPlayhead(displayTime);
       const liveRecordingActive = state.exporting
-        && exportSession?.mode === 'live'
-        && mediaRecorder?.state === 'recording';
+        && exportSessionEngine.mode === 'live'
+        && liveExportCapture?.state === 'recording';
       if (liveRecordingActive) {
-        $('#exportProgressFill').style.width = `${progress * 100}%`;
-        $('#exportProgressText').textContent = `Rendering ${Math.round(progress * 100)}% · ${formatTime(audio.currentTime)} / ${formatTime(audio.duration)}`;
-        $('#stageRenderFill').style.width = `${progress * 100}%`;
-        $('#stageRenderText').textContent = `Rendering ${Math.round(progress * 100)}%`;
         const overall = progress * .80;
-        setExportProgress(
+        exportProgressCoordinator.update(
           overall,
           `Live recording ${Math.round(progress * 100)}% | overall ${Math.round(overall * 100)}% | ${formatTime(audio.currentTime)} / ${formatTime(audio.duration)}`,
           `Live recording ${Math.round(progress * 100)}% | overall ${Math.round(overall * 100)}%`
@@ -3325,67 +3654,7 @@
     return String(filePath || '').split(/[\\/]/).pop() || 'video';
   }
 
-  function setExportProgress(overall, panelText, stageText = panelText) {
-    exportProgressOverall = clamp(Number(overall) || 0, 0, 1);
-    const percent = exportProgressOverall >= 1 ? 100 : Math.min(99, Math.floor(exportProgressOverall * 100));
-    $('#exportProgressFill').style.width = `${exportProgressOverall * 100}%`;
-    $('#exportProgressText').textContent = panelText;
-    $('#stageRenderFill').style.width = `${exportProgressOverall * 100}%`;
-    $('#stageRenderText').textContent = stageText || `Exporting ${percent}%`;
-    if (exportStartedAt) {
-      const now = performance.now();
-      const paused = exportPausedDuration + (exportPauseStartedAt ? now - exportPauseStartedAt : 0);
-      const elapsedSeconds = Math.max(0, (now - exportStartedAt - paused) / 1000);
-      if (offlineExportPaused) $('#stageRenderMeta').textContent = `Paused · elapsed ${formatTime(elapsedSeconds)}`;
-      else if (exportProgressOverall > .01 && exportProgressOverall < .995) {
-        const remainingSeconds = elapsedSeconds * (1 - exportProgressOverall) / exportProgressOverall;
-        $('#stageRenderMeta').textContent = `Elapsed ${formatTime(elapsedSeconds)} · estimated remaining ${formatTime(remainingSeconds)}`;
-      } else $('#stageRenderMeta').textContent = `Elapsed ${formatTime(elapsedSeconds)}`;
-    }
-  }
-
-  function beginExportProgress(panelText, stageText = panelText) {
-    clearTimeout(exportProgressHideTimer);
-    exportStartedAt = performance.now();
-    exportPauseStartedAt = 0;
-    exportPausedDuration = 0;
-    $('#exportProgress').hidden = false;
-    setExportProgress(0, panelText, stageText);
-  }
-
-  function setStageExportMode(mode) {
-    const offline = mode === 'offline';
-    $('#stageRenderMode').textContent = offline ? 'OFFLINE MASTER EXPORT' : 'LIVE VIDEO EXPORT';
-    $('#stageRenderNote').textContent = offline
-      ? 'Every frame is being completed independently for maximum detail and consistency.'
-      : 'Quartic Pulse is recording in real time. Keep the visualizer running until the track finishes.';
-    $('#pauseExportButton').hidden = !offline;
-    $('#pauseExportButton').disabled = !offline;
-    $('#pauseExportButton').textContent = 'PAUSE';
-    setExportActionButtons(true, true);
-  }
-
-  function setExportActionButtons(endEnabled, cancelEnabled) {
-    $('#endExportButton').disabled = !endEnabled;
-    $('#cancelExportButton').disabled = !cancelEnabled;
-    if (!$('#pauseExportButton').hidden) $('#pauseExportButton').disabled = !endEnabled;
-  }
-
-  function completeExportProgress(outputPath) {
-    setExportProgress(1, `Saved 100% | ${exportedFileName(outputPath)}`, 'Export saved 100%');
-    $('#stageRenderNote').textContent = 'The finished video has been saved successfully.';
-    const elapsedSeconds = exportStartedAt ? Math.max(0, (performance.now() - exportStartedAt - exportPausedDuration) / 1000) : 0;
-    $('#stageRenderMeta').textContent = `Completed in ${formatTime(elapsedSeconds)}`;
-    setExportActionButtons(false, false);
-    playExportCompleteStinger();
-    clearTimeout(exportProgressHideTimer);
-    exportProgressHideTimer = setTimeout(() => {
-      if (!state.exporting) $('#exportProgress').hidden = true;
-    }, 2200);
-  }
-
   function playExportCompleteStinger() {
-    if (!$('#exportCompleteSound')?.checked) return;
     const stinger = $('#exportCompleteStinger');
     if (!stinger) return;
     stinger.pause();
@@ -3394,28 +3663,6 @@
     const playback = stinger.play();
     playback?.catch?.((error) => console.warn('Export completion stinger could not play:', error));
   }
-
-  window.quarticDesktop.onExportProgress?.((update) => {
-    if (!update || !exportSession || update.id !== exportSession.id) return;
-    const phaseProgress = clamp(Number(update.progress) || 0, 0, 1);
-    const renderShare = exportSession.mode === 'offline' ? .85 : .80;
-    let overall;
-    let phaseLabel;
-    if (update.stage === 'saving') {
-      const start = Math.max(renderShare, exportProgressOverall);
-      overall = start + (.995 - start) * phaseProgress;
-      phaseLabel = `Saving ${Math.round(phaseProgress * 100)}%`;
-    } else {
-      overall = renderShare + (.99 - renderShare) * phaseProgress;
-      phaseLabel = `Finalizing ${Math.round(phaseProgress * 100)}%`;
-    }
-    const overallPercent = overall >= 1 ? 100 : Math.min(99, Math.floor(overall * 100));
-    const detail = String(update.message || phaseLabel).replace(/\.{3}$/, '');
-    $('#stageRenderNote').textContent = update.stage === 'saving'
-      ? 'The completed video is being written to the selected destination.'
-      : 'All visual frames are complete; audio and the final video container are being finished.';
-    setExportProgress(overall, `${phaseLabel} | overall ${overallPercent}% | ${detail}`, `${phaseLabel} | overall ${overallPercent}%`);
-  });
 
   function showToast(message, error = false) {
     const toast = $('#toast');
@@ -3571,243 +3818,369 @@
     });
   }
 
+  function recommendedExportIterations(width, height) {
+    return exportSamplingEngine.recommendedIterations(width, height);
+  }
+  window.__quarticRecommendedExportIterations = recommendedExportIterations;
+
+  function effectiveExportIterations(width, height, requestedIterations = state.exportIterations) {
+    return exportSamplingEngine.effectiveIterations(requestedIterations, { unleashed: state.unleashedMode });
+  }
+  window.__quarticEffectiveExportIterations = effectiveExportIterations;
+
+  function applyResolutionIterationRecommendation({ announce = false } = {}) {
+    const { width, height } = exportSettingsSnapshotEngine.parseResolution(exportController.readSettings().resolution);
+    const recommendation = recommendedExportIterations(width, height);
+    state.exportIterations = recommendation;
+    $('#exportIterations').value = String(recommendation);
+    renderExportMathParity();
+    if (announce) showToast(state.exportMatchLive
+      ? `${width}×${height} selected · matching ${state.iterations} live iterations`
+      : `${width}×${height} selected · ${recommendation} alternate-look iterations recommended`);
+    return recommendation;
+  }
+
+  function currentExportSettings(audioDuration = Number(audio.duration) || 0) {
+    return exportSettingsSnapshotEngine.capture(exportController.readSettings(), {
+      unleashed: state.unleashedMode,
+      liveIterations: state.iterations,
+      audioDuration
+    });
+  }
+
+  function selectedExportProfile() {
+    return currentExportSettings().profile;
+  }
+
   function updateExportPerformanceNote() {
-    const [width, height] = $('#resolution').value.split('x').map(Number);
-    const fps = Number($('#fps').value);
-    const detail = Number($('#exportDetail').value);
-    const note = $('#exportPerformanceNote');
-    const load = width * height * fps;
-    const offline = $('#exportMode')?.value !== 'live';
-    const masterMbps = Math.round(offlineVideoBitrate(width, height, fps, detail) / 1000000);
-    let message = offline
-      ? `Offline · ${width}×${height} at ${fps} FPS · ~${masterMbps} Mb/s quality master`
-      : `Live · ${width}×${height} at ${fps} FPS · real-time frame rate required`;
-    let warning = false;
-    if (load >= 3840 * 2160 * 90) {
-      message = offline
-        ? `Offline · ${width}×${height} at ${fps} FPS · ~${masterMbps} Mb/s master · extreme load`
-        : `Live · ${width}×${height} at ${fps} FPS · extreme GPU and storage load`;
-      warning = true;
-    } else if (load >= 2560 * 1440 * 60) {
-      message = offline
-        ? `Offline · ${width}×${height} at ${fps} FPS · ~${masterMbps} Mb/s master · high load`
-        : `Live · ${width}×${height} at ${fps} FPS · high GPU load`;
-      warning = true;
-    } else if (load <= 1280 * 720 * 30) {
-      message = offline
-        ? `Offline · ${width}×${height} at ${fps} FPS · ~${masterMbps} Mb/s master · light load`
-        : `Live · ${width}×${height} at ${fps} FPS · light export load`;
-    }
-    note.textContent = message;
-    note.classList.toggle('warning', warning);
+    const settings = currentExportSettings();
+    const estimate = exportPlanningEngine.profileEstimate({
+      profileId: settings.format,
+      width: settings.width,
+      height: settings.height,
+      fps: settings.fps,
+      duration: settings.audioDuration,
+      hdrOutput: settings.hdrOutput
+    });
+    exportController.renderPerformance(exportPresentationEngine.performanceView({
+      estimate,
+      iterations: settings.effectiveIterations,
+      supersampling: settings.supersampling
+    }));
   }
 
   function formatByteSize(bytes) {
-    const value = Math.max(0, Number(bytes) || 0);
-    if (value >= 1073741824) return `${(value / 1073741824).toFixed(value >= 10737418240 ? 1 : 2)} GB`;
-    if (value >= 1048576) return `${(value / 1048576).toFixed(1)} MB`;
-    return `${Math.round(value / 1024)} KB`;
+    return exportPlanningEngine.formatByteSize(bytes);
   }
 
-  async function requestExportPreflight(durationOverride = null, refreshEncoder = false) {
-    const [width, height] = $('#resolution').value.split('x').map(Number);
-    const fps = Number($('#fps').value);
-    const detail = Number($('#exportDetail').value);
-    const mode = $('#exportMode').value;
-    const duration = Math.max(.1, Number(durationOverride) || Number(audio.duration) || 0);
-    const masterBitrate = offlineVideoBitrate(width, height, fps, detail);
-    const result = await window.quarticDesktop.getExportPreflight({
-      width, height, fps, detail, mode, duration, masterBitrate,
-      format: $('#videoFormat').value,
-      refreshEncoder
-    });
-    return { ...result, width, height, fps, detail, mode, duration, masterBitrate };
+  function currentExportPreflightSettings(durationOverride = null, refreshEncoder = false) {
+    return exportSettingsSnapshotEngine.preflight(currentExportSettings(), { durationOverride, refreshEncoder });
+  }
+
+  function requestExportPreflight(durationOverride = null, refreshEncoder = false) {
+    return exportPreflightEngine.load(
+      currentExportPreflightSettings(durationOverride, refreshEncoder),
+      (request) => window.quarticDesktop.getExportPreflight(request)
+    );
   }
 
   function updateEncoderStatus(preflight) {
-    if (!preflight?.encoder) return;
-    const status = $('#exportEncoderStatus');
-    status.classList.add('ready');
-    status.querySelector('strong').textContent = preflight.encoder.label.toUpperCase();
-    status.querySelector('small').textContent = preflight.encoder.hardware
-      ? 'Hardware acceleration verified; CPU x264 remains available as an automatic fallback'
-      : 'Universal CPU fallback selected for compatibility and consistent quality';
+    const view = exportPresentationEngine.encoderStatusView(preflight, currentExportSettings().format);
+    if (view) exportController.renderEncoderStatus(view);
   }
 
   function populateExportPreflight(preflight) {
-    $('#preflightVideo').textContent = `${preflight.width}×${preflight.height} · ${preflight.fps} FPS · ${$('#videoFormat').value.toUpperCase()}`;
-    $('#preflightEncoder').textContent = preflight.encoder.label;
-    $('#preflightOutput').textContent = `About ${formatByteSize(preflight.estimatedOutputBytes)}`;
-    $('#preflightSpace').textContent = formatByteSize(preflight.requiredBytes);
-    $('#preflightFree').textContent = preflight.freeBytes ? `${formatByteSize(preflight.freeBytes)} · Videos drive` : 'Checked after destination selection';
-    $('#preflightDuration').textContent = formatTime(preflight.duration);
-    $('#exportPreflightSummary').textContent = preflight.mode === 'offline'
-      ? 'Exact-frame rendering with a high-quality master and verified final encoder.'
-      : 'Real-time capture requires Quartic Pulse to maintain the selected frame rate.';
-    const lowSpace = preflight.freeBytes > 0 && preflight.freeBytes < preflight.requiredBytes;
-    $('#preflightWarning').hidden = !lowSpace;
-    $('#preflightWarning').textContent = lowSpace
-      ? 'The default Videos drive may not have enough space. Choose another destination when prompted.'
-      : '';
-    $('#preflightTestButton').disabled = state.audioMode !== 'deck' || !currentPlaylistItem()?.filePath;
+    const settings = currentExportSettings();
+    exportController.renderPreflight(exportPresentationEngine.preflightView({
+      preflight,
+      fallbackProfileId: settings.format,
+      hdrOutput: settings.hdrOutput,
+      testDisabled: state.audioMode !== 'deck' || !currentPlaylistItem()?.filePath
+    }));
     updateEncoderStatus(preflight);
   }
 
-  async function showExportPreflight() {
-    const dialog = $('#exportPreflightDialog');
-    $('#exportPreflightSummary').textContent = 'Testing encoders and estimating storage…';
-    dialog.hidden = false;
-    const preflight = await requestExportPreflight();
-    lastExportPreflight = preflight;
-    populateExportPreflight(preflight);
-    return new Promise((resolve) => {
-      const close = (choice) => {
-        dialog.hidden = true;
-        resolve(choice);
-      };
-      $('#preflightCancelButton').onclick = () => close(null);
-      $('#preflightStartButton').onclick = () => close({ preflight, test: false });
-      $('#preflightTestButton').onclick = async () => {
-        $('#preflightTestButton').disabled = true;
-        try {
-          const testPreflight = await requestExportPreflight(Math.min(5, preflight.duration));
-          close({ preflight: testPreflight, test: true });
-        } catch (error) {
-          $('#preflightTestButton').disabled = false;
-          showToast(error.message, true);
-        }
-      };
+  function refreshExportEncoderStatus() {
+    return exportPreflightEngine.refresh({
+      settings: currentExportPreflightSettings(1),
+      requestPreflight: (request) => window.quarticDesktop.getExportPreflight(request),
+      started: () => exportController.renderEncoderStatus(exportPresentationEngine.encoderCheckingView()),
+      completed: ({ preflight }) => updateEncoderStatus(preflight),
+      failed: ({ error }) => exportController.renderEncoderStatus(exportPresentationEngine.encoderFailureView(error))
     });
   }
 
-  async function refreshExportEncoderStatus() {
-    try {
-      updateEncoderStatus(await requestExportPreflight(1));
-    } catch (error) {
-      const status = $('#exportEncoderStatus');
-      status.querySelector('strong').textContent = 'ENCODER CHECK FAILED';
-      status.querySelector('small').textContent = error.message;
+  function scanExportEncoderCapabilities() {
+    return exportEncoderScanEngine.run({
+      started: () => exportController.renderEncoderScanState(
+        'running',
+        exportPresentationEngine.encoderScanRunningView()
+      ),
+      scan: () => window.quarticDesktop.getExportEncoderCapabilities(),
+      completed: ({ report }) => {
+        exportController.renderEncoderScanState(
+          'completed',
+          exportPresentationEngine.encoderScanCompletedView(report)
+        );
+        if (currentExportSettings().format === 'gpu_auto') {
+          updateEncoderStatus({ encoder: report.selected, profile: selectedExportProfile() });
+        }
+        showToast('Encoder compatibility scan complete');
+      },
+      failed: ({ error }) => {
+        exportController.renderEncoderScanState(
+          'failed',
+          exportPresentationEngine.encoderScanFailedView(error)
+        );
+        showToast(error?.message || String(error), true);
+      },
+      restored: () => exportController.renderEncoderScanState(
+        'restored',
+        exportPresentationEngine.encoderScanRestoredView()
+      )
+    }).catch(() => {});
+  }
+
+  function modeledExportRenderFps(width, height, exportIterations) {
+    const settings = currentExportSettings();
+    return exportPlanningEngine.modeledRenderFps({
+      liveFps: 1000 / Math.max(1, state.frameTime),
+      livePixels: Math.max(1, canvas.width * canvas.height),
+      width,
+      height,
+      visualStyle: state.visualStyle,
+      liveIterations: state.iterations,
+      exportIterations,
+      supersampling: settings.supersampling
+    });
+  }
+
+  let lastExportBenchmark = null;
+
+  function exportAdvisorRecommendations(reference) {
+    const settings = currentExportSettings();
+    const resolutions = Array.from($('#resolution').options).map((option) => {
+      const [width, height] = option.value.split('x').map(Number);
+      return { value: option.value, width, height };
+    });
+    const frameRates = Array.from($('#fps').options).map((option) => Number(option.value));
+    return exportPlanningEngine.advisorRecommendations({
+      reference,
+      resolutions,
+      frameRates,
+      currentIterations: settings.requestedIterations,
+      unleashed: state.unleashedMode,
+      recommendedIterations: recommendedExportIterations,
+      liveContext: {
+        liveFps: 1000 / Math.max(1, state.frameTime),
+        livePixels: Math.max(1, canvas.width * canvas.height),
+        visualStyle: state.visualStyle,
+        liveIterations: state.iterations,
+        supersampling: settings.supersampling
+      }
+    });
+  }
+
+  function renderExportAdvisor(reference) {
+    const settings = currentExportSettings();
+    exportController.renderAdvisor(exportPresentationEngine.advisorView({
+      recommendations: exportAdvisorRecommendations(reference),
+      currentResolution: settings.resolution,
+      currentFps: settings.fps,
+      currentIterations: settings.requestedIterations
+    }));
+  }
+
+  function applyExportAdvisorRecommendation(selection) {
+    return exportSettingsCoordinatorEngine.applyAdvisor(selection, {
+      readChoices: () => exportController.readSettingChoices(),
+      applySettings: (recommendation) => exportController.applyAdvisorSelection(recommendation, { dispatch: false }),
+      syncIterations: syncExportIterations,
+      refreshPerformance: updateExportPerformanceNote,
+      invalidateBenchmark: invalidateExportBenchmark,
+      completed: ({ recommendation }) => showToast(`${recommendation.label} applied · benchmark again to verify`),
+      failed: ({ error }) => showToast(error?.message || String(error), true)
+    }).catch(() => {});
+  }
+
+  function invalidateExportBenchmark() {
+    exportController.invalidateBenchmark();
+    lastExportBenchmark = null;
+  }
+
+  function syncExportIterations(value) {
+    state.exportIterations = Number(value);
+    renderExportMathParity();
+  }
+
+  function renderExportMathParity() {
+    const matchLive = Boolean(state.exportMatchLive);
+    const group = $('#exportIterations')?.closest('.slider-group');
+    group?.classList.toggle('control-disabled', matchLive);
+    $('#exportIterations')?.setAttribute('aria-disabled', String(matchLive));
+    if ($('#exportIterationsValue')) {
+      $('#exportIterationsValue').value = matchLive ? `${state.iterations} · LIVE` : state.exportIterations;
     }
   }
 
-  const exportHistoryStorageKey = 'quarticPulseExportHistoryV1';
-  let exportHistory = [];
+  function syncExportMatchLive(checked) {
+    state.exportMatchLive = Boolean(checked);
+    renderExportMathParity();
+  }
+
+  function syncExportSupersampling(checked) {
+    state.exportSupersampling = Boolean(checked);
+  }
+
+  function coordinateExportSettingsChange(kind, payload = {}) {
+    return exportSettingsCoordinatorEngine.change(kind, payload, {
+      recommendIterations: applyResolutionIterationRecommendation,
+      syncIterations: syncExportIterations,
+      syncParity: syncExportMatchLive,
+      syncSupersampling: syncExportSupersampling,
+      updateHdrAvailability: updateExportHdrAvailability,
+      refreshPerformance: updateExportPerformanceNote,
+      invalidateBenchmark: invalidateExportBenchmark,
+      refreshEncoder: isObsOutput ? null : refreshExportEncoderStatus,
+      failed: ({ error }) => showToast(error?.message || String(error), true)
+    }).catch(() => {});
+  }
+
+  async function benchmarkSelectedExportSettings() {
+    return exportBenchmarkEngine.run({
+      prepare: async () => {
+        const settings = currentExportSettings();
+        return {
+          width: settings.width,
+          height: settings.height,
+          fps: settings.fps,
+          iterations: settings.effectiveIterations,
+          format: settings.format,
+          visualKind: state.visualStyle === 0 ? 'fractal iteration' : 'visual shader'
+        };
+      },
+      started: async ({ context }) => {
+        exportController.renderBenchmarkState('running', exportPresentationEngine.benchmarkRunningView(context));
+      },
+      benchmarkEncoder: (context) => window.quarticDesktop.benchmarkExportEncoder({
+        format: context.format,
+        width: context.width,
+        height: context.height,
+        fps: context.fps
+      }),
+      estimateRenderFps: (context) => modeledExportRenderFps(context.width, context.height, context.iterations),
+      skipped: async ({ result, renderFps }) => {
+        exportController.renderBenchmarkState('skipped', exportPresentationEngine.benchmarkSkippedView({ result, renderFps }));
+      },
+      completed: async ({ context, result, renderFps, benchmark }) => {
+        exportController.renderBenchmarkState('completed', exportPresentationEngine.benchmarkCompletedView({
+          result,
+          renderFps,
+          benchmark,
+          visualKind: context.visualKind
+        }));
+        lastExportBenchmark = { ...result, encodedFps: benchmark.encoderFps };
+        renderExportAdvisor(lastExportBenchmark);
+        showToast('Export readiness benchmark complete');
+      },
+      failed: async ({ error }) => {
+        exportController.renderBenchmarkState('failed', exportPresentationEngine.benchmarkFailedView(error));
+        showToast(error.message, true);
+      },
+      restored: async () => exportController.renderBenchmarkState('restored')
+    }).catch(() => {});
+  }
 
   function loadExportHistory() {
-    try {
-      const stored = JSON.parse(localStorage.getItem(exportHistoryStorageKey) || '[]');
-      exportHistory = Array.isArray(stored) ? stored.slice(0, 30) : [];
-    } catch (_) { exportHistory = []; }
+    exportHistoryEngine.load();
     renderExportHistory();
   }
 
   function renderExportHistory() {
-    const list = $('#exportHistoryList');
-    list.replaceChildren();
-    if (!exportHistory.length) {
-      const empty = document.createElement('p');
-      empty.textContent = 'No completed exports yet.';
-      list.appendChild(empty);
-      return;
+    exportController.renderHistory(exportPresentationEngine.historyView(exportHistoryEngine.list(12)));
+  }
+
+  function clearExportHistory() {
+    return exportHistoryActionEngine.clear({
+      confirm: () => window.confirm('Clear the recent export history? Exported video files will not be deleted.'),
+      completed: renderExportHistory,
+      failed: ({ error }) => showToast(error?.message || String(error), true)
+    }).catch(() => {});
+  }
+
+  function handleExportHistoryAction(action, id) {
+    return exportHistoryActionEngine.perform(action, id, {
+      open: (outputPath) => window.quarticDesktop.openExport(outputPath),
+      reveal: (outputPath) => window.quarticDesktop.revealExport(outputPath),
+      failed: ({ error }) => showToast(error?.message || String(error), true)
+    }).catch(() => {});
+  }
+
+  function completeExportResult(result, details = {}, presentCompleted) {
+    const settings = currentExportSettings();
+    return exportResultWorkflowEngine.complete(result, {
+      details,
+      defaults: {
+        mode: exportSessionEngine.mode || 'offline',
+        width: settings.width,
+        height: settings.height,
+        fps: settings.fps
+      },
+      historyChanged: renderExportHistory,
+      progressCompleted: ({ outputPath }) => exportProgressCoordinator.complete(outputPath),
+      presentCompleted,
+      notify: ({ message, error }) => showToast(message, error)
+    });
+  }
+
+  function refreshRecoverableExports() {
+    return exportHistoryActionEngine.refreshRecoveries({
+      load: () => window.quarticDesktop.getRecoverableExports(),
+      completed: ({ recoveries }) => exportController.renderRecoveries(exportPresentationEngine.recoveryView(recoveries)),
+      failed: ({ recoveries }) => exportController.renderRecoveries(exportPresentationEngine.recoveryView(recoveries))
+    });
+  }
+
+  function handleExportRecoveryAction(action, id) {
+    if (state.exporting) return;
+    if (action === 'recover') {
+      recoverInterruptedExport(id);
+    } else if (window.confirm('Discard this interrupted export and its temporary master?')) {
+      exportRecoveryEngine.discard(id, {
+        discard: (recoveryId) => window.quarticDesktop.discardRecoverableExport(recoveryId),
+        completed: async () => {
+          await refreshRecoverableExports();
+          showToast('Interrupted export discarded');
+        },
+        failed: ({ error }) => showToast(error?.message || String(error), true)
+      }).catch(() => {});
     }
-    for (const entry of exportHistory.slice(0, 12)) {
-      const row = document.createElement('div');
-      row.className = 'export-history-entry';
-      const details = document.createElement('div');
-      const name = document.createElement('strong');
-      const meta = document.createElement('small');
-      name.textContent = exportedFileName(entry.outputPath);
-      meta.textContent = `${String(entry.mode || 'offline').toUpperCase()} · ${entry.width || '?'}×${entry.height || '?'} · ${entry.fps || '?'} FPS · ${formatByteSize(entry.sizeBytes)} · ${entry.encoderLabel || 'encoder unknown'}`;
-      details.append(name, meta);
-      const actions = document.createElement('div');
-      actions.className = 'export-entry-actions';
-      for (const [action, label] of [['open', 'OPEN'], ['reveal', 'FOLDER']]) {
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.dataset.exportAction = action;
-        button.dataset.exportId = entry.id;
-        button.textContent = label;
-        actions.appendChild(button);
+  }
+
+  function recoverInterruptedExport(id) {
+    return exportRecoveryEngine.recover(id, {
+      started: () => {
+        state.exporting = true;
+        exportResultWorkflowEngine.reset();
+        exportController.renderRecoveryState('preparing', exportPresentationEngine.recoveryPreparingView());
+        exportSessionEngine.startProgress();
+      },
+      recover: (recoveryId) => window.quarticDesktop.recoverExport(recoveryId),
+      completed: ({ result }) => completeExportResult(
+        result,
+        { mode: 'recovered' },
+        () => exportController.renderRecoveryState('completed', exportPresentationEngine.recoveryCompletedView())
+      ),
+      failed: ({ error }) => {
+        exportController.renderRecoveryState('failed', exportPresentationEngine.recoveryFailedView(error));
+        showToast(`Recovery failed: ${error?.message || String(error)}`, true);
+      },
+      restored: async ({ completed }) => {
+        state.exporting = false;
+        exportController.renderRecoveryState('restored', { completed });
+        await refreshRecoverableExports();
       }
-      row.append(details, actions);
-      list.appendChild(row);
-    }
-  }
-
-  function recordExportResult(result, details = {}) {
-    if (!result?.outputPath) return;
-    const [width, height] = $('#resolution').value.split('x').map(Number);
-    const entry = {
-      id: crypto.randomUUID(),
-      completedAt: new Date().toISOString(),
-      outputPath: result.outputPath,
-      sizeBytes: Number(result.sizeBytes) || 0,
-      encoderLabel: result.encoderLabel || details.encoderLabel || '',
-      mode: details.mode || exportSession?.mode || 'offline',
-      width: details.width || width,
-      height: details.height || height,
-      fps: details.fps || Number($('#fps').value),
-      duration: details.duration || 0,
-      partial: Boolean(result.partial),
-      recovered: Boolean(result.recovered)
-    };
-    exportHistory.unshift(entry);
-    exportHistory = exportHistory.slice(0, 30);
-    localStorage.setItem(exportHistoryStorageKey, JSON.stringify(exportHistory));
-    renderExportHistory();
-  }
-
-  async function refreshRecoverableExports() {
-    const recoveries = await window.quarticDesktop.getRecoverableExports().catch(() => []);
-    const card = $('#exportRecoveryCard');
-    const list = $('#exportRecoveryList');
-    list.replaceChildren();
-    card.hidden = !recoveries.length;
-    for (const entry of recoveries) {
-      const row = document.createElement('div');
-      row.className = 'export-recovery-entry';
-      const details = document.createElement('div');
-      const name = document.createElement('strong');
-      const meta = document.createElement('small');
-      name.textContent = exportedFileName(entry.outputPath);
-      meta.textContent = `${entry.width}×${entry.height} · ${entry.fps} FPS · ${entry.encodedFrames || 0} saved frames · ${formatByteSize(entry.tempBytes)}`;
-      details.append(name, meta);
-      const actions = document.createElement('div');
-      actions.className = 'export-entry-actions';
-      for (const [action, label] of [['recover', 'FINISH'], ['discard', 'DISCARD']]) {
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.dataset.recoveryAction = action;
-        button.dataset.recoveryId = entry.id;
-        button.textContent = label;
-        actions.appendChild(button);
-      }
-      row.append(details, actions);
-      list.appendChild(row);
-    }
-  }
-
-  async function recoverInterruptedExport(id) {
-    state.exporting = true;
-    exportSession = { id, mode: 'offline' };
-    document.body.classList.add('exporting', 'hide-export-preview');
-    setStageExportMode('offline');
-    setExportActionButtons(false, false);
-    beginExportProgress('Recovering interrupted export | overall 0%', 'Inspecting saved frames…');
-    $('#stageRenderNote').textContent = 'Quartic Pulse is validating the saved master and finishing the interrupted video.';
-    try {
-      const result = await window.quarticDesktop.recoverExport(id);
-      recordExportResult(result, { mode: 'recovered' });
-      completeExportProgress(result.outputPath);
-      $('#revealButton').hidden = false;
-      state.exportedPath = result.outputPath;
-      showToast(`Recovered export complete: ${result.outputPath}`);
-    } finally {
-      state.exporting = false;
-      exportSession = null;
-      document.body.classList.remove('exporting', 'hide-export-preview');
-      await refreshRecoverableExports();
-    }
+    }).catch(() => {});
   }
 
   let obsOutputOpen = false;
@@ -4427,7 +4800,6 @@
   const creativeToolsStorageKey = 'quarticPulseCreativeToolsV1';
   let cameraBookmarks = [];
   let randomizerUndoSnapshot = null;
-  let quickCaptureActive = false;
   let performanceAnalysis = null;
   let performanceReport = null;
   let pendingScreenshotRequest = null;
@@ -4668,55 +5040,49 @@
   }
 
   async function captureQuickClip() {
-    if (quickCaptureActive || state.exporting) return showToast('A recording is already active.', true);
-    const duration = clamp(Number($('#quickClipDuration').value) || 10, 5, 15);
-    const session = await window.quarticDesktop.beginExport({ suggestedName: `${state.audioName || 'Quartic-Pulse'}-clip`, format: 'mp4' });
-    if (!session) return;
-    let recorder;
-    let captureStream;
-    let progressTimer;
-    try {
-      createAudioGraph();
-      await audioContext.resume();
-      const canvasStream = canvas.captureStream(60);
-      captureStream = new MediaStream([...canvasStream.getVideoTracks(), ...recordingDestination.stream.getAudioTracks()]);
-      recorder = new MediaRecorder(captureStream, { mimeType: chooseRecorderType(), videoBitsPerSecond: Math.round(canvas.width * canvas.height * 60 * .1) });
-      let queue = Promise.resolve();
-      quickCaptureActive = true;
-      $('#quickCaptureStatus').textContent = `RECORDING ${duration}s`;
-      $('#captureClipButton').disabled = true;
-      const startedAt = performance.now();
-      progressTimer = setInterval(() => {
-        $('#quickCaptureProgress').style.width = `${clamp((performance.now() - startedAt) / (duration * 10), 0, 100)}%`;
-      }, 100);
-      recorder.addEventListener('dataavailable', (event) => {
-        if (!event.data.size) return;
-        queue = queue.then(async () => window.quarticDesktop.appendExport(session.id, await event.data.arrayBuffer()));
-      });
-      await new Promise((resolve, reject) => {
-        recorder.addEventListener('error', (event) => reject(event.error || new Error('Quick recorder failed.')), { once: true });
-        recorder.addEventListener('stop', resolve, { once: true });
-        recorder.start(1000);
-        setTimeout(() => recorder.state !== 'inactive' && recorder.stop(), duration * 1000);
-      });
-      clearInterval(progressTimer);
-      await queue;
-      const result = await window.quarticDesktop.finishExport(session.id);
-      $('#quickCaptureProgress').style.width = '100%';
-      $('#quickCaptureStatus').textContent = 'SAVED';
-      showToast(result.warning || `Quick clip saved: ${result.outputPath}`, Boolean(result.warning));
-    } catch (error) {
-      if (recorder?.state !== 'inactive') recorder.stop();
-      await window.quarticDesktop.abortExport(session.id).catch(() => {});
-      $('#quickCaptureStatus').textContent = 'FAILED';
-      throw error;
-    } finally {
-      clearInterval(progressTimer);
-      quickCaptureActive = false;
-      captureStream?.getVideoTracks().forEach((track) => track.stop());
-      $('#captureClipButton').disabled = false;
-      setTimeout(() => { if (!quickCaptureActive) $('#quickCaptureProgress').style.width = '0%'; }, 1200);
+    if (exportQuickClipWorkflowEngine.diagnostics.active || state.exporting) {
+      return showToast('A recording is already active.', true);
     }
+    return exportQuickClipWorkflowEngine.run({
+      duration: $('#quickClipDuration').value,
+      beginSession: () => window.quarticDesktop.beginExport({
+        suggestedName: `${state.audioName || 'Quartic-Pulse'}-clip`,
+        format: 'mp4'
+      }),
+      prepare: async () => {
+        createAudioGraph();
+        await audioContext.resume();
+      },
+      createCapture: ({ session }) => exportLiveCaptureEngine.createCapture({
+        canvas,
+        audioStream: recordingDestination.stream,
+        width: canvas.width,
+        height: canvas.height,
+        fps: 60,
+        onChunk: (bytes) => window.quarticDesktop.appendExport(session.id, bytes)
+      }),
+      started: ({ duration }) => {
+        $('#quickCaptureStatus').textContent = `RECORDING ${duration}s`;
+        $('#captureClipButton').disabled = true;
+      },
+      progress: ({ progress }) => {
+        $('#quickCaptureProgress').style.width = `${Math.round(progress * 1000) / 10}%`;
+      },
+      finalize: (sessionId) => window.quarticDesktop.finishExport(sessionId),
+      abort: (sessionId) => window.quarticDesktop.abortExport(sessionId),
+      completed: ({ result }) => {
+        $('#quickCaptureProgress').style.width = '100%';
+        $('#quickCaptureStatus').textContent = 'SAVED';
+        showToast(result.warning || `Quick clip saved: ${result.outputPath}`, Boolean(result.warning));
+      },
+      failed: () => { $('#quickCaptureStatus').textContent = 'FAILED'; },
+      restored: () => {
+        $('#captureClipButton').disabled = false;
+        setTimeout(() => {
+          if (!exportQuickClipWorkflowEngine.diagnostics.active) $('#quickCaptureProgress').style.width = '0%';
+        }, 1200);
+      }
+    });
   }
 
   function initializeCreativeTools() {
@@ -4865,8 +5231,6 @@
     const numericInput = $('#iterations').closest('.slider-group')?.querySelector('.numeric-value-input');
     if (numericInput) numericInput.max = state.unleashedMode ? '800' : '500';
     $('#unleashedExportDetail').disabled = !state.unleashedMode;
-    const liveOption = $('#exportMode').querySelector('option[value="live"]');
-    liveOption.disabled = !state.unleashedMode;
     if (!state.unleashedMode) {
       if (Number($('#iterations').value) > 500) {
         $('#iterations').value = '500';
@@ -4874,9 +5238,8 @@
         $('#iterations')._syncNumericValue?.();
       }
       if (Number($('#exportDetail').value) > 2.3) $('#exportDetail').value = '2.3';
-      if ($('#exportMode').value === 'live') $('#exportMode').value = 'offline';
     }
-    updateExportPerformanceNote();
+    coordinateExportSettingsChange('unleashed');
     persistPerformanceMode();
     if (announce) showToast(state.unleashedMode
       ? 'Unleashed mode enabled · raised shader limits and live export unlocked'
@@ -5184,63 +5547,12 @@
   }
 
   function activateTab(tabName) {
-    if (tabName === 'live') tabName = 'show';
-    const musicTabNames = ['music', 'playlist', 'analysis', 'frequency-color'];
-    const appearanceTabNames = ['appearance', 'reactivity', 'dimensional', 'folding', 'mapping'];
-    const liveTabNames = ['show', 'composer', 'controls', 'camera', 'tools', 'stream'];
-    const systemTabNames = ['system', 'reports', 'about'];
-    if (state.interfaceMode === 'basic' && ['reactivity', 'dimensional', 'folding', 'mapping'].includes(tabName)) {
-      tabName = 'appearance';
-    }
-    const inMusicGroup = musicTabNames.includes(tabName);
-    const inAppearanceGroup = appearanceTabNames.includes(tabName);
-    const inLiveGroup = liveTabNames.includes(tabName);
-    const inSystemGroup = systemTabNames.includes(tabName);
-    document.body.classList.toggle('appearance-active', inAppearanceGroup);
-    const topLevelTab = inMusicGroup ? 'music' : (inAppearanceGroup ? 'appearance' : (inLiveGroup ? 'live' : (inSystemGroup ? 'system' : tabName)));
-    document.querySelectorAll('.settings-tab').forEach((button) => {
-      const active = button.dataset.tab === topLevelTab;
-      button.classList.toggle('active', active);
-      button.setAttribute('aria-selected', String(active));
-    });
-    const musicSubtabs = document.querySelector('.music-subtabs');
-    musicSubtabs.hidden = !inMusicGroup;
-    document.querySelectorAll('.music-subtab').forEach((button) => {
-      const active = inMusicGroup && button.dataset.musicTab === tabName;
-      button.classList.toggle('active', active);
-      button.setAttribute('aria-selected', String(active));
-    });
-    const appearanceSubtabs = document.querySelector('.appearance-subtabs');
-    appearanceSubtabs.hidden = !inAppearanceGroup;
-    document.querySelectorAll('.appearance-subtab').forEach((button) => {
-      const active = inAppearanceGroup && button.dataset.appearanceTab === tabName;
-      button.classList.toggle('active', active);
-      button.setAttribute('aria-selected', String(active));
-    });
-    const liveSubtabs = document.querySelector('.live-subtabs');
-    liveSubtabs.hidden = !inLiveGroup;
-    document.querySelectorAll('.live-subtab').forEach((button) => {
-      const active = inLiveGroup && button.dataset.liveTab === tabName;
-      button.classList.toggle('active', active);
-      button.setAttribute('aria-selected', String(active));
-    });
-    const systemSubtabs = document.querySelector('.system-subtabs');
-    systemSubtabs.hidden = !inSystemGroup;
-    document.querySelectorAll('.system-subtab').forEach((button) => {
-      const active = inSystemGroup && button.dataset.systemTab === tabName;
-      button.classList.toggle('active', active);
-      button.setAttribute('aria-selected', String(active));
-    });
-    document.querySelectorAll('.tab-panel').forEach((panel) => {
-      const active = panel.dataset.tabPanel === tabName;
-      panel.classList.toggle('active', active);
-      if (active) panel.scrollTop = 0;
-    });
+    workspaceShell.activate(tabName, state.interfaceMode);
   }
 
   function updateVisualStyleOptions() {
-    const names = ['Fractal', 'Spectrum Bars', 'Radial Spectrum', 'Pulse Rings', 'Waveform Field', '3D Mandelbulb', 'Mainframe Room'];
-    document.querySelectorAll('[data-visual-style]').forEach((button) => {
+    const activeStyle = visualCatalog.get(state.visualStyle);
+    document.querySelectorAll('#visualStylePicker [data-visual-style]').forEach((button) => {
       const active = Number(button.dataset.visualStyle) === state.visualStyle;
       button.classList.toggle('active', active);
       button.setAttribute('aria-checked', String(active));
@@ -5252,7 +5564,7 @@
     $('#fractalType').disabled = conventional;
     $('#fractalEquationControl').classList.toggle('control-disabled', conventional);
     const preset = fractalPresets[state.fractalType] || fractalPresets[0];
-    $('#formulaLabel').textContent = state.visualStyle === 5 ? 'POWER-4 · 3D DE' : (conventional ? names[state.visualStyle].toUpperCase() : preset.formula);
+    $('#formulaLabel').textContent = activeStyle.formulaLabel || (conventional ? activeStyle.name.toUpperCase() : preset.formula);
   }
 
   const interfaceModeStorageKey = 'quarticPulseInterfaceModeV1';
@@ -5261,23 +5573,18 @@
     const mode = requestedMode === 'advanced' ? 'advanced' : 'basic';
     state.interfaceMode = mode;
     document.body.dataset.interfaceMode = mode;
-    document.querySelectorAll('[data-interface-mode]').forEach((button) => {
-      const active = button.dataset.interfaceMode === mode;
-      button.classList.toggle('active', active);
-      button.setAttribute('aria-pressed', String(active));
-    });
-    $('#interfaceModeDescription').textContent = mode === 'advanced'
-      ? 'Fine tuning, equation controls, and music mapping'
-      : 'Visuals, presets, colors, and quick controls';
+    workspaceShell.syncInterfaceMode(mode);
     const basic = mode === 'basic';
     document.querySelectorAll('.advanced-ui-only, .advanced-ui-control').forEach((element) => {
       element.hidden = basic;
       if (basic && element.matches('details')) element.open = false;
     });
-    if (basic && document.querySelector('.tab-panel.active')?.dataset.tabPanel !== 'appearance'
-      && ['reactivity', 'dimensional', 'folding', 'mapping'].includes(document.querySelector('.tab-panel.active')?.dataset.tabPanel)) {
-      activateTab('appearance');
+    if (basic && $('#videoFormat')?.value === 'av1_quality') {
+      $('#videoFormat').value = 'gpu_auto';
+      coordinateExportSettingsChange('format');
     }
+    const activeTab = document.querySelector('.tab-panel.active')?.dataset.tabPanel || 'music';
+    activateTab(workspaceShell.normalizeTab(activeTab, mode));
     if (persist) {
       try { localStorage.setItem(interfaceModeStorageKey, mode); } catch (_) { /* Storage is optional. */ }
     }
@@ -5287,10 +5594,9 @@
     let mode = 'basic';
     try { mode = localStorage.getItem(interfaceModeStorageKey) || mode; } catch (_) { /* Use Basic mode. */ }
     setInterfaceMode(mode, false);
-    document.querySelector('.interface-mode-switch').addEventListener('click', (event) => {
-      const button = event.target.closest('[data-interface-mode]');
-      if (!button || button.dataset.interfaceMode === state.interfaceMode) return;
-      setInterfaceMode(button.dataset.interfaceMode);
+    workspaceShell.bindInterfaceMode((nextMode) => {
+      if (nextMode === state.interfaceMode) return;
+      setInterfaceMode(nextMode);
       showToast(`${state.interfaceMode === 'advanced' ? 'Advanced' : 'Basic'} controls enabled`);
     });
   }
@@ -5539,7 +5845,7 @@
     }
     applyControlDefaults({ flow: .28, motion: .85, reactivity: .9 });
     showToast(state.visualStyle === 6
-      ? 'Mainframe Room quick controls reset'
+      ? 'Data Horizon quick controls reset'
       : 'Waveform Field quick controls reset');
   }
 
@@ -5674,7 +5980,7 @@
       setCustomColor(index, state.customColors[index].map((value) => value * 255));
     }
     $('#resetCustomPaletteButton').addEventListener('click', () => {
-      const defaults = [[20, 15, 45], [123, 44, 255], [241, 75, 203], [92, 245, 220]];
+      const defaults = [[9, 17, 37], [32, 70, 110], [99, 85, 142], [107, 168, 181]];
       defaults.forEach((rgb, index) => setCustomColor(index, rgb));
       showToast('Custom palette reset to default colors');
     });
@@ -5697,9 +6003,9 @@
     'bulbPower', 'bulbDetail', 'bulbAudio', 'bulbOrbit', 'bulbFold', 'bulbGlow', 'bulbCamera',
     'zoom', 'flow', 'autoReactivity', 'reactivity', 'motion', 'spin', 'equationSmoothing', 'equationMod',
     'adaptiveQuality', 'beatPulse', 'autoDrift',
-    'iterations', 'resolution', 'fps', 'videoFormat', 'exportDetail', 'showExportPreview', 'exportCompleteSound',
+    'iterations', 'resolution', 'exportIterations', 'fps', 'videoFormat', 'exportDetail', 'exportMatchLive', 'exportSupersampling', 'exportHdrOutput', 'showExportPreview', 'exportCompleteSound',
     'obsResolution', 'obsFps', 'obsAlwaysOnTop', 'obsChromaKey', 'obsChromaThreshold',
-    'musicPersonality', 'songDirectorStyle', 'songDirectorBehavior', 'songDirectorIntensity'
+    'musicPersonality', 'songDirectorStyle', 'songDirectorBehavior', 'songDirectorTransition', 'songDirectorIntensity'
   ];
   let savedProfiles = [];
 
@@ -5737,73 +6043,27 @@
   }
 
   function validProfile(profile) {
-    return Boolean(profile
-      && typeof profile === 'object'
-      && typeof profile.name === 'string'
-      && ['colors', 'settings'].includes(profile.kind)
-      && profile.data
-      && typeof profile.data === 'object');
+    return performanceShowDataEngine.isValidProfile(profile);
   }
 
   function loadSavedProfiles() {
-    try {
-      const parsed = JSON.parse(localStorage.getItem(profileStorageKey) || '[]');
-      savedProfiles = Array.isArray(parsed) ? parsed.filter(validProfile).slice(0, 100) : [];
-    } catch (_) {
-      savedProfiles = [];
-    }
+    savedProfiles = performanceShowDataEngine.parseProfiles(localStorage.getItem(profileStorageKey) || '[]');
   }
 
   function persistSavedProfiles() {
-    localStorage.setItem(profileStorageKey, JSON.stringify(savedProfiles));
+    localStorage.setItem(profileStorageKey, performanceShowDataEngine.serializeProfiles(savedProfiles));
   }
 
   function setProfileStatus(message) {
-    $('#profileStatus').textContent = message;
+    profileManagerController.setStatus(message);
   }
 
   function selectedSavedProfile() {
-    const id = $('#savedProfileSelect').value;
-    return savedProfiles.find((profile) => profile.id === id) || null;
+    return profileManagerController.selectedProfile();
   }
 
   function renderSavedProfiles(preferredId = '') {
-    const select = $('#savedProfileSelect');
-    const previousId = preferredId || select.value;
-    const query = $('#profileSearch')?.value.trim().toLowerCase() || '';
-    const visibleProfiles = savedProfiles
-      .filter((profile) => !query || profile.name.toLowerCase().includes(query) || profile.kind.includes(query))
-      .sort((a, b) => Number(Boolean(b.favorite)) - Number(Boolean(a.favorite)) || String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')));
-    select.replaceChildren();
-    if (!visibleProfiles.length) {
-      const option = document.createElement('option');
-      option.value = '';
-      option.textContent = query ? 'No matching profiles' : 'No saved profiles';
-      select.appendChild(option);
-    } else {
-      for (const profile of visibleProfiles) {
-        const option = document.createElement('option');
-        option.value = profile.id;
-        option.textContent = `${profile.favorite ? '★ ' : ''}${profile.kind === 'colors' ? 'COLOR' : 'FULL'} · ${profile.name}`;
-        select.appendChild(option);
-      }
-      select.value = visibleProfiles.some((profile) => profile.id === previousId) ? previousId : visibleProfiles[0].id;
-    }
-    const hasSelection = Boolean(selectedSavedProfile());
-    $('#applyProfileButton').disabled = !hasSelection;
-    $('#favoriteProfileButton').disabled = !hasSelection;
-    $('#deleteProfileButton').disabled = !hasSelection;
-    $('#exportProfileButton').disabled = !hasSelection;
-    if (hasSelection) {
-      const profile = selectedSavedProfile();
-      $('#favoriteProfileButton').textContent = `${profile.favorite ? '★' : '☆'} FAVORITE`;
-      setProfileStatus(`${profile.kind === 'colors' ? 'Color Palette' : 'Full Visual Settings'} · saved ${new Date(profile.updatedAt || profile.createdAt).toLocaleString()}`);
-    } else {
-      $('#favoriteProfileButton').textContent = '☆ FAVORITE';
-      setProfileStatus(query ? 'No saved profile matches this search.' : 'Profiles are saved locally as JSON-compatible data.');
-    }
-    renderShowProfileOptions();
-    renderObsProfileOptions();
+    return profileManagerController.render(preferredId);
   }
 
   function applyControlValues(values, allowedIds) {
@@ -5901,15 +6161,14 @@
   }
 
   function quickSaveCurrentVisualProfile() {
-    const visualNames = ['Fractal', 'Spectrum Bars', 'Radial Spectrum', 'Pulse Rings', 'Waveform Field', '3D Mandelbulb', 'Mainframe Room'];
+    const visualNames = ['Fractal', 'Spectrum Bars', 'Radial Spectrum', 'Pulse Rings', 'Waveform Field', '3D Mandelbulb', 'Data Horizon'];
     const stamp = new Date().toISOString().replace('T', ' ').slice(0, 19).replaceAll(':', '-');
     $('#profileName').value = `${visualNames[state.visualStyle] || visualNames[0]} · ${stamp}`.slice(0, 60);
     $('#profileKind').value = 'settings';
     saveCurrentProfile();
   }
 
-  async function exportSelectedProfile() {
-    const profile = selectedSavedProfile();
+  async function exportSelectedProfile(profile = selectedSavedProfile()) {
     if (!profile) return;
     const documentData = {
       application: profileApplication,
@@ -5953,92 +6212,43 @@
     showToast(`${name} imported`);
   }
 
+  function favoriteSavedProfile(profile) {
+    if (!profile) return;
+    profile.favorite = !profile.favorite;
+    profile.updatedAt = new Date().toISOString();
+    persistSavedProfiles();
+    renderSavedProfiles(profile.id);
+  }
+
+  function deleteSavedProfile(profile) {
+    if (!profile || !window.confirm(`Delete the saved profile "${profile.name}"?`)) return;
+    savedProfiles = savedProfiles.filter((item) => item.id !== profile.id);
+    persistSavedProfiles();
+    renderSavedProfiles();
+    showToast(`${profile.name} deleted`);
+  }
+
   function initializeProfileManager() {
     loadSavedProfiles();
-    renderSavedProfiles();
-    $('#profileSearch').addEventListener('input', () => renderSavedProfiles());
-    $('#savedProfileSelect').addEventListener('change', () => renderSavedProfiles($('#savedProfileSelect').value));
-    $('#saveProfileButton').addEventListener('click', () => {
-      try { saveCurrentProfile(); }
-      catch (error) { showToast(`Profile could not be saved: ${error.message}`, true); }
-    });
-    $('#quickSaveProfileButton').addEventListener('click', () => {
-      try { quickSaveCurrentVisualProfile(); }
-      catch (error) { showToast(`Preset could not be saved: ${error.message}`, true); }
-    });
-    $('#resetActiveVisualButton').addEventListener('click', resetActiveVisual);
-    $('#applyProfileButton').addEventListener('click', () => {
-      try { applySavedProfile(selectedSavedProfile()); }
-      catch (error) { showToast(error.message, true); }
-    });
-    $('#favoriteProfileButton').addEventListener('click', () => {
-      const profile = selectedSavedProfile();
-      if (!profile) return;
-      profile.favorite = !profile.favorite;
-      profile.updatedAt = new Date().toISOString();
-      persistSavedProfiles();
-      renderSavedProfiles(profile.id);
-    });
-    $('#deleteProfileButton').addEventListener('click', () => {
-      const profile = selectedSavedProfile();
-      if (!profile || !window.confirm(`Delete the saved profile "${profile.name}"?`)) return;
-      savedProfiles = savedProfiles.filter((item) => item.id !== profile.id);
-      persistSavedProfiles();
-      renderSavedProfiles();
-      showToast(`${profile.name} deleted`);
-    });
-    $('#exportProfileButton').addEventListener('click', () => exportSelectedProfile().catch((error) => showToast(error.message, true)));
-    $('#importProfileButton').addEventListener('click', () => $('#importProfileInput').click());
-    $('#importProfileInput').addEventListener('change', async (event) => {
-      try { await importProfileFile(event.target.files[0]); }
-      catch (error) { showToast(`Import failed: ${error.message}`, true); }
-      finally { event.target.value = ''; }
-    });
+    profileManagerController.initialize();
   }
 
-  const performancePackageApplication = 'quartic-pulse-performance';
-  const performancePackageSchemaVersion = 1;
-  const performancePackageAppVersion = '0.29.1';
   const pendingPerformanceMapStorageKey = 'quarticPulsePendingPerformanceMapV1';
 
-  function stableStringify(value) {
-    if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
-    if (value && typeof value === 'object') {
-      return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${stableStringify(value[key])}`).join(',')}}`;
-    }
-    return JSON.stringify(value);
-  }
-
   function jsonSafeClone(value) {
-    return JSON.parse(JSON.stringify(value));
+    return performancePackageEngine.clone(value);
   }
 
   function cleanPackageText(value, maximum, fallback = '') {
-    return String(value ?? '').replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, maximum) || fallback;
+    return performancePackageEngine.cleanText(value, maximum, fallback);
   }
 
   function performanceTrackIdentity(item = currentPlaylistItem(), map = activeSongMap) {
-    if (!item?.file) return null;
-    const fileName = cleanPackageText(item.file.name, 240, 'Unknown audio file');
-    const duration = Number.isFinite(Number(map?.duration)) ? Number(Number(map.duration).toFixed(3)) : 0;
-    const portableSource = [fileName.toLowerCase(), Number(item.file.size) || 0, duration.toFixed(3)].join('|');
-    return {
-      displayName: cleanPackageText(item.name, 160, fileName.replace(/\.[^.]+$/, '')),
-      fileName,
-      size: Math.max(0, Number(item.file.size) || 0),
-      lastModified: Math.max(0, Number(item.file.lastModified) || 0),
-      duration,
-      fingerprint: `TRACK-${hashSongMapText(portableSource).toUpperCase()}`
-    };
+    return performancePackageEngine.trackIdentity(item, map);
   }
 
   function performanceTrackMatches(identity, item = currentPlaylistItem()) {
-    if (!identity || !item?.file) return false;
-    const nameMatches = String(identity.fileName || '').toLowerCase() === String(item.file.name || '').toLowerCase();
-    const sizeMatches = Number(identity.size) > 0 && Number(identity.size) === Number(item.file.size);
-    const duration = Number(identity.duration) || 0;
-    const durationMatches = !duration || !Number.isFinite(audio.duration) || Math.abs(duration - audio.duration) <= 1.25;
-    return nameMatches && sizeMatches && durationMatches;
+    return performancePackageEngine.trackMatches(identity, item, audio.duration);
   }
 
   function currentDirectorCuePackage() {
@@ -6048,10 +6258,7 @@
   }
 
   function portableSongMap() {
-    if (!activeSongMap || !validSongMap(activeSongMap)) return null;
-    const map = jsonSafeClone(activeSongMap);
-    delete map.key;
-    return map;
+    return performancePackageEngine.portableSongMap(activeSongMap);
   }
 
   function createPerformancePackage() {
@@ -6059,8 +6266,7 @@
       state.audioName ? `${state.audioName} Performance` : 'Quartic Pulse Performance');
     const creator = cleanPackageText($('#performancePackageCreator').value, 80, 'Quartic Pulse Creator');
     const notes = cleanPackageText($('#performancePackageNotes').value, 500);
-    const referencedIds = new Set(state.showSequence.map((entry) => entry.profileId));
-    const showProfiles = savedProfiles.filter((profile) => referencedIds.has(profile.id)).map(jsonSafeClone);
+    const showProfiles = performancePackageEngine.referencedProfiles(state.showSequence, savedProfiles);
     const currentVisual = {
       id: 'performance-current-visual',
       name: title,
@@ -6086,19 +6292,13 @@
         enabled: state.songDirectorEnabled,
         style: state.songDirectorStyle,
         behavior: state.songDirectorBehavior,
+        transition: state.songDirectorTransition,
         intensity: Number(state.songDirectorIntensity.toFixed(4)),
         map: portableSongMap(),
         cueOverrides: currentDirectorCuePackage()
       }
     };
-    return {
-      application: performancePackageApplication,
-      schemaVersion: performancePackageSchemaVersion,
-      appVersion: performancePackageAppVersion,
-      exportedAt: new Date().toISOString(),
-      fingerprint: `QP-${hashSongMapText(stableStringify(packageData)).toUpperCase()}`,
-      performance: packageData
-    };
+    return performancePackageEngine.createDocument(packageData);
   }
 
   function setPerformancePackageStatus(message) {
@@ -6108,7 +6308,7 @@
 
   async function exportPerformancePackage() {
     const documentData = createPerformancePackage();
-    const suggestedName = documentData.performance.metadata.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'quartic-pulse-performance';
+    const suggestedName = performancePackageEngine.suggestedFilename(documentData.performance.metadata.title);
     const outputPath = await window.quarticDesktop.exportPerformancePackage(suggestedName, JSON.stringify(documentData, null, 2));
     if (!outputPath) return;
     setPerformancePackageStatus(`${documentData.fingerprint} · Package exported without audio.`);
@@ -6137,9 +6337,8 @@
     activeSongMap = map;
     const cues = performance.director.cueOverrides && typeof performance.director.cueOverrides === 'object'
       ? jsonSafeClone(performance.director.cueOverrides) : {};
-    const overrides = readSongDirectorOverrides().filter((entry) => entry.mapKey !== key);
-    if (Object.keys(cues).length) overrides.unshift({ mapKey: key, updatedAt: new Date().toISOString(), cues });
-    try { localStorage.setItem(songDirectorOverridesStorageKey, JSON.stringify(overrides.slice(0, 20))); }
+    const overrides = songMapDataEngine.replaceOverrideSet(readSongDirectorOverrides(), key, cues);
+    try { localStorage.setItem(songDirectorOverridesStorageKey, JSON.stringify(overrides)); }
     catch (_) { /* Cue restoration is optional if local storage is unavailable. */ }
     try { localStorage.removeItem(pendingPerformanceMapStorageKey); } catch (_) { /* Optional cleanup. */ }
     renderSongMap();
@@ -6161,37 +6360,19 @@
   }
 
   function importPerformanceProfiles(performance) {
-    const imported = Array.isArray(performance?.show?.profiles) ? performance.show.profiles.filter(validProfile).slice(0, 100) : [];
-    const idMap = new Map();
-    const now = new Date().toISOString();
-    const profiles = imported.map((profile, index) => {
-      const id = crypto.randomUUID?.() || `${Date.now()}-${index}-${Math.random()}`;
-      idMap.set(profile.id, id);
-      return {
-        id,
-        name: cleanPackageText(profile.name, 60, `Imported Show Profile ${index + 1}`),
-        kind: profile.kind,
-        createdAt: now,
-        updatedAt: now,
-        data: jsonSafeClone(profile.data)
-      };
-    });
-    savedProfiles = [...profiles, ...savedProfiles].slice(0, 100);
+    const imported = performancePackageEngine.remapImportedShow(performance, savedProfiles);
+    savedProfiles = imported.profiles;
     persistSavedProfiles();
-    const entries = Array.isArray(performance?.show?.entries) ? performance.show.entries : [];
-    state.showSequence = entries.slice(0, 100).map((entry, index) => ({
-      ...serializeShowEntry({ ...entry, profileId: idMap.get(entry.profileId) || '' }),
-      id: crypto.randomUUID?.() || `${Date.now()}-show-${index}`
-    })).filter((entry) => savedProfiles.some((profile) => profile.id === entry.profileId));
-    state.showLoop = performance.show?.loop !== false;
-    state.showShuffle = Boolean(performance.show?.shuffle);
-    state.autoBpm = performance.show?.autoBpm !== false;
-    state.manualBpm = clamp(Number(performance.show?.manualBpm) || 120, 60, 200);
-    state.beatOffsetMs = clamp(Math.round(Number(performance.show?.beatOffsetMs) || 0), -500, 500);
+    state.showSequence = imported.entries;
+    state.showLoop = imported.loop;
+    state.showShuffle = imported.shuffle;
+    state.autoBpm = imported.autoBpm;
+    state.manualBpm = imported.manualBpm;
+    state.beatOffsetMs = imported.beatOffsetMs;
     state.showPlaying = false;
     state.showIndex = -1;
     persistShowSequence();
-    renderSavedProfiles(profiles[0]?.id || '');
+    renderSavedProfiles(imported.importedProfiles[0]?.id || '');
     renderShowSequence();
     $('#showLoop').checked = state.showLoop;
     $('#showShuffle').checked = state.showShuffle;
@@ -6207,15 +6388,7 @@
     if (!file) return;
     if (file.size > 10 * 1024 * 1024) throw new Error('Performance packages must be smaller than 10 MB.');
     const parsed = JSON.parse(await file.text());
-    if (parsed?.application !== performancePackageApplication || Number(parsed?.schemaVersion) !== performancePackageSchemaVersion) {
-      throw new Error('This is not a compatible Quartic Pulse performance package.');
-    }
-    const performance = parsed.performance;
-    if (!performance || typeof performance !== 'object' || !validProfile(performance.currentVisual)) {
-      throw new Error('The performance package is incomplete or damaged.');
-    }
-    const expectedFingerprint = `QP-${hashSongMapText(stableStringify(performance)).toUpperCase()}`;
-    if (parsed.fingerprint !== expectedFingerprint) throw new Error('The package fingerprint does not match its contents.');
+    const { performance, fingerprint: expectedFingerprint } = performancePackageEngine.validateDocument(parsed);
     try { localStorage.removeItem(pendingPerformanceMapStorageKey); } catch (_) { /* Optional cleanup. */ }
     applySavedProfile(performance.currentVisual, { quiet: true });
     importPerformanceProfiles(performance);
@@ -6227,6 +6400,9 @@
     state.songDirectorBehavior = director.behavior === 'auto' || songDirectorBehaviors[director.behavior]
       ? director.behavior
       : state.songDirectorBehavior;
+    state.songDirectorTransition = songDirectorTransitions[director.transition]
+      ? director.transition
+      : state.songDirectorTransition;
     const importedDirectorIntensity = Number(director.intensity);
     state.songDirectorIntensity = Number.isFinite(importedDirectorIntensity)
       ? clamp(importedDirectorIntensity, 0, 1)
@@ -6234,6 +6410,7 @@
     $('#songDirectorEnabled').checked = false;
     $('#songDirectorStyle').value = state.songDirectorStyle;
     $('#songDirectorBehavior').value = state.songDirectorBehavior;
+    $('#songDirectorTransition').value = state.songDirectorTransition;
     $('#songDirectorIntensity').value = String(state.songDirectorIntensity);
     $('#songDirectorIntensity')._syncNumericValue?.();
     $('#songDirectorIntensityValue').value = `${Math.round(state.songDirectorIntensity * 100)}%`;
@@ -6392,6 +6569,8 @@
     const list = $('#modulationRouteList');
     list.replaceChildren();
     for (const mapping of state.modulationMappings) {
+      const amountMinimum = modulationAmountMinimum(mapping.target);
+      const amountIsBipolar = amountMinimum < 0;
       const route = document.createElement('article');
       route.className = `modulation-route${mapping.enabled ? '' : ' disabled'}`;
       route.dataset.mappingId = mapping.id;
@@ -6405,7 +6584,17 @@
           <label>SOURCE<select data-modulation-select="source">${modulationSelectOptions(modulationSources, mapping.source)}</select></label>
           <label>TARGET<select data-modulation-select="target">${modulationSelectOptions(modulationTargets, mapping.target)}</select></label>
         </div>
-        ${modulationControlMarkup('AMOUNT (− / +)', 'amount', mapping.amount, -100, 100, 35, 'Negative values reverse the source response. Positive values add to the target.')}
+        ${modulationControlMarkup(
+          amountIsBipolar ? 'AMOUNT (− / +)' : 'AMOUNT',
+          'amount',
+          mapping.amount,
+          amountMinimum,
+          100,
+          35,
+          amountIsBipolar
+            ? 'Negative values reverse the source response. Positive values add to the target.'
+            : 'Controls how strongly the source increases this target.'
+        )}
         <div class="modulation-route-meter"><i></i></div>
         <details>
           <summary>ADVANCED RESPONSE</summary>
@@ -6428,7 +6617,8 @@
 
   function setModulationField(mapping, field, requestedValue, route) {
     const limits = {
-      amount: [-100, 100], attack: [0, 100], release: [0, 100], floor: [0, 99], ceiling: [1, 100]
+      amount: [modulationAmountMinimum(mapping.target), 100],
+      attack: [0, 100], release: [0, 100], floor: [0, 99], ceiling: [1, 100]
     };
     if (!limits[field]) return;
     let value = Math.round(clamp(Number(requestedValue) || 0, limits[field][0], limits[field][1]));
@@ -6517,10 +6707,16 @@
       }
       const selectField = event.target.dataset.modulationSelect;
       if (selectField === 'source' && Object.hasOwn(modulationSources, event.target.value)) mapping.source = event.target.value;
-      if (selectField === 'target' && Object.hasOwn(modulationTargets, event.target.value)) mapping.target = event.target.value;
+      let targetRangeChanged = false;
+      if (selectField === 'target' && Object.hasOwn(modulationTargets, event.target.value)) {
+        mapping.target = event.target.value;
+        mapping.amount = clamp(mapping.amount, modulationAmountMinimum(mapping.target), 100);
+        targetRangeChanged = true;
+      }
       const title = event.target.closest('.modulation-route').querySelector('.modulation-route-title');
       title.textContent = `${modulationSources[mapping.source].label} → ${modulationTargets[mapping.target].label}`;
       persistModulationMatrix();
+      if (targetRangeChanged) renderModulationRoutes();
     });
     renderModulationRoutes();
   }
@@ -6546,7 +6742,7 @@
     }
     $('#addShowEntryButton').disabled = !savedProfiles.length;
     renderShowSequence();
-    if (composerInitialized) renderShowComposer();
+    if (showComposerController.initialized) renderShowComposer();
   }
 
   function renderShowSequence() {
@@ -6568,7 +6764,7 @@
     });
     $('#showSequenceEmpty').hidden = state.showSequence.length > 0;
     updateShowUi();
-    if (composerInitialized) renderShowComposer();
+    if (showComposerController.initialized) renderShowComposer();
   }
 
   function updateBeatGridUi() {
@@ -6587,21 +6783,13 @@
   }
 
   function initializeShowSequencer() {
-    try {
-      const stored = JSON.parse(localStorage.getItem('quarticPulseShowSequenceV1') || 'null');
-      if (stored && typeof stored === 'object') {
-        state.showSequence = Array.isArray(stored.entries)
-          ? stored.entries.slice(0, 100).map((entry) => ({ ...serializeShowEntry(entry), id: String(entry.id || crypto.randomUUID?.() || Date.now()) }))
-          : [];
-        state.showLoop = stored.loop !== false;
-        state.showShuffle = Boolean(stored.shuffle);
-        state.autoBpm = stored.autoBpm !== false;
-        state.manualBpm = clamp(Number(stored.manualBpm) || 120, 60, 200);
-        state.beatOffsetMs = clamp(Math.round(Number(stored.beatOffsetMs) || 0), -500, 500);
-      }
-    } catch (_) {
-      state.showSequence = [];
-    }
+    const stored = performanceShowDataEngine.parseShowDocument(localStorage.getItem('quarticPulseShowSequenceV1') || 'null');
+    state.showSequence = stored.entries;
+    state.showLoop = stored.loop;
+    state.showShuffle = stored.shuffle;
+    state.autoBpm = stored.autoBpm;
+    state.manualBpm = stored.manualBpm;
+    state.beatOffsetMs = stored.beatOffsetMs;
     $('#showLoop').checked = state.showLoop;
     $('#showShuffle').checked = state.showShuffle;
     $('#autoBpm').checked = state.autoBpm;
@@ -6699,7 +6887,7 @@
       state.showPlaying = false;
       state.showIndex = -1;
       $('#showProgressFill').style.width = '0%';
-      $('#performanceDockProgress').style.width = '0%';
+      performanceController.setProgress(0);
       updateShowUi();
     });
     $('#showLoop').addEventListener('change', (event) => { state.showLoop = event.target.checked; persistShowSequence(); });
@@ -6728,9 +6916,7 @@
       $('#trackName').textContent = 'No audio loaded';
       $('#trackMeta').textContent = 'Drop songs anywhere, choose files, or choose a local folder';
     }
-    $('#timeReadout').textContent = Number.isFinite(audio.duration)
-      ? `${formatTime(audio.currentTime)} / ${formatTime(audio.duration)}`
-      : '00:00 / 00:00';
+    audioController.renderTimeline(audio.currentTime, audio.duration);
   }
 
   function stopLiveAudio({ restoreDeck = true } = {}) {
@@ -6781,8 +6967,7 @@
     resetPulseEvents();
     $('#trackName').textContent = state.liveAudioLabel;
     $('#trackMeta').textContent = 'LIVE WINDOWS AUDIO · visualization only';
-    $('#timelineFill').style.width = '100%';
-    $('#timeReadout').textContent = 'LIVE';
+    audioController.renderLiveTimeline();
     setAudioSourceStatus('LISTENING', true);
     updateTrackControls();
     setPlayState();
@@ -6811,8 +6996,7 @@
     resetPulseEvents();
     $('#trackName').textContent = label;
     $('#trackMeta').textContent = 'WASAPI OUTPUT LOOPBACK · visualization only';
-    $('#timelineFill').style.width = '100%';
-    $('#timeReadout').textContent = 'LIVE';
+    audioController.renderLiveTimeline();
     setAudioSourceStatus('WASAPI LIVE', true);
     updateTrackControls();
     setPlayState();
@@ -6931,25 +7115,92 @@
     return preservedCount;
   }
 
+  async function applyDeckOutput(deviceId, { quiet = false } = {}) {
+    createAudioGraph();
+    const requestedId = String(deviceId || '');
+    if (typeof audioContext?.setSinkId !== 'function') {
+      if (requestedId) throw new Error('Direct playback-output routing is not supported by this Windows audio runtime.');
+      return false;
+    }
+    await audioContext.setSinkId(requestedId);
+    const stinger = $('#exportCompleteStinger');
+    if (typeof stinger?.setSinkId === 'function') await stinger.setSinkId(requestedId).catch(() => {});
+    deckOutputDeviceId = requestedId;
+    if (requestedId) localStorage.setItem(deckOutputStorageKey, requestedId);
+    else localStorage.removeItem(deckOutputStorageKey);
+    const select = $('#deckOutputSelect');
+    if (select && [...select.options].some((option) => option.value === requestedId)) select.value = requestedId;
+    const label = select?.selectedOptions?.[0]?.textContent || (requestedId ? 'Direct output' : 'Windows default');
+    $('#deckOutputStatus').textContent = requestedId ? 'DIRECT' : 'WINDOWS DEFAULT';
+    if (!quiet) showToast(`Music Deck playback routed to ${label}`);
+    return true;
+  }
+
+  async function refreshDeckOutputs({ silent = false } = {}) {
+    if (!navigator.mediaDevices?.enumerateDevices) return 0;
+    try {
+      const devices = (await navigator.mediaDevices.enumerateDevices()).filter((device) => device.kind === 'audiooutput');
+      const select = $('#deckOutputSelect');
+      const group = $('#deckOutputOptions');
+      const options = devices
+        .filter((device) => device.deviceId && device.deviceId !== 'default')
+        .map((device, index) => {
+          const option = document.createElement('option');
+          option.value = device.deviceId;
+          option.textContent = device.label || `Windows playback device ${index + 1}`;
+          return option;
+        });
+      group.replaceChildren(...options);
+      if ([...select.options].some((option) => option.value === deckOutputDeviceId)) {
+        select.value = deckOutputDeviceId;
+        $('#deckOutputStatus').textContent = deckOutputDeviceId ? 'DIRECT' : 'WINDOWS DEFAULT';
+      } else if (deckOutputDeviceId) {
+        select.value = '';
+        $('#deckOutputStatus').textContent = 'SAVED OUTPUT';
+      }
+      if (!silent) showToast(`${devices.length} direct playback ${devices.length === 1 ? 'device' : 'devices'} found`);
+      return devices.length;
+    } catch (error) {
+      if (!silent) showToast(`Playback output scan failed: ${error.message}`, true);
+      return 0;
+    }
+  }
+
   async function refreshAllAudioDevices() {
-    const [outputs, inputs] = await Promise.all([
+    const inputs = await refreshAudioInputs({ requestPermission: true, silent: true });
+    const [outputs, deckOutputs] = await Promise.all([
       refreshWindowsOutputs({ silent: true }),
-      refreshAudioInputs({ requestPermission: true, silent: true })
+      refreshDeckOutputs({ silent: true })
     ]);
-    showToast(`${outputs} playback endpoints and ${inputs} input devices found`);
+    showToast(`${outputs} capture endpoints, ${inputs} inputs, and ${deckOutputs} direct playback devices found`);
+  }
+
+  function currentPlaylistIndex() {
+    if (state.playlistLoadedId == null) return -1;
+    return state.playlist.findIndex((item) => item.id === state.playlistLoadedId);
   }
 
   function currentPlaylistItem() {
-    return state.playlist[state.playlistIndex] || null;
+    const index = currentPlaylistIndex();
+    return index >= 0 ? state.playlist[index] : null;
+  }
+
+  function selectPlaylistRow(index) {
+    if (state.exporting) return showToast('Finish the current export before changing the playlist.', true);
+    if (!state.playlist[index]) return;
+    state.playlistIndex = index;
+    Array.from($('#playlistList').children).forEach((row, rowIndex) => {
+      const selected = rowIndex === index;
+      row.classList.toggle('active', selected);
+      row.setAttribute('aria-selected', String(selected));
+    });
+    updatePlaylistControls();
   }
 
   function updateTrackControls() {
     const hasTrack = Boolean(currentPlaylistItem());
     const deckAvailable = hasTrack && state.audioMode === 'deck';
-    $('#playButton').disabled = !deckAvailable;
-    $('#restartButton').disabled = !deckAvailable;
-    $('#skipBackButton').disabled = !deckAvailable;
-    $('#skipForwardButton').disabled = !deckAvailable;
+    audioController.setAvailability(deckAvailable);
     $('#exportButton').disabled = !hasTrack;
     updateNowPlayingOverlay();
     updatePerformanceDock();
@@ -6958,11 +7209,13 @@
   function updatePlaylistControls() {
     const count = state.playlist.length;
     const selected = state.playlistIndex >= 0 && state.playlistIndex < count;
+    const loadedIndex = currentPlaylistIndex();
+    const navigationIndex = loadedIndex >= 0 ? loadedIndex : state.playlistIndex;
     $('#playlistCount').textContent = `${count} ${count === 1 ? 'TRACK' : 'TRACKS'}`;
     $('#playlistEmpty').hidden = count > 0;
     $('#playlistCurrentLabel').textContent = selected ? `SELECTED ${state.playlistIndex + 1} / ${count}` : 'NOTHING SELECTED';
-    $('#playlistPreviousButton').disabled = !selected || state.playlistIndex <= 0 || state.exporting;
-    $('#playlistNextButton').disabled = !selected || state.playlistIndex >= count - 1 || state.exporting;
+    $('#playlistPreviousButton').disabled = navigationIndex <= 0 || state.exporting;
+    $('#playlistNextButton').disabled = navigationIndex < 0 || navigationIndex >= count - 1 || state.exporting;
     $('#playlistMoveUpButton').disabled = !selected || state.playlistIndex <= 0 || state.exporting;
     $('#playlistMoveDownButton').disabled = !selected || state.playlistIndex >= count - 1 || state.exporting;
     $('#playlistRemoveButton').disabled = !selected || state.exporting;
@@ -6980,9 +7233,12 @@
       const meta = document.createElement('small');
       const kind = document.createElement('span');
       button.type = 'button';
-      button.className = `playlist-item${index === state.playlistIndex ? ' active' : ''}`;
+      const selected = index === state.playlistIndex;
+      const loaded = item.id === state.playlistLoadedId;
+      button.className = `playlist-item${selected ? ' active' : ''}${loaded ? ' loaded' : ''}`;
+      button.title = loaded ? 'Loaded in the Music Deck' : 'Click to select · double-click to load and play';
       button.setAttribute('role', 'option');
-      button.setAttribute('aria-selected', String(index === state.playlistIndex));
+      button.setAttribute('aria-selected', String(selected));
       number.className = 'playlist-item-index';
       number.textContent = String(index + 1).padStart(2, '0');
       copy.className = 'playlist-item-copy';
@@ -6990,9 +7246,9 @@
       meta.textContent = item.meta;
       copy.append(title, meta);
       kind.className = 'playlist-item-kind';
-      kind.textContent = 'FILE';
+      kind.textContent = loaded ? 'LOADED' : 'FILE';
       button.append(number, copy, kind);
-      button.addEventListener('click', () => selectPlaylistIndex(index, false).catch((error) => showToast(error.message, true)));
+      button.addEventListener('click', () => selectPlaylistRow(index));
       button.addEventListener('dblclick', () => selectPlaylistIndex(index, true).catch((error) => showToast(error.message, true)));
       list.appendChild(button);
     });
@@ -7012,22 +7268,22 @@
     activeSongMap = null;
     resetPulseEvents();
     state.playlistIndex = index;
+    state.playlistLoadedId = item.id;
     state.audioName = item.name;
     audio.src = item.source;
     audio.load();
     // A source swap can occur before the media element's asynchronous pause
     // event updates the HUD. Reset the transport immediately for a newly
-    // selected track unless this selection explicitly requested autoplay.
+    // loaded track unless this activation explicitly requested autoplay.
     setPlayState();
     $('#trackName').textContent = item.name;
     $('#trackMeta').textContent = item.meta;
-    $('#timelineFill').style.width = '0%';
-    $('#timeReadout').textContent = '00:00 / 00:00';
+    audioController.renderTimeline(0, 0);
     $('#revealButton').hidden = true;
     updateTrackControls();
     renderPlaylist();
     loadSongMapForCurrentTrack();
-    showToast(`${item.name} selected`);
+    showToast(`${item.name} loaded${autoplay ? ' and playing' : ''}`);
     if (autoplay) {
       createAudioGraph();
       await audioContext.resume();
@@ -7075,20 +7331,25 @@
     state.playlist.splice(to, 0, item);
     state.playlistIndex = to;
     renderPlaylist();
+    showToast(`${item.name} moved`);
   }
 
-  async function removeCurrentPlaylistItem() {
+  function removeCurrentPlaylistItem() {
     const index = state.playlistIndex;
     if (index < 0 || state.exporting) return;
     const [removed] = state.playlist.splice(index, 1);
-    audio.pause();
-    audio.removeAttribute('src');
-    audio.load();
+    const removedLoadedTrack = removed.id === state.playlistLoadedId;
     URL.revokeObjectURL(removed.source);
-    state.playlistIndex = -1;
-    if (state.playlist.length) await selectPlaylistIndex(Math.min(index, state.playlist.length - 1), false);
-    else resetAudioDeck();
+    state.playlistIndex = state.playlist.length ? Math.min(index, state.playlist.length - 1) : -1;
+    if (removedLoadedTrack) {
+      audio.pause();
+      audio.removeAttribute('src');
+      audio.load();
+      state.playlistLoadedId = null;
+      resetAudioDeck();
+    }
     renderPlaylist();
+    showToast(`${removed.name} removed${removedLoadedTrack ? ' · playback stopped' : ''}`);
   }
 
   function resetAudioDeck() {
@@ -7099,8 +7360,7 @@
     activeSongMap = null;
     $('#trackName').textContent = 'No audio loaded';
     $('#trackMeta').textContent = 'Drop songs anywhere, choose files, or choose a local folder';
-    $('#timelineFill').style.width = '0%';
-    $('#timeReadout').textContent = '00:00 / 00:00';
+    audioController.renderTimeline(0, 0);
     updateTrackControls();
     setPlayState();
     if (songMapInitialized) renderSongMap();
@@ -7115,13 +7375,16 @@
     state.playlist.forEach((item) => URL.revokeObjectURL(item.source));
     state.playlist = [];
     state.playlistIndex = -1;
+    state.playlistLoadedId = null;
     resetAudioDeck();
     renderPlaylist();
     showToast('Playlist cleared');
   }
 
   async function changePlaylistTrack(direction, forcePlay = false) {
-    const nextIndex = state.playlistIndex + direction;
+    const loadedIndex = currentPlaylistIndex();
+    const referenceIndex = loadedIndex >= 0 ? loadedIndex : state.playlistIndex;
+    const nextIndex = referenceIndex + direction;
     if (nextIndex < 0 || nextIndex >= state.playlist.length) return;
     const autoplay = forcePlay || !audio.paused;
     await selectPlaylistIndex(nextIndex, autoplay);
@@ -7141,18 +7404,7 @@
     const liveInput = state.audioMode !== 'deck' && audioIsActive();
     const deckPlaying = state.audioMode === 'deck' && !audio.paused;
     const playing = liveInput || deckPlaying;
-    document.body.classList.toggle('playing', playing);
-    $('#playIcon').textContent = deckPlaying ? 'Ⅱ' : '▶';
-    $('#playButton').setAttribute('aria-label', deckPlaying ? 'Pause' : 'Play');
-    if (!state.exporting) {
-      $('#liveDot').className = `live-dot${playing ? ' playing' : ''}`;
-      $('#liveLabel').textContent = liveInput ? 'LISTENING' : (playing ? 'LIVE' : 'IDLE');
-    }
-  }
-
-  function chooseRecorderType() {
-    const types = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
-    return types.find((type) => MediaRecorder.isTypeSupported(type)) || '';
+    audioController.renderTransport({ liveInput, deckPlaying, playing, exporting: state.exporting });
   }
 
   function fftInPlace(real, imaginary) {
@@ -7276,8 +7528,7 @@
   }
 
   const songMapCacheStorageKey = 'quarticPulseSongMapsV1';
-  const songMapCacheVersion = 1;
-  const songMapCacheLimit = 10;
+  const songMapCacheVersion = songMapDataEngine.diagnostics.cacheVersion;
   const songMapSectionColors = ['#45ddcf', '#826dff', '#ed68df', '#f2bd59', '#55a8ff', '#78df78'];
   let activeSongMap = null;
   let songMapAnalyzing = false;
@@ -7285,168 +7536,33 @@
   let songMapInitialized = false;
   let songMapRefreshTimer = 0;
   let activeSongDirectorPlan = [];
-  let songDirectorInitialized = false;
-  let songDirectorLastUiUpdate = 0;
-  let selectedSongDirectorCueIndex = -1;
-  let selectedSongDirectorMapKey = '';
   const songDirectorOverridesStorageKey = 'quarticPulseDirectorOverridesV1';
 
-  const songDirectorStyles = Object.freeze({
-    subtle: { label: 'Subtle', master: .48, camera: .62, equation: .48, color: .6, depth: .42, fold: .34 },
-    cinematic: { label: 'Cinematic', master: 1, camera: 1.12, equation: .82, color: .95, depth: 1.08, fold: .72 },
-    mathematical: { label: 'Mathematical', master: .94, camera: .65, equation: 1.35, color: .88, depth: .92, fold: 1.24 },
-    storm: { label: 'Storm', master: 1.22, camera: 1.12, equation: 1.16, color: 1.2, depth: 1.16, fold: 1.08 }
-  });
-
-  const songDirectorBehaviors = Object.freeze({
-    balanced: { label: 'Balanced', camera: 1, equation: 1, color: 1, motion: 1, depth: 1, fold: 1, pulse: 1, rotation: 1, bass: 1, mids: 1, highs: 1, transition: .18 },
-    electronic: { label: 'Electronic / EDM', camera: 1.08, equation: 1.08, color: 1.25, motion: 1.25, depth: 1.05, fold: 1.05, pulse: 1.35, rotation: 1.12, bass: 1.25, mids: .95, highs: 1.2, transition: .11 },
-    hiphop: { label: 'Hip-Hop', camera: 1.2, equation: 1.1, color: .9, motion: .85, depth: .8, fold: .9, pulse: 1.05, rotation: .65, bass: 1.45, mids: 1, highs: .75, transition: .22 },
-    rock: { label: 'Rock / Metal', camera: 1, equation: 1.15, color: 1, motion: 1.2, depth: 1, fold: 1.18, pulse: 1.3, rotation: 1.05, bass: 1.05, mids: 1.3, highs: 1.18, transition: .13 },
-    pop: { label: 'Pop', camera: .95, equation: .9, color: 1.35, motion: 1.05, depth: .95, fold: .8, pulse: 1.1, rotation: .9, bass: .95, mids: 1.15, highs: 1.25, transition: .16 },
-    ambient: { label: 'Ambient / Classical', camera: .72, equation: .58, color: .82, motion: .62, depth: 1.35, fold: .68, pulse: .35, rotation: .42, bass: .7, mids: 1.12, highs: .95, transition: .34 }
-  });
+  const songDirectorStyles = songDirectorEngine.styles;
+  const songDirectorBehaviors = songDirectorEngine.behaviors;
+  const songDirectorTransitions = songDirectorEngine.transitions;
 
   function resolveSongDirectorBehavior(map = activeSongMap) {
-    if (songDirectorBehaviors[state.songDirectorBehavior]) return state.songDirectorBehavior;
-    return songDirectorBehaviors[map?.personality] ? map.personality : 'balanced';
-  }
-
-  function behaviorTargetScale(key, behavior) {
-    if (['zoom', 'panX', 'panY'].includes(key)) return behavior.camera;
-    if (key === 'rotationOffset') return behavior.rotation;
-    if (key === 'motion') return behavior.motion;
-    if (['equation', 'bulbPower'].includes(key)) return behavior.equation;
-    if (['frequencyHue', 'flow', 'bulbGlow'].includes(key)) return behavior.color;
-    if (['fractalTilt', 'fractalSlice'].includes(key)) return behavior.depth;
-    if (['equationFold', 'equationWarp', 'bulbFold'].includes(key)) return behavior.fold;
-    if (key === 'pulseJagged') return behavior.pulse;
-    return 1;
+    return songDirectorEngine.resolveBehavior(state.songDirectorBehavior, map);
   }
 
   function readSongDirectorOverrides() {
-    try {
-      const entries = JSON.parse(localStorage.getItem(songDirectorOverridesStorageKey) || '[]');
-      return Array.isArray(entries) ? entries.filter((entry) => entry && typeof entry.mapKey === 'string' && entry.cues && typeof entry.cues === 'object') : [];
-    } catch (_) {
-      return [];
-    }
+    return songMapDataEngine.parseOverrides(localStorage.getItem(songDirectorOverridesStorageKey) || '[]');
   }
 
   function songDirectorOverrideFor(index) {
-    if (!activeSongMap?.key) return null;
-    const set = readSongDirectorOverrides().find((entry) => entry.mapKey === activeSongMap.key);
-    const override = set?.cues?.[index];
-    if (!override) return null;
-    return {
-      strength: clamp(Number(override.strength), 0, 1),
-      emphasis: ['auto', 'camera', 'equation', 'color', 'dimension', 'fold'].includes(override.emphasis) ? override.emphasis : 'auto'
-    };
+    return songMapDataEngine.overrideFor(readSongDirectorOverrides(), activeSongMap?.key, index);
   }
 
   function writeSongDirectorOverride(index, override) {
     if (!activeSongMap?.key || index < 0) return;
-    const entries = readSongDirectorOverrides().filter((entry) => entry.mapKey !== activeSongMap.key);
-    const existing = readSongDirectorOverrides().find((entry) => entry.mapKey === activeSongMap.key) || { mapKey: activeSongMap.key, cues: {} };
-    const cues = { ...existing.cues };
-    const strength = clamp(Number(override?.strength), 0, 1);
-    const emphasis = ['camera', 'equation', 'color', 'dimension', 'fold'].includes(override?.emphasis) ? override.emphasis : 'auto';
-    if (!override || (Math.abs(strength - 1) < .0001 && emphasis === 'auto')) delete cues[index];
-    else cues[index] = { strength, emphasis };
-    if (Object.keys(cues).length) entries.unshift({ mapKey: activeSongMap.key, updatedAt: new Date().toISOString(), cues });
-    try { localStorage.setItem(songDirectorOverridesStorageKey, JSON.stringify(entries.slice(0, 20))); }
+    const entries = songMapDataEngine.updateOverride(readSongDirectorOverrides(), activeSongMap.key, index, override);
+    try { localStorage.setItem(songDirectorOverridesStorageKey, JSON.stringify(entries)); }
     catch (_) { /* Cue edits remain optional if local storage is unavailable. */ }
   }
 
-  function directorEmphasisGroup(key) {
-    if (['zoom', 'rotationOffset', 'panX', 'panY', 'motion'].includes(key)) return 'camera';
-    if (['equation', 'bulbPower'].includes(key)) return 'equation';
-    if (['frequencyHue', 'flow', 'bulbGlow', 'pulseJagged'].includes(key)) return 'color';
-    if (['fractalTilt', 'fractalSlice'].includes(key)) return 'dimension';
-    if (['equationFold', 'equationWarp', 'bulbFold'].includes(key)) return 'fold';
-    return 'other';
-  }
-
-  function directorCueTargets(cue) {
-    const override = songDirectorOverrideFor(cue.index);
-    if (!override) return cue.targets;
-    return Object.fromEntries(Object.entries(cue.targets).map(([key, value]) => {
-      const emphasisScale = override.emphasis === 'auto'
-        ? 1
-        : (directorEmphasisGroup(key) === override.emphasis ? 1.35 : .72);
-      return [key, value * override.strength * emphasisScale];
-    }));
-  }
-
-  function directorSeedUnit(text) {
-    return parseInt(hashSongMapText(String(text)), 16) / 0xffffffff;
-  }
-
-  function directorSectionArc(kind) {
-    return ({ intro: .32, build: .76, peak: 1, breakdown: .24, bass: .76, lift: .72, outro: .18, steady: .56 })[kind] ?? .56;
-  }
-
   function generateSongDirectorPlan(map = activeSongMap) {
-    if (!map?.sections?.length) return [];
-    const behaviorId = resolveSongDirectorBehavior(map);
-    const behavior = songDirectorBehaviors[behaviorId];
-    return map.sections.map((section, index) => {
-      const randomA = directorSeedUnit(`${map.key}|${index}|a`);
-      const randomB = directorSeedUnit(`${map.key}|${index}|b`);
-      const direction = randomA < .5 ? -1 : 1;
-      const arc = directorSectionArc(section.kind);
-      const energy = clamp(Number(section.energy) || 0, 0, 1);
-      const bass = clamp((Number(section.bass) || 0) * behavior.bass, 0, 1.35);
-      const mids = clamp((Number(section.mids) || 0) * behavior.mids, 0, 1.35);
-      const highs = clamp((Number(section.highs) || 0) * behavior.highs, 0, 1.35);
-      const brightness = highs - bass;
-      const sectionLength = Math.max(.1, (Number(section.end) || map.duration) - (Number(section.start) || 0));
-      const sectionBeatCount = map.beats.filter((beat) => beat >= section.start && beat < section.end).length;
-      const beatRate = clamp(sectionBeatCount / sectionLength / 2.5, 0, 1);
-      const buildDirection = section.kind === 'build' ? 1 : (section.kind === 'outro' ? -1 : 0);
-      return {
-        index,
-        start: Number(section.start) || 0,
-        end: Number(section.end) || map.duration,
-        label: section.label || `Movement ${index + 1}`,
-        kind: section.kind || 'steady',
-        energy,
-        behaviorId,
-        transitionFraction: behavior.transition,
-        targets: Object.fromEntries(Object.entries({
-          zoom: (arc - .46) * .14 + buildDirection * .025,
-          rotationOffset: direction * (.018 + arc * .052 + randomB * .018),
-          panX: direction * (.004 + randomB * .014) * (.45 + arc),
-          panY: (randomA - .5) * .022 * (.5 + arc),
-          equation: Math.max(0, .012 + energy * .105 + arc * .035),
-          frequencyHue: brightness * .18 + direction * (.025 + randomB * .045),
-          flow: .018 + arc * .085 + highs * .035,
-          motion: .025 + arc * .16 + energy * .09 + beatRate * .035,
-          fractalTilt: .015 + arc * .095 + mids * .035,
-          fractalSlice: .01 + arc * .072 + highs * .03,
-          equationFold: .004 + arc * .025 + mids * .012,
-          equationWarp: .006 + arc * .038 + bass * .014,
-          bulbPower: direction * (.04 + arc * .12),
-          bulbFold: .004 + arc * .026,
-          bulbGlow: .025 + arc * .14 + highs * .05,
-          pulseJagged: .02 + arc * .13 + beatRate * .055
-        }).map(([key, value]) => [key, value * behaviorTargetScale(key, behavior)]))
-      };
-    });
-  }
-
-  function smoothstep01(value) {
-    const t = clamp(value, 0, 1);
-    return t * t * (3 - 2 * t);
-  }
-
-  function directorTargetScale(key, style) {
-    if (['zoom', 'rotationOffset', 'panX', 'panY', 'motion'].includes(key)) return style.camera;
-    if (['equation', 'bulbPower'].includes(key)) return style.equation;
-    if (['frequencyHue', 'flow', 'bulbGlow'].includes(key)) return style.color;
-    if (['fractalTilt', 'fractalSlice'].includes(key)) return style.depth;
-    if (['equationFold', 'equationWarp', 'bulbFold'].includes(key)) return style.fold;
-    return 1;
+    return songDirectorEngine.generatePlan(map, state.songDirectorBehavior);
   }
 
   function updateSongDirector(time) {
@@ -7456,235 +7572,66 @@
       updateSongDirectorNow(null, {}, time);
       return state.songDirectorValues;
     }
-    const duration = activeSongMap.duration || 1;
-    const songTime = clamp(Number(time) || 0, 0, duration);
-    let index = activeSongDirectorPlan.findIndex((cue) => songTime >= cue.start && songTime < cue.end);
-    if (index < 0) index = activeSongDirectorPlan.length - 1;
-    const cue = activeSongDirectorPlan[index];
-    const previous = activeSongDirectorPlan[Math.max(0, index - 1)];
-    const sectionLength = Math.max(.1, cue.end - cue.start);
-    const sectionProgress = clamp((songTime - cue.start) / sectionLength, 0, 1);
-    const transition = Math.min(7, Math.max(.65, sectionLength * (cue.transitionFraction || .18)));
-    const blend = index ? smoothstep01((songTime - cue.start) / transition) : 1;
-    let arcEnvelope = 1;
-    if (cue.kind === 'build') arcEnvelope = .56 + .44 * smoothstep01(sectionProgress);
-    else if (cue.kind === 'outro') arcEnvelope = 1 - .68 * smoothstep01(sectionProgress);
-    else if (cue.kind === 'intro') arcEnvelope = .55 + .45 * smoothstep01(sectionProgress);
-    const style = songDirectorStyles[state.songDirectorStyle] || songDirectorStyles.cinematic;
-    const master = clamp(state.songDirectorIntensity, 0, 1) * style.master;
-    const values = { cueIndex: index, cueLabel: cue.label, sectionProgress };
-    const previousTargets = directorCueTargets(previous);
-    const cueTargets = directorCueTargets(cue);
-    for (const key of Object.keys(cueTargets)) {
-      const from = previousTargets[key] || 0;
-      const to = cueTargets[key] || 0;
-      values[key] = (from + (to - from) * blend) * master * directorTargetScale(key, style) * arcEnvelope;
-    }
-    if (!state.fractalDimensional) {
-      values.fractalTilt = 0;
-      values.fractalSlice = 0;
-    }
-    if (!state.equationFolding) {
-      values.equationFold = 0;
-      values.equationWarp = 0;
-    }
-    state.songDirectorValues = values;
-    updateSongDirectorNow(cue, values, songTime);
-    return values;
+    const result = songDirectorEngine.evaluate({
+      plan: activeSongDirectorPlan,
+      map: activeSongMap,
+      time,
+      styleId: state.songDirectorStyle,
+      transitionId: state.songDirectorTransition,
+      intensity: state.songDirectorIntensity,
+      getOverride: songDirectorOverrideFor,
+      dimensionalEnabled: state.fractalDimensional,
+      foldingEnabled: state.equationFolding
+    });
+    state.songDirectorValues = result.values;
+    updateSongDirectorNow(result.cue, result.values, result.songTime, result.dynamics);
+    return result.values;
   }
 
-  function updateSongDirectorNow(cue, values, time) {
-    if (!songDirectorInitialized || performance.now() - songDirectorLastUiUpdate < 120) return;
-    songDirectorLastUiUpdate = performance.now();
-    const now = $('#songDirectorNow');
-    if (!now) return;
-    const label = now.querySelector('strong');
-    if (!activeSongMap) label.textContent = 'WAITING FOR SONG MAP';
-    else if (!state.songDirectorEnabled) label.textContent = 'DIRECTOR STANDBY';
-    else label.textContent = `${cue?.label || 'MOVEMENT'} · ${formatTime(time)}`;
-    const meters = now.querySelectorAll('.song-director-meters i');
-    const levels = [Math.abs(values.motion || 0) * 4, Math.abs(values.equation || 0) * 7, Math.abs(values.frequencyHue || 0) * 6, Math.abs(values.zoom || 0) * 7];
-    meters.forEach((meter, index) => { meter.style.height = `${8 + clamp(levels[index], 0, 1) * 92}%`; });
-    document.querySelectorAll('.song-director-cue').forEach((button) => button.classList.toggle('active', Number(button.dataset.cueIndex) === values.cueIndex));
+  function updateSongDirectorNow(cue, values, time, dynamics = null) {
+    songDirectorController.updateNow(cue, values, time, dynamics);
   }
 
   function renderSongDirector() {
-    if (!songDirectorInitialized) return;
-    activeSongDirectorPlan = generateSongDirectorPlan(activeSongMap);
-    const ready = activeSongDirectorPlan.length > 0;
-    const resolvedBehaviorId = resolveSongDirectorBehavior(activeSongMap);
-    const resolvedBehavior = songDirectorBehaviors[resolvedBehaviorId];
-    const status = $('#songDirectorStatus');
-    status.textContent = ready ? (state.songDirectorEnabled ? 'ACTIVE' : 'PLAN READY') : 'NEEDS SONG MAP';
-    status.dataset.tone = state.songDirectorEnabled && ready ? 'active' : '';
-    $('#songDirectorEnabled').disabled = !ready;
-    $('#songDirectorEnabled').checked = state.songDirectorEnabled && ready;
-    $('#songDirectorIntensity').disabled = !ready;
-    $('#songDirectorBehavior').disabled = !ready;
-    $('#songDirectorBehavior').value = state.songDirectorBehavior;
-    $('#songDirectorBehaviorResolved').textContent = `${state.songDirectorBehavior === 'auto' ? 'AUTO · ' : ''}${resolvedBehavior.label.toUpperCase()}`;
-    if ((activeSongMap?.key || '') !== selectedSongDirectorMapKey) {
-      selectedSongDirectorMapKey = activeSongMap?.key || '';
-      selectedSongDirectorCueIndex = -1;
-    }
-    if (selectedSongDirectorCueIndex >= activeSongDirectorPlan.length) selectedSongDirectorCueIndex = -1;
-    document.querySelectorAll('[data-director-style]').forEach((button) => {
-      const active = button.dataset.directorStyle === state.songDirectorStyle;
-      button.disabled = !ready;
-      button.classList.toggle('active', active);
-      button.setAttribute('aria-checked', String(active));
-    });
-    const plan = $('#songDirectorPlan');
-    plan.replaceChildren(...activeSongDirectorPlan.map((cue, index) => {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'song-director-cue';
-      button.classList.toggle('edited', Boolean(songDirectorOverrideFor(index)));
-      button.classList.toggle('selected', selectedSongDirectorCueIndex === index);
-      button.dataset.cueIndex = String(index);
-      button.style.setProperty('--cue-color', songMapSectionColors[index % songMapSectionColors.length]);
-      button.innerHTML = `<strong>${cue.label}</strong><small>${formatTime(cue.start)} · ${cue.kind.toUpperCase()}</small>`;
-      button.addEventListener('click', () => {
-        selectedSongDirectorCueIndex = index;
-        renderSongDirectorCueEditor();
-        document.querySelectorAll('.song-director-cue').forEach((cueButton) => cueButton.classList.toggle('selected', Number(cueButton.dataset.cueIndex) === index));
-        if (state.audioMode !== 'deck' || !Number.isFinite(audio.duration)) return;
-        audio.currentTime = Math.min(audio.duration, cue.start);
-        updateSongMapPlayhead(audio.currentTime);
-        updateSongDirector(audio.currentTime);
-      });
-      return button;
-    }));
-    renderSongDirectorCueEditor();
-    updateSongDirectorNow(null, {}, audio.currentTime);
-  }
-
-  function renderSongDirectorCueEditor() {
-    if (!songDirectorInitialized) return;
-    const editor = $('#songDirectorCueEditor');
-    const cue = activeSongDirectorPlan[selectedSongDirectorCueIndex];
-    editor.hidden = !cue;
-    if (!cue) return;
-    const override = songDirectorOverrideFor(selectedSongDirectorCueIndex);
-    $('#songDirectorCueName').textContent = cue.label;
-    $('#songDirectorCueState').textContent = override ? 'EDITED' : 'AUTO';
-    $('#songDirectorCueEmphasis').value = override?.emphasis || 'auto';
-    $('#songDirectorCueStrength').value = String(override?.strength ?? 1);
-    $('#songDirectorCueStrength')._syncNumericValue?.();
-    $('#songDirectorCueStrengthValue').value = `${Math.round((override?.strength ?? 1) * 100)}%`;
-    $('#resetSongDirectorCue').disabled = !override;
+    songDirectorController.render();
   }
 
   function initializeSongDirector() {
-    songDirectorInitialized = true;
-    $('#songDirectorEnabled').addEventListener('change', (event) => {
-      state.songDirectorEnabled = event.target.checked;
-      if (!state.songDirectorEnabled) state.songDirectorValues = {};
-      renderSongDirector();
-      showToast(state.songDirectorEnabled ? 'Mathematical Song Director enabled' : 'Song Director standing by');
-    });
-    $('#songDirectorIntensity').addEventListener('input', (event) => {
-      state.songDirectorIntensity = Number(event.target.value);
-      $('#songDirectorIntensityValue').value = `${Math.round(state.songDirectorIntensity * 100)}%`;
-    });
-    $('#songDirectorStyleGrid').addEventListener('click', (event) => {
-      const button = event.target.closest('[data-director-style]');
-      if (!button || button.disabled) return;
-      state.songDirectorStyle = button.dataset.directorStyle;
-      $('#songDirectorStyle').value = state.songDirectorStyle;
-      renderSongDirector();
-      showToast(`${songDirectorStyles[state.songDirectorStyle].label} Song Director selected`);
-    });
-    $('#songDirectorStyle').addEventListener('change', (event) => {
-      state.songDirectorStyle = songDirectorStyles[event.target.value] ? event.target.value : 'cinematic';
-      renderSongDirector();
-    });
-    $('#songDirectorBehavior').addEventListener('change', (event) => {
-      state.songDirectorBehavior = event.target.value === 'auto' || songDirectorBehaviors[event.target.value]
-        ? event.target.value
-        : 'auto';
-      renderSongDirector();
-      const resolved = songDirectorBehaviors[resolveSongDirectorBehavior(activeSongMap)];
-      showToast(`${resolved.label} musical behavior ${state.songDirectorBehavior === 'auto' ? 'selected automatically' : 'selected'}`);
-    });
-    const saveCueEditor = () => {
-      if (!activeSongDirectorPlan[selectedSongDirectorCueIndex]) return;
-      writeSongDirectorOverride(selectedSongDirectorCueIndex, {
-        strength: Number($('#songDirectorCueStrength').value),
-        emphasis: $('#songDirectorCueEmphasis').value
-      });
-      const edited = Boolean(songDirectorOverrideFor(selectedSongDirectorCueIndex));
-      document.querySelector(`.song-director-cue[data-cue-index="${selectedSongDirectorCueIndex}"]`)?.classList.toggle('edited', edited);
-      renderSongDirectorCueEditor();
-      updateSongDirector(state.offlineExporting ? (state.offlineCurrentTime || 0) : audio.currentTime);
-    };
-    $('#songDirectorCueStrength').addEventListener('input', (event) => {
-      $('#songDirectorCueStrengthValue').value = `${Math.round(Number(event.target.value) * 100)}%`;
-      saveCueEditor();
-    });
-    $('#songDirectorCueEmphasis').addEventListener('change', saveCueEditor);
-    $('#resetSongDirectorCue').addEventListener('click', () => {
-      if (selectedSongDirectorCueIndex < 0) return;
-      writeSongDirectorOverride(selectedSongDirectorCueIndex, null);
-      document.querySelector(`.song-director-cue[data-cue-index="${selectedSongDirectorCueIndex}"]`)?.classList.remove('edited');
-      renderSongDirectorCueEditor();
-      updateSongDirector(state.offlineExporting ? (state.offlineCurrentTime || 0) : audio.currentTime);
-      showToast('Section cue returned to its automatic plan');
-    });
-    renderSongDirector();
+    songDirectorController.initialize();
   }
 
   function hashSongMapText(text) {
-    let hash = 2166136261;
-    for (let index = 0; index < text.length; index++) {
-      hash ^= text.charCodeAt(index);
-      hash = Math.imul(hash, 16777619);
-    }
-    return (hash >>> 0).toString(16).padStart(8, '0');
+    return songMapDataEngine.hashText(text);
   }
 
   function songMapProfileSignature() {
     const bands = getActiveFrequencyBands();
-    return [
-      state.musicPersonality,
-      bands.floor, bands.lowMid, bands.midHigh, bands.ceiling,
-      state.analysisBassGain.toFixed(3), state.analysisMidGain.toFixed(3), state.analysisHighGain.toFixed(3),
-      state.analysisSmoothing.toFixed(3), state.beatSensitivity.toFixed(3), Math.round(state.beatCooldownMs)
-    ].join('|');
+    return songMapDataEngine.profileSignature({
+      personality: state.musicPersonality,
+      bands,
+      bassGain: state.analysisBassGain,
+      midGain: state.analysisMidGain,
+      highGain: state.analysisHighGain,
+      smoothing: state.analysisSmoothing,
+      beatSensitivity: state.beatSensitivity,
+      beatCooldownMs: state.beatCooldownMs
+    });
   }
 
   function songMapKey(item = currentPlaylistItem()) {
-    if (!item?.file) return '';
-    const source = [item.file.name, item.file.size, item.file.lastModified, item.filePath || '', songMapProfileSignature()].join('|');
-    return `map-${hashSongMapText(source)}`;
+    return songMapDataEngine.mapKey(item, songMapProfileSignature());
   }
 
   function validSongMap(map) {
-    const pointCount = map?.energy?.length;
-    return Boolean(map
-      && map.version === songMapCacheVersion
-      && typeof map.key === 'string'
-      && Number.isFinite(map.duration) && map.duration > 0
-      && Number.isFinite(map.interval) && map.interval > 0
-      && pointCount > 1
-      && ['bass', 'mids', 'highs'].every((key) => Array.isArray(map[key]) && map[key].length === pointCount)
-      && Array.isArray(map.beats)
-      && Array.isArray(map.sections));
+    return songMapDataEngine.isValidMap(map);
   }
 
   function readSongMapCache() {
-    try {
-      const entries = JSON.parse(localStorage.getItem(songMapCacheStorageKey) || '[]');
-      return Array.isArray(entries) ? entries.filter(validSongMap) : [];
-    } catch (_) {
-      return [];
-    }
+    return songMapDataEngine.parseCache(localStorage.getItem(songMapCacheStorageKey) || '[]');
   }
 
   function writeSongMapCache(entries) {
-    const ordered = entries.filter(validSongMap)
-      .sort((a, b) => Date.parse(b.updatedAt || 0) - Date.parse(a.updatedAt || 0))
-      .slice(0, songMapCacheLimit);
+    const ordered = songMapDataEngine.prepareCache(entries);
     try {
       localStorage.setItem(songMapCacheStorageKey, JSON.stringify(ordered));
     } catch (_) {
@@ -7694,9 +7641,7 @@
   }
 
   function cacheSongMap(map) {
-    const entries = readSongMapCache().filter((entry) => entry.key !== map.key);
-    entries.unshift(map);
-    writeSongMapCache(entries);
+    writeSongMapCache(songMapDataEngine.upsertCache(readSongMapCache(), map));
   }
 
   function percentile(values, amount) {
@@ -8056,7 +8001,7 @@
     if (!item?.file) songMapStatus('LOAD A SONG');
     else if (!map && !songMapAnalyzing) songMapStatus('READY');
     renderSongDirector();
-    if (composerInitialized) renderShowComposer();
+    if (showComposerController.initialized) renderShowComposer();
     if (!map) return;
     const profile = musicPersonalityProfiles[map.personality]?.label || (map.personality === 'custom' ? 'Custom' : 'Analyzer');
     songMapStatus(`CACHED · ${profile}`);
@@ -8208,401 +8153,286 @@
     loadSongMapForCurrentTrack();
   }
 
-  function offlineVideoBitrate(width, height, fps, detail = 1.6) {
-    const bitsPerPixel = detail >= 3 ? 1.2 : (detail >= 2 ? .95 : (detail >= 1.5 ? .72 : .5));
-    return Math.round(clamp(width * height * fps * bitsPerPixel, 12000000, 420000000));
-  }
-
-  async function chooseOfflineEncoderConfig(width, height, fps, detail) {
-    if (!window.VideoEncoder || !window.VideoFrame) throw new Error('This graphics driver does not expose the offline video encoder.');
-    const bitrate = offlineVideoBitrate(width, height, fps, detail);
-    const candidates = [
-      { codecName: 'vp9', codec: 'vp09.00.10.08', hardwareAcceleration: 'prefer-software' },
-      { codecName: 'vp9', codec: 'vp09.00.10.08', hardwareAcceleration: 'prefer-hardware' },
-      { codecName: 'vp8', codec: 'vp8', hardwareAcceleration: 'prefer-software' },
-      { codecName: 'vp8', codec: 'vp8', hardwareAcceleration: 'prefer-hardware' }
-    ];
-    for (const candidate of candidates) {
-      const config = {
-        codec: candidate.codec,
-        width,
-        height,
-        framerate: fps,
-        bitrate,
-        bitrateMode: 'variable',
-        latencyMode: 'quality',
-        hardwareAcceleration: candidate.hardwareAcceleration
-      };
-      try {
-        const support = await VideoEncoder.isConfigSupported(config);
-        if (support.supported) return { codecName: candidate.codecName, config: support.config || config, bitrate };
-      } catch (_) { /* Try the next encoder. */ }
-    }
-    throw new Error(`No offline VP9/VP8 encoder supports ${width}×${height} at ${fps} FPS.`);
-  }
-
   function requestOfflineVisualFrame() {
     if (pendingOfflineRender) return Promise.reject(new Error('The previous offline frame is still rendering.'));
     return new Promise((resolve) => { pendingOfflineRender = resolve; });
   }
 
-  async function startOfflineExport(options = {}) {
+  if (isSmokeTest) {
+    window.__quarticTestExportSampling = () => exportSamplingEngine.selfTest();
+  }
+
+  function createOfflineExportJob(options = {}) {
     const item = currentPlaylistItem();
-    if (!item?.file || !item.filePath) throw new Error('Offline export requires a local song file. Reload the song if it was added by an older session.');
-    if (state.audioMode !== 'deck') stopLiveAudio();
-    audio.pause();
-    const [width, height] = $('#resolution').value.split('x').map(Number);
-    const fps = Number($('#fps').value);
-    const format = $('#videoFormat').value;
-    const exportDetail = Number($('#exportDetail').value);
-    $('#exportLabel').textContent = 'PREPARING OFFLINE AUDIO…';
-    $('#exportButton').disabled = true;
-    createAudioGraph();
-    const audioBuffer = await audioContext.decodeAudioData((await item.file.arrayBuffer()).slice(0));
-    const duration = Math.min(audioBuffer.duration, Math.max(.1, Number(options.durationLimit) || audioBuffer.duration));
-    const frameCount = Math.max(1, Math.ceil(duration * fps));
-    const encoderChoice = await chooseOfflineEncoderConfig(width, height, fps, exportDetail);
-    const session = await window.quarticDesktop.beginOfflineExport({
-      suggestedName: `${state.audioName || 'quartic-pulse'}${options.test ? '-5-second-test' : ''}`,
-      format, width, height, fps, frameCount,
-      codec: encoderChoice.codecName, audioPath: item.filePath,
-      requiredBytes: options.preflight?.requiredBytes,
-      finalEncoder: options.preflight?.encoder?.id
-    });
-    if (!session) {
-      $('#exportButton').disabled = false;
-      $('#exportLabel').textContent = 'EXPORT VIDEO';
-      return;
-    }
-
-    exportSession = session;
-    exportSession.mode = 'offline';
-    state.loopBeforeExport = audio.loop;
-    const previousVisualTime = state.visualTime;
-    const previousModulationRotationPhase = state.modulationRotationPhase;
-    let encoder = null;
-    let encoderError = null;
-    let encodedQueue = Promise.resolve();
-    let exportCompleted = false;
-    let renderedFrameCount = 0;
-    offlineExportCancelled = false;
-    offlineExportFinishRequested = false;
-    offlineExportPaused = false;
-    try {
-      state.exportWidth = width;
-      state.exportHeight = height;
-      state.exportDetail = exportDetail;
-      state.offlineFps = fps;
-      state.offlineExporting = true;
-      state.exporting = true;
-      state.visualTime = 0;
-      state.modulationRotationPhase = 0;
-      state.autoReactivityGain = 1;
-      resetPulseEvents();
-      state.spectrumData.fill(0);
-      state.waveformData.fill(0);
-      renderPlaylist();
-      document.body.classList.add('exporting');
-      document.body.classList.toggle('hide-export-preview', !$('#showExportPreview').checked);
-      state.exportedPath = null;
-      setStageExportMode('offline');
-      beginExportProgress(`Rendering frames 0 / ${frameCount} | overall 0%`, 'Rendering frames 0% | overall 0%');
-      $('#revealButton').hidden = true;
-      $('#exportButton').disabled = false;
-      $('#exportButton').classList.add('recording');
-      $('#exportLabel').textContent = 'END & FINISH';
-      $('#exportIcon').textContent = '■';
-      for (const id of ['resolution', 'fps', 'videoFormat', 'exportDetail', 'exportMode']) $(`#${id}`).disabled = true;
-      $('#unleashedMode').disabled = true;
-      $('#performanceMode').disabled = true;
-      $('#liveDot').className = 'live-dot recording';
-      $('#liveLabel').textContent = 'OFFLINE RENDER';
-      setCanvasSize();
-      const analyzeFrame = createOfflineAudioAnalyzer(audioBuffer, fps);
-      encoder = new VideoEncoder({
-        output: (chunk) => {
-          const bytes = new Uint8Array(chunk.byteLength);
-          chunk.copyTo(bytes);
-          encodedQueue = encodedQueue.then(() => window.quarticDesktop.appendOfflineFrame(session.id, bytes));
-        },
-        error: (error) => { encoderError = error; }
-      });
-      encoder.configure(encoderChoice.config);
-      setExportProgress(
-        0,
-        `Quality master ready | ${Math.round(encoderChoice.bitrate / 1000000)} Mb/s | rendering frames next`,
-        `Quality master ready | ${Math.round(encoderChoice.bitrate / 1000000)} Mb/s`
-      );
-
-      for (let frameIndex = 0; frameIndex < frameCount; frameIndex++) {
-        if (offlineExportCancelled) throw new DOMException('Offline export cancelled.', 'AbortError');
-        if (offlineExportFinishRequested && frameIndex > 0) break;
-        while (offlineExportPaused && !offlineExportCancelled && !offlineExportFinishRequested) {
-          await new Promise((resolve) => setTimeout(resolve, 100));
-        }
-        if (offlineExportCancelled) throw new DOMException('Offline export cancelled.', 'AbortError');
-        if (offlineExportFinishRequested && frameIndex > 0) break;
-        if (encoderError) throw encoderError;
-        const time = frameIndex / fps;
-        state.offlineCurrentTime = time;
-        state.visualTime = time;
-        analyzeFrame(time);
-        await requestOfflineVisualFrame();
-        const videoFrame = new VideoFrame(canvas, {
-          timestamp: Math.round(time * 1000000),
-          duration: Math.round(1000000 / fps),
-          alpha: 'discard'
+    return {
+      prepare: async () => {
+        if (state.audioMode !== 'deck') stopLiveAudio();
+        audio.pause();
+        const settings = currentExportSettings();
+        exportController.renderOfflineState('preparing');
+        createAudioGraph();
+        return exportPreparationEngine.prepareOffline({
+          item,
+          settings,
+          audioName: state.audioName,
+          test: options.test,
+          durationLimit: options.durationLimit,
+          preflight: options.preflight
+        }, {
+          readAudioData: (track) => track.file.arrayBuffer(),
+          decodeAudioData: (bytes) => audioContext.decodeAudioData(bytes)
         });
-        encoder.encode(videoFrame, { keyFrame: frameIndex % Math.max(1, fps * 2) === 0 });
-        videoFrame.close();
-        renderedFrameCount = frameIndex + 1;
-        if (encoder.encodeQueueSize > 5) {
-          await encoder.flush();
-          await encodedQueue;
+      },
+      beginSession: (context) => window.quarticDesktop.beginOfflineExport(context.sessionRequest),
+      activate: ({ context }) => {
+        const {
+          width, height, fps, format, frameCount, hdrProfile, tenBitProfile,
+          supersampling, exportDetail, exportIterations
+        } = context;
+        if (tenBitProfile && !ensureHdrExportTarget(width, height)) {
+          throw new Error('This GPU/driver could not create the required 10-bit RGB export framebuffer. Use a lossless RGB profile or update the graphics driver.');
         }
-        const progress = (frameIndex + 1) / frameCount;
-        if (frameIndex % Math.max(1, Math.floor(fps / 5)) === 0 || frameIndex + 1 === frameCount) {
-          $('#exportProgressFill').style.width = `${progress * 100}%`;
-          $('#exportProgressText').textContent = `Offline frame ${frameIndex + 1} / ${frameCount} · ${Math.round(progress * 100)}%`;
-          $('#stageRenderFill').style.width = `${progress * 100}%`;
-          $('#stageRenderText').textContent = `Offline rendering ${Math.round(progress * 100)}%`;
-          const overall = progress * .80;
-          setExportProgress(
-            overall,
-            `Rendering frames ${frameIndex + 1} / ${frameCount} | render ${Math.round(progress * 100)}% | overall ${Math.round(overall * 100)}%`,
-            `Rendering frames ${Math.round(progress * 100)}% | overall ${Math.round(overall * 100)}%`
-          );
-        }
+        context.frameCapture = exportFrameCaptureEngine.createCapture({
+          width,
+          height,
+          tenBit: tenBitProfile,
+          hdr: hdrProfile,
+          supersampling
+        });
+        exportRuntimeStateCoordinator.activate('offline', {
+          width, height, fps, hdrProfile, tenBitProfile, exportDetail, exportIterations
+        }, { loopPlayback: audio.loop });
+        resetExportAudioVisualState();
+        renderPlaylist();
+        exportResultWorkflowEngine.reset();
+        exportController.renderOfflineState('rendering', { hidePreview: !context.showPreview });
+        exportProgressCoordinator.begin(`Rendering frames 0 / ${frameCount} | overall 0%`, 'Rendering frames 0% | overall 0%');
+        audioController.renderLiveStatus('OFFLINE RENDER', true);
+        setCanvasSize();
+        const exportProfile = exportProfileCatalog.profiles[format];
+        exportProgressCoordinator.update(
+          0,
+          hdrProfile
+            ? '10-bit Rec.2020 HLG target ready | HEVC Main 10 pipeline | rendering next'
+            : `${exportProfile.container} | ${exportProfile.videoCodec} | rendering next`,
+          hdrProfile
+            ? 'YouTube HDR master ready | quality-priority HEVC'
+            : `${exportProfile.label} ready`
+        );
+      },
+      render: ({ context, session }) => {
+        const { fps, frameCount, supersampling, audioBuffer, frameCapture } = context;
+        const analyzeFrame = createOfflineAudioAnalyzer(audioBuffer, fps);
+        return exportRenderCoordinator.renderFrames({
+          sessionEngine: exportSessionEngine,
+          frameCount,
+          fps,
+          supersampling,
+          sampleOffsets: exportSamplingEngine.offsets,
+          onFrameStart: ({ time }) => {
+            state.offlineCurrentTime = time;
+            state.visualTime = time;
+            analyzeFrame(time);
+            state.offlineBaseModulation = null;
+            frameCapture.beginFrame();
+          },
+          onSample: (sample) => frameCapture.captureSample(sample),
+          onFrameReady: () => frameCapture.resolveFrame(),
+          onAppendFrame: () => window.quarticDesktop.appendOfflineFrame(session.id, frameCapture.outputBytes),
+          onFrameEnd: () => frameCapture.cleanup(),
+          onProgress: ({ renderedFrameCount, progress, overallProgress }) => {
+            exportProgressCoordinator.update(
+              overallProgress,
+              `Rendering frames ${renderedFrameCount} / ${frameCount} | render ${Math.round(progress * 100)}% | overall ${Math.round(overallProgress * 100)}%`,
+              `Rendering frames ${Math.round(progress * 100)}% | overall ${Math.round(overallProgress * 100)}%`
+            );
+          }
+        });
+      },
+      beforeFinalize: () => {
+        exportProgressCoordinator.update(.80, 'Frames rendered | closing the quality master and audio | overall 80%', 'Frames rendered | finalizing master | overall 80%');
+        exportProgressCoordinator.update(.85, 'Encoded frames written | preparing final video | overall 85%', 'Encoded frames written | finalizing next | overall 85%');
+        exportRuntimeStateCoordinator.markFinalizing('offline');
+        exportController.renderOfflineState('finalizing', { shortened: exportSessionEngine.finishRequested });
+        exportProgressCoordinator.update(.85, 'Frames complete | finalizing and saving | overall 85%', 'Frames complete | finalizing 0% | overall 85%');
+      },
+      complete: ({ context, renderedFrameCount, result }) => completeExportResult(result, {
+          mode: options.test ? 'test' : 'offline',
+          width: context.width,
+          height: context.height,
+          fps: context.fps,
+          duration: renderedFrameCount / context.fps
+        }, () => exportController.renderOfflineState('completed')),
+      cancelled: () => {
+        exportController.renderOfflineState('cancelled');
+        showToast('Offline export cancelled and temporary files discarded');
+      },
+      failed: () => exportController.renderOfflineState('failed'),
+      restore: ({ context, completed }) => {
+        pendingOfflineRender = null;
+        context?.frameCapture?.cleanup();
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        if (context?.tenBitProfile) releaseHdrExportTarget();
+        exportRuntimeStateCoordinator.restore('offline');
+        resetExportAudioVisualState();
+        exportController.renderOfflineState('restored', { completed });
+        updateUnleashedMode(state.unleashedMode);
+        renderExportMathParity();
+        audioController.renderLiveStatus('IDLE');
+        updateTrackControls();
+        renderPlaylist();
+        setCanvasSize();
+        setPlayState();
       }
-      setExportProgress(.80, 'Frames rendered | flushing the video encoder | overall 80%', 'Frames rendered | flushing encoder | overall 80%');
-      await encoder.flush();
-      encoder.close();
-      encoder = null;
-      await encodedQueue;
-      if (offlineExportCancelled) throw new DOMException('Offline export cancelled.', 'AbortError');
-      setExportProgress(.85, 'Encoded frames written | preparing final video | overall 85%', 'Encoded frames written | finalizing next | overall 85%');
-      state.offlineExporting = false;
-      setExportActionButtons(false, true);
-      $('#exportLabel').textContent = offlineExportFinishRequested ? 'FINISHING SHORT EXPORT…' : 'MUXING AUDIO…';
-      $('#exportButton').disabled = true;
-      setExportProgress(.85, 'Frames complete | finalizing and saving | overall 85%', 'Frames complete | finalizing 0% | overall 85%');
-      const result = await window.quarticDesktop.finishOfflineExport(session.id, {
-        allowPartial: offlineExportFinishRequested,
-        renderedFrameCount
-      });
-      state.exportedPath = result.outputPath;
-      exportCompleted = true;
-      recordExportResult(result, { mode: options.test ? 'test' : 'offline', width, height, fps, duration: renderedFrameCount / fps });
-      completeExportProgress(result.outputPath);
-      exportSession = null;
-      $('#revealButton').hidden = false;
-      showToast(result.warning || `${result.partial ? 'Shortened export' : 'Offline export'} complete: ${result.outputPath}`, Boolean(result.warning));
-    } catch (error) {
-      if (encoder && encoder.state !== 'closed') encoder.close();
-      await encodedQueue.catch(() => {});
-      pendingOfflineRender = null;
-      if (exportSession?.id) await window.quarticDesktop.abortOfflineExport(exportSession.id).catch(() => {});
-      exportSession = null;
-      if (error.name === 'AbortError' || offlineExportCancelled) showToast('Offline export cancelled and temporary files discarded');
-      else throw error;
-    } finally {
-      state.offlineExporting = false;
-      state.exporting = false;
-      state.visualTime = previousVisualTime;
-      state.modulationRotationPhase = previousModulationRotationPhase;
-      offlineExportCancelled = false;
-      offlineExportFinishRequested = false;
-      offlineExportPaused = false;
-      exportPauseStartedAt = 0;
-      resetPulseEvents();
-      document.body.classList.remove('exporting', 'hide-export-preview');
-      $('#exportButton').classList.remove('recording');
-      $('#exportButton').disabled = false;
-      $('#exportLabel').textContent = 'EXPORT VIDEO';
-      $('#exportIcon').textContent = '●';
-      for (const id of ['resolution', 'fps', 'videoFormat', 'exportDetail', 'exportMode']) $(`#${id}`).disabled = false;
-      $('#unleashedMode').disabled = false;
-      $('#performanceMode').disabled = false;
-      updateUnleashedMode(state.unleashedMode);
-      if (!exportCompleted) $('#exportProgress').hidden = true;
-      $('#liveDot').className = 'live-dot';
-      $('#liveLabel').textContent = 'IDLE';
-      updateTrackControls();
-      renderPlaylist();
-      setCanvasSize();
-      setPlayState();
-    }
+    };
+  }
+
+  async function startOfflineExport(options = {}) {
+    return exportJobCoordinator.startOffline(options);
   }
 
   async function startExport() {
-    try {
-      const choice = await showExportPreflight();
-      if (!choice) return;
-      if (choice.test) return await startOfflineExport({
-        preflight: choice.preflight,
-        durationLimit: Math.min(5, choice.preflight.duration),
-        test: true
-      });
-      if ($('#exportMode').value === 'live') return await startLiveExport({ preflight: choice.preflight });
-      return await startOfflineExport({ preflight: choice.preflight });
-    } catch (error) {
-      if (!state.exporting) {
-        $('#exportButton').disabled = false;
-        $('#exportButton').classList.remove('recording');
-        $('#exportLabel').textContent = 'EXPORT VIDEO';
-        $('#exportIcon').textContent = '●';
+    return exportWorkflowEngine.run({
+      requestChoice: () => exportController.requestPreflightChoice({
+        load: () => requestExportPreflight(),
+        loaded: (preflight) => {
+          lastExportPreflight = preflight;
+          populateExportPreflight(preflight);
+        },
+        loadTest: (preflight) => requestExportPreflight(Math.min(5, preflight.duration)),
+        failed: (error) => showToast(error.message, true)
+      }),
+      startOffline: startOfflineExport,
+      failed: () => {
+        if (!state.exporting) exportController.renderOfflineState('restored', { completed: false });
       }
-      throw error;
-    }
+    });
+  }
+
+  function createLiveExportJob(options = {}) {
+    const settings = currentExportSettings();
+    return {
+      prepare: async () => {
+        exportController.renderLiveState('preparing');
+        if (state.audioMode !== 'deck') stopLiveAudio();
+        createAudioGraph();
+        await audioContext.resume();
+        return exportPreparationEngine.prepareLive({
+          settings,
+          audioName: state.audioName,
+          preflight: options.preflight
+        });
+      },
+      beginSession: (context) => window.quarticDesktop.beginExport(context.sessionRequest),
+      activate: async ({ context }) => {
+        exportRuntimeStateCoordinator.activate('live', context, { loopPlayback: audio.loop });
+        resetExportAudioVisualState();
+        renderPlaylist();
+        audio.loop = false;
+        exportResultWorkflowEngine.reset();
+        exportController.renderLiveState('recording', { hidePreview: !context.showPreview });
+        exportProgressCoordinator.begin('Live recording 0% | overall 0%', 'Live recording 0% | overall 0%');
+        setCanvasSize();
+      },
+      record: async ({ context, session }) => {
+        liveExportCapture = exportLiveCaptureEngine.createCapture({
+          canvas,
+          audioStream: recordingDestination.stream,
+          width: context.width,
+          height: context.height,
+          fps: context.fps,
+          onChunk: (bytes) => window.quarticDesktop.appendExport(session.id, bytes),
+          onError: (error) => showToast(`Recorder error: ${error?.message || 'unknown error'}`, true),
+          onStop: finishLiveExport
+        });
+        audio.currentTime = 0;
+        liveExportCapture.start(1000);
+        await audio.play();
+      },
+      started: async ({ context }) => {
+        audioController.renderLiveStatus('RECORDING', true);
+        showToast(`Recording ${context.width}×${context.height} at ${context.fps} FPS for ${context.format.toUpperCase()} export`);
+      },
+      finishing: () => exportController.renderLiveState('stopping'),
+      cancelling: () => exportController.renderLiveState('cancelling'),
+      beforeFinalize: async () => {
+        if (!exportSessionEngine.cancelRequested) exportController.renderLiveState('finalizing');
+        await liveExportCapture?.drain();
+      },
+      finalize: async ({ session }) => {
+        exportProgressCoordinator.update(.80, 'Recording complete | finalizing and saving | overall 80%', 'Recording complete | finalizing 0% | overall 80%');
+        return window.quarticDesktop.finishExport(session.id);
+      },
+      complete: ({ context, result }) => completeExportResult(
+        result,
+        { mode: 'live', width: context.width, height: context.height, fps: context.fps, duration: audio.currentTime },
+        () => exportController.renderLiveState('completed')
+      ),
+      cancelled: async () => {
+        exportController.renderLiveState('cancelled');
+        showToast('Live export cancelled and temporary files discarded');
+      },
+      failed: async ({ error }) => {
+        exportController.renderLiveState('failed');
+        showToast(error?.message || 'Video export failed.', true);
+      },
+      restore: async ({ completed }) => {
+        const runtime = exportRuntimeStateCoordinator.restore('live');
+        if (runtime.restored) audio.loop = runtime.loopPlayback;
+        await liveExportCapture?.dispose();
+        liveExportCapture = null;
+        exportController.renderLiveState('restored', { completed });
+        updateTrackControls();
+        renderPlaylist();
+        updateUnleashedMode(state.unleashedMode);
+        audioController.renderLiveStatus('IDLE');
+        setCanvasSize();
+        setPlayState();
+      }
+    };
   }
 
   async function startLiveExport(options = {}) {
-    if (!state.unleashedMode) throw new Error('Live export requires Unleashed mode. Use Offline export for exact frames.');
-    if (!audio.src) return;
-    if (state.audioMode !== 'deck') stopLiveAudio();
-    const [width, height] = $('#resolution').value.split('x').map(Number);
-    const fps = Number($('#fps').value);
-    const format = $('#videoFormat').value;
-    const session = await window.quarticDesktop.beginExport({
-      suggestedName: state.audioName || 'quartic-pulse', format,
-      requiredBytes: options.preflight?.requiredBytes,
-      finalEncoder: options.preflight?.encoder?.id
-    });
-    if (!session) return;
-    exportSession = session;
-    exportSession.mode = 'live';
-    liveExportCompleted = false;
-    liveExportCancelled = false;
-    state.loopBeforeExport = audio.loop;
-
-    try {
-      createAudioGraph();
-      await audioContext.resume();
-      state.exportWidth = width;
-      state.exportHeight = height;
-      state.exportDetail = Number($('#exportDetail').value);
-      state.visualTime = 0;
-      state.modulationRotationPhase = 0;
-      resetPulseEvents();
-      state.exporting = true;
-      renderPlaylist();
-      audio.loop = false;
-      $('#loopPlayback').disabled = true;
-      document.body.classList.add('exporting');
-      document.body.classList.toggle('hide-export-preview', !$('#showExportPreview').checked);
-      state.exportedPath = null;
-      setStageExportMode('live');
-      beginExportProgress('Live recording 0% | overall 0%', 'Live recording 0% | overall 0%');
-      setCanvasSize();
-
-      const canvasStream = canvas.captureStream(fps);
-      const combinedStream = new MediaStream([
-        ...canvasStream.getVideoTracks(),
-        ...recordingDestination.stream.getAudioTracks()
-      ]);
-      const mimeType = chooseRecorderType();
-      const bitsPerPixel = width >= 3840 ? .13 : .1;
-      const videoBitsPerSecond = Math.round(width * height * fps * bitsPerPixel);
-      mediaRecorder = new MediaRecorder(combinedStream, { mimeType, videoBitsPerSecond });
-      appendQueue = Promise.resolve();
-
-      mediaRecorder.addEventListener('dataavailable', (event) => {
-        if (!event.data.size) return;
-        appendQueue = appendQueue.then(async () => {
-          const bytes = await event.data.arrayBuffer();
-          await window.quarticDesktop.appendExport(session.id, bytes);
-        });
-      });
-      mediaRecorder.addEventListener('error', (event) => showToast(`Recorder error: ${event.error?.message || 'unknown error'}`, true));
-      mediaRecorder.addEventListener('stop', finishLiveExport, { once: true });
-
-      audio.currentTime = 0;
-      mediaRecorder.start(1000);
-      await audio.play();
-      $('#exportButton').classList.add('recording');
-      $('#exportLabel').textContent = 'STOP & SAVE';
-      $('#exportIcon').textContent = '■';
-      $('#revealButton').hidden = true;
-      $('#resolution').disabled = true;
-      $('#fps').disabled = true;
-      $('#videoFormat').disabled = true;
-      $('#exportDetail').disabled = true;
-      $('#exportMode').disabled = true;
-      $('#unleashedMode').disabled = true;
-      $('#performanceMode').disabled = true;
-      $('#liveDot').className = 'live-dot recording';
-      $('#liveLabel').textContent = 'RECORDING';
-      showToast(`Recording ${width}×${height} at ${fps} FPS for ${format.toUpperCase()} export`);
-    } catch (error) {
-      if (exportSession?.id) await window.quarticDesktop.abortExport(exportSession.id).catch(() => {});
-      exportSession = null;
-      state.exporting = false;
-      renderPlaylist();
-      audio.loop = state.loopBeforeExport;
-      $('#loopPlayback').disabled = false;
-      document.body.classList.remove('exporting', 'hide-export-preview');
-      $('#exportProgress').hidden = true;
-      setCanvasSize();
-      showToast(error.message, true);
-    }
-  }
-
-  function resumeOfflineExportClock() {
-    if (exportPauseStartedAt) exportPausedDuration += performance.now() - exportPauseStartedAt;
-    exportPauseStartedAt = 0;
-    offlineExportPaused = false;
-    $('#pauseExportButton').textContent = 'PAUSE';
+    return exportJobCoordinator.startLive(options);
   }
 
   function togglePauseExport() {
-    if (exportSession?.mode !== 'offline' || !state.offlineExporting || offlineExportCancelled) return;
-    if (offlineExportPaused) {
-      resumeOfflineExportClock();
-      $('#stageRenderNote').textContent = 'Offline rendering resumed from the next exact frame.';
-      setExportProgress(exportProgressOverall, $('#exportProgressText').textContent, `Rendering resumed · overall ${Math.floor(exportProgressOverall * 100)}%`);
-    } else {
-      offlineExportPaused = true;
-      exportPauseStartedAt = performance.now();
-      $('#pauseExportButton').textContent = 'RESUME';
-      $('#stageRenderNote').textContent = 'Offline rendering is paused safely between frames.';
-      $('#stageRenderText').textContent = `Paused at ${Math.floor(exportProgressOverall * 100)}%`;
-      $('#stageRenderMeta').textContent = `Paused · elapsed ${formatTime((performance.now() - exportStartedAt - exportPausedDuration) / 1000)}`;
-    }
+    return exportCommandCoordinator.togglePause({
+      offlineRendering: state.offlineExporting,
+      paused: (view) => exportController.setPaused(true, view),
+      resumed: ({ progress, percent }) => {
+        exportController.setPaused(false, { note: 'Offline rendering resumed from the next exact frame.' });
+        exportProgressCoordinator.update(progress, exportController.getPanelText(), `Rendering resumed · overall ${percent}%`);
+      }
+    });
   }
 
   function endAndFinishExport() {
-    if (exportSession?.mode === 'offline') {
-      if (!state.offlineExporting) return;
-      resumeOfflineExportClock();
-      offlineExportFinishRequested = true;
-      $('#stageRenderNote').textContent = 'Stopping after the current frame, then finishing and saving the shortened video.';
-      $('#exportLabel').textContent = 'ENDING & FINISHING…';
-      $('#exportButton').disabled = true;
-      setExportActionButtons(false, true);
-      return;
-    }
-    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-      audio.pause();
-      mediaRecorder.stop();
-    }
+    return exportCommandCoordinator.finish({
+      offlineRendering: state.offlineExporting,
+      resumed: () => exportController.setPaused(false),
+      offlineFinishing: () => exportController.renderOfflineState('ending'),
+      liveCaptureActive: () => Boolean(liveExportCapture && liveExportCapture.state !== 'inactive'),
+      pauseAudio: () => audio.pause(),
+      stopLiveCapture: () => liveExportCapture?.stop()
+    });
   }
 
-  function cancelExport() {
-    if (!state.exporting || !exportSession) return;
-    if (!window.confirm('Cancel this export and permanently discard its temporary output?')) return;
-    $('#stageRenderNote').textContent = 'Cancelling the export and discarding its temporary output.';
-    $('#exportLabel').textContent = 'CANCELLING…';
-    $('#exportButton').disabled = true;
-    setExportActionButtons(false, false);
-    if (exportSession.mode === 'offline') {
-      resumeOfflineExportClock();
-      offlineExportCancelled = true;
-      if (!state.offlineExporting) window.quarticDesktop.abortOfflineExport(exportSession.id).catch(() => {});
-      return;
-    }
-    liveExportCancelled = true;
-    audio.pause();
-    if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+  async function cancelExport() {
+    return exportCommandCoordinator.cancel({
+      exporting: state.exporting,
+      offlineRendering: state.offlineExporting,
+      confirm: () => window.confirm('Cancel this export and permanently discard its temporary output?'),
+      cancelling: ({ mode }) => {
+        if (mode !== 'offline') exportController.setNote('Cancelling the export and discarding its temporary output.');
+      },
+      offlineCancelling: () => exportController.renderOfflineState('cancelling'),
+      resumed: () => exportController.setPaused(false),
+      abortOffline: (id) => window.quarticDesktop.abortOfflineExport(id),
+      liveCaptureActive: () => Boolean(liveExportCapture && liveExportCapture.state !== 'inactive'),
+      pauseAudio: () => audio.pause(),
+      stopLiveCapture: () => liveExportCapture?.stop()
+    });
   }
 
   function stopExport() {
@@ -8610,54 +8440,7 @@
   }
 
   async function finishLiveExport() {
-    const session = exportSession;
-    $('#exportLabel').textContent = 'FINALIZING…';
-    $('#exportButton').disabled = true;
-    setExportActionButtons(false, false);
-    try {
-      await appendQueue;
-      if (liveExportCancelled) {
-        await window.quarticDesktop.abortExport(session.id).catch(() => {});
-        showToast('Live export cancelled and temporary files discarded');
-        return;
-      }
-      setExportProgress(.80, 'Recording complete | finalizing and saving | overall 80%', 'Recording complete | finalizing 0% | overall 80%');
-      const result = await window.quarticDesktop.finishExport(session.id);
-      state.exportedPath = result.outputPath;
-      liveExportCompleted = true;
-      recordExportResult(result, { mode: 'live', width: state.exportWidth, height: state.exportHeight, fps: Number($('#fps').value), duration: audio.currentTime });
-      completeExportProgress(result.outputPath);
-      $('#revealButton').hidden = false;
-      showToast(result.warning || `Export complete: ${result.outputPath}`, Boolean(result.warning));
-    } catch (error) {
-      showToast(error.message || 'Video export failed.', true);
-    } finally {
-      state.exporting = false;
-      audio.loop = state.loopBeforeExport;
-      $('#loopPlayback').disabled = false;
-      document.body.classList.remove('exporting', 'hide-export-preview');
-      exportSession = null;
-      mediaRecorder = null;
-      $('#exportButton').classList.remove('recording');
-      updateTrackControls();
-      renderPlaylist();
-      $('#exportLabel').textContent = 'EXPORT VIDEO';
-      $('#exportIcon').textContent = '●';
-      $('#resolution').disabled = false;
-      $('#fps').disabled = false;
-      $('#videoFormat').disabled = false;
-      $('#exportDetail').disabled = false;
-      $('#exportMode').disabled = false;
-      $('#unleashedMode').disabled = false;
-      $('#performanceMode').disabled = false;
-      updateUnleashedMode(state.unleashedMode);
-      if (!liveExportCompleted) $('#exportProgress').hidden = true;
-      liveExportCancelled = false;
-      $('#liveDot').className = 'live-dot';
-      $('#liveLabel').textContent = 'IDLE';
-      setCanvasSize();
-      setPlayState();
-    }
+    return exportLiveLifecycle.finish().catch(() => {});
   }
 
   $('#loadButton').addEventListener('click', () => $('#audioInput').click());
@@ -8668,6 +8451,12 @@
   });
   $('#audioSourceSelect').addEventListener('change', () => {
     if (state.audioMode !== 'live') setAudioSourceStatus('READY', false);
+  });
+  $('#deckOutputSelect').addEventListener('change', (event) => {
+    applyDeckOutput(event.target.value).catch((error) => {
+      event.target.value = deckOutputDeviceId;
+      showToast(`Playback output: ${error.message}`, true);
+    });
   });
   $('#audioInput').addEventListener('change', async (event) => {
     await loadAudio(event.target.files[0]);
@@ -8688,35 +8477,9 @@
   $('#playlistNextButton').addEventListener('click', () => changePlaylistTrack(1).catch((error) => showToast(error.message, true)));
   $('#playlistMoveUpButton').addEventListener('click', () => movePlaylistItem(-1));
   $('#playlistMoveDownButton').addEventListener('click', () => movePlaylistItem(1));
-  $('#playlistRemoveButton').addEventListener('click', () => removeCurrentPlaylistItem().catch((error) => showToast(error.message, true)));
+  $('#playlistRemoveButton').addEventListener('click', removeCurrentPlaylistItem);
   $('#playlistClearButton').addEventListener('click', clearPlaylist);
-  $('#playButton').addEventListener('click', () => togglePlayback().catch((error) => showToast(error.message, true)));
-  $('#restartButton').addEventListener('click', () => {
-    audio.currentTime = 0;
-    resetPulseEvents();
-  });
-  $('#skipBackButton').addEventListener('click', () => {
-    if (Number.isFinite(audio.duration) && !state.exporting) audio.currentTime = Math.max(0, audio.currentTime - 10);
-  });
-  $('#skipForwardButton').addEventListener('click', () => {
-    if (Number.isFinite(audio.duration) && !state.exporting) audio.currentTime = Math.min(audio.duration, audio.currentTime + 10);
-  });
-  $('#volume').addEventListener('input', (event) => {
-    state.monitorVolume = Number(event.target.value);
-    $('#volumeValue').value = `${Math.round(state.monitorVolume * 100)}%`;
-    updateMonitorGain();
-  });
-  $('#muteButton').addEventListener('click', () => {
-    state.monitorMuted = !state.monitorMuted;
-    $('#muteButton').setAttribute('aria-pressed', String(state.monitorMuted));
-    $('#muteButton').textContent = state.monitorMuted ? 'UNMUTE MONITOR' : 'MUTE MONITOR';
-    updateMonitorGain();
-  });
-  $('#playbackRate').addEventListener('change', (event) => {
-    audio.playbackRate = Number(event.target.value);
-    audio.defaultPlaybackRate = audio.playbackRate;
-  });
-  $('#loopPlayback').addEventListener('change', (event) => { audio.loop = event.target.checked; });
+  audioController.bind();
   $('#frequencyColor').addEventListener('change', (event) => { state.frequencyColorEnabled = event.target.checked; });
   $('#frequencyColorAmount').addEventListener('input', (event) => {
     state.frequencyColorAmount = Number(event.target.value);
@@ -8762,79 +8525,28 @@
   audio.addEventListener('ended', () => {
     setPlayState();
     if (state.exporting) stopExport();
-    else if (state.playlistIndex < state.playlist.length - 1) changePlaylistTrack(1, true).catch((error) => showToast(error.message, true));
+    else if (currentPlaylistIndex() < state.playlist.length - 1) changePlaylistTrack(1, true).catch((error) => showToast(error.message, true));
   });
   audio.addEventListener('loadedmetadata', () => {
     updateUiMeters();
+    coordinateExportSettingsChange('audio');
   });
   audio.addEventListener('error', () => {
     showToast('The local audio file could not be decoded.', true);
   });
 
-  const trackTimeline = $('#timeline');
-  let timelinePointerId = null;
-
-  function seekTrackFromPointer(event) {
-    if (!Number.isFinite(audio.duration) || audio.duration <= 0 || state.exporting) return;
-    const rect = trackTimeline.getBoundingClientRect();
-    if (rect.width <= 0) return;
-    const progress = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
-    audio.currentTime = progress * audio.duration;
-    $('#timelineFill').style.width = `${progress * 100}%`;
-    $('#timeReadout').textContent = `${formatTime(audio.currentTime)} / ${formatTime(audio.duration)}`;
-  }
-
-  function finishTimelineScrub(event) {
-    if (timelinePointerId !== event.pointerId) return;
-    if (event.type === 'pointerup') seekTrackFromPointer(event);
-    if (trackTimeline.hasPointerCapture(event.pointerId)) trackTimeline.releasePointerCapture(event.pointerId);
-    timelinePointerId = null;
-    trackTimeline.classList.remove('scrubbing');
-  }
-
-  trackTimeline.addEventListener('pointerdown', (event) => {
-    if ((event.pointerType === 'mouse' && event.button !== 0)
-      || !Number.isFinite(audio.duration) || audio.duration <= 0 || state.exporting) return;
-    event.preventDefault();
-    timelinePointerId = event.pointerId;
-    trackTimeline.setPointerCapture(event.pointerId);
-    trackTimeline.classList.add('scrubbing');
-    seekTrackFromPointer(event);
-  });
-  trackTimeline.addEventListener('pointermove', (event) => {
-    if (timelinePointerId === event.pointerId) seekTrackFromPointer(event);
-  });
-  trackTimeline.addEventListener('pointerup', finishTimelineScrub);
-  trackTimeline.addEventListener('pointercancel', finishTimelineScrub);
-  trackTimeline.addEventListener('lostpointercapture', (event) => {
-    if (timelinePointerId !== event.pointerId) return;
-    timelinePointerId = null;
-    trackTimeline.classList.remove('scrubbing');
-  });
-  trackTimeline.addEventListener('keydown', (event) => {
-    if (!Number.isFinite(audio.duration) || audio.duration <= 0 || state.exporting) return;
-    const seekAmount = event.shiftKey ? 15 : 5;
-    let target = audio.currentTime;
-    if (event.key === 'ArrowLeft' || event.key === 'ArrowDown') target -= seekAmount;
-    else if (event.key === 'ArrowRight' || event.key === 'ArrowUp') target += seekAmount;
-    else if (event.key === 'Home') target = 0;
-    else if (event.key === 'End') target = audio.duration;
-    else return;
-    event.preventDefault();
-    audio.currentTime = Math.max(0, Math.min(audio.duration, target));
-    updateUiMeters();
-  });
-
   $('#iterations').addEventListener('input', (event) => {
     state.iterations = Number(event.target.value);
     $('#iterationsValue').value = state.iterations;
+    if (state.exportMatchLive) renderExportMathParity();
+    coordinateExportSettingsChange('visual');
   });
   $('#visualStyle').addEventListener('change', (event) => {
     state.visualStyle = Number(event.target.value);
     document.body.dataset.visualStyle = String(state.visualStyle);
-    const names = ['Fractal', 'Spectrum Bars', 'Radial Spectrum', 'Pulse Rings', 'Waveform Field', '3D Mandelbulb', 'Mainframe Room'];
     updateVisualStyleOptions();
-    showToast(`${names[state.visualStyle] || names[0]} selected`);
+    coordinateExportSettingsChange('visual');
+    showToast(`${visualCatalog.get(state.visualStyle).name} selected`);
   });
   $('#experiencePresetGrid').addEventListener('click', (event) => {
     const button = event.target.closest('[data-experience-preset]');
@@ -8968,26 +8680,7 @@
     $('#customPaletteEditor').hidden = state.palette !== 4;
   });
 
-  document.querySelector('.settings-tabs').addEventListener('click', (event) => {
-    const button = event.target.closest('.settings-tab');
-    if (button) activateTab(button.dataset.tab);
-  });
-  document.querySelector('.music-subtabs').addEventListener('click', (event) => {
-    const button = event.target.closest('.music-subtab');
-    if (button) activateTab(button.dataset.musicTab);
-  });
-  document.querySelector('.appearance-subtabs').addEventListener('click', (event) => {
-    const button = event.target.closest('.appearance-subtab');
-    if (button) activateTab(button.dataset.appearanceTab);
-  });
-  document.querySelector('.live-subtabs').addEventListener('click', (event) => {
-    const button = event.target.closest('.live-subtab');
-    if (button) activateTab(button.dataset.liveTab);
-  });
-  document.querySelector('.system-subtabs').addEventListener('click', (event) => {
-    const button = event.target.closest('.system-subtab');
-    if (button) activateTab(button.dataset.systemTab);
-  });
+  workspaceShell.bindNavigation(activateTab);
   $('#showExportPreview').addEventListener('change', (event) => {
     if (state.exporting) document.body.classList.toggle('hide-export-preview', !event.target.checked);
   });
@@ -8996,10 +8689,14 @@
   $('#exportCompleteSound').addEventListener('change', (event) => {
     localStorage.setItem('quarticPulseExportCompleteSound', String(event.target.checked));
   });
-  $('#resolution').addEventListener('change', updateExportPerformanceNote);
-  $('#fps').addEventListener('change', updateExportPerformanceNote);
-  $('#exportMode').addEventListener('change', updateExportPerformanceNote);
-  $('#exportDetail').addEventListener('change', updateExportPerformanceNote);
+  state.exportSupersampling = $('#exportSupersampling').checked;
+  state.exportMatchLive = $('#exportMatchLive').checked;
+  renderExportMathParity();
+  function updateExportHdrAvailability() {
+    const available = exportController.readSettings().format === 'youtube_hdr';
+    exportController.setHdrAvailability(available);
+    return available;
+  }
   $('#obsOutputButton').addEventListener('click', () => toggleObsOutput().catch((error) => showToast(`OBS output: ${error.message}`, true)));
   $('#obsResolution').addEventListener('change', () => applyObsWindowOptions().catch((error) => showToast(error.message, true)));
   $('#obsFps').addEventListener('change', () => applyObsWindowOptions().catch((error) => showToast(error.message, true)));
@@ -9231,39 +8928,12 @@
     if (state.exporting) endAndFinishExport();
     else startExport().catch((error) => showToast(error.message, true));
   });
-  $('#endExportButton').addEventListener('click', endAndFinishExport);
-  $('#cancelExportButton').addEventListener('click', cancelExport);
-  $('#pauseExportButton').addEventListener('click', togglePauseExport);
-  $('#clearExportHistoryButton').addEventListener('click', () => {
-    if (!exportHistory.length || !window.confirm('Clear the recent export history? Exported video files will not be deleted.')) return;
-    exportHistory = [];
-    localStorage.removeItem(exportHistoryStorageKey);
-    renderExportHistory();
-  });
-  $('#exportHistoryList').addEventListener('click', (event) => {
-    const button = event.target.closest('[data-export-action]');
-    if (!button) return;
-    const entry = exportHistory.find((item) => item.id === button.dataset.exportId);
-    if (!entry) return;
-    const operation = button.dataset.exportAction === 'open'
-      ? window.quarticDesktop.openExport(entry.outputPath)
-      : window.quarticDesktop.revealExport(entry.outputPath);
-    operation.catch((error) => showToast(error.message, true));
-  });
-  $('#exportRecoveryList').addEventListener('click', (event) => {
-    const button = event.target.closest('[data-recovery-action]');
-    if (!button || state.exporting) return;
-    const id = button.dataset.recoveryId;
-    if (button.dataset.recoveryAction === 'recover') {
-      recoverInterruptedExport(id).catch((error) => showToast(`Recovery failed: ${error.message}`, true));
-    } else if (window.confirm('Discard this interrupted export and its temporary master?')) {
-      window.quarticDesktop.discardRecoverableExport(id)
-        .then(refreshRecoverableExports)
-        .catch((error) => showToast(error.message, true));
-    }
-  });
+  exportController.bind();
   $('#revealButton').addEventListener('click', () => {
-    if (state.exportedPath) window.quarticDesktop.revealExport(state.exportedPath);
+    exportResultWorkflowEngine.reveal({
+      reveal: (outputPath) => window.quarticDesktop.revealExport(outputPath),
+      failed: ({ error }) => showToast(error?.message || String(error), true)
+    }).catch(() => {});
   });
 
   window.addEventListener('keydown', (event) => {
@@ -9334,6 +9004,7 @@
   navigator.mediaDevices?.addEventListener?.('devicechange', () => {
     refreshAudioInputs({ requestPermission: false, silent: true }).catch(() => {});
     refreshWindowsOutputs({ silent: true }).catch(() => {});
+    refreshDeckOutputs({ silent: true }).catch(() => {});
   });
 
   bindCustomPalette();
@@ -9341,11 +9012,13 @@
   loadExportHistory();
   if (!isObsOutput) refreshRecoverableExports();
   initializeVisualEffectControls();
+  visualCatalog.decorate();
   initializeFractalLibrary();
   initializeNumericSliders();
   initializeSettingTools();
   initializePaletteTools();
   initializeInterfaceMode();
+  activateTab(document.querySelector('.tab-panel.active')?.dataset.tabPanel || 'music');
   initializeMusicPersonality();
   initializeSongMap();
   initializeSongDirector();
@@ -9367,8 +9040,7 @@
     const outputId = id === 'equationMod' ? 'equationValue' : `${id}Value`;
     $(`#${outputId}`).value = normalizedPercent(id, state[stateKey]);
   });
-  updateExportPerformanceNote();
-  if (!isObsOutput) refreshExportEncoderStatus();
+  coordinateExportSettingsChange('initialize', { refreshEncoder: !isObsOutput });
   updateObsChromaUi();
   updateObsOutputUi(false);
   initializePanelResizer();
@@ -9389,6 +9061,7 @@
     initializeSessionAutosave();
     refreshAudioInputs({ requestPermission: false, silent: true }).catch(() => {});
     refreshWindowsOutputs({ silent: true }).catch(() => {});
+    refreshDeckOutputs({ silent: true }).catch(() => {});
     window.quarticDesktop.onObsOutputStatus(updateObsOutputUi);
     window.quarticDesktop.getObsOutputStatus().then(updateObsOutputUi).catch(() => {});
     initializeVisualSafety();
