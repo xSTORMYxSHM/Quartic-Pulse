@@ -26,6 +26,17 @@
   }
 
   const $ = (selector) => document.querySelector(selector);
+  const appMetadata = window.QuarticAppMetadata;
+  if (!appMetadata) throw new Error('Quartic application metadata failed to load.');
+  const appVersionText = $('#appVersionText');
+  if (appVersionText) {
+    const channelLabel = appMetadata.releaseChannel === 'stable'
+      ? 'Stable Release'
+      : appMetadata.releaseChannel === 'release-candidate' ? 'Release Candidate' : 'Testing Build';
+    appVersionText.textContent = `Version ${appMetadata.version} ${channelLabel}`;
+  }
+  const exportProfileCatalog = window.QuarticExportProfiles;
+  if (!exportProfileCatalog) throw new Error('Quartic export profile catalog failed to load.');
   const workspaceShell = window.QuarticWorkspaceShell;
   if (!workspaceShell) throw new Error('Quartic workspace shell failed to load.');
   const visualCatalog = window.QuarticVisualCatalog;
@@ -48,17 +59,73 @@
   if (!songMapDataEngineFactory) throw new Error('Quartic Song Map data engine failed to load.');
   const songDirectorEngineFactory = window.QuarticSongDirectorEngine;
   if (!songDirectorEngineFactory) throw new Error('Quartic Song Director engine failed to load.');
+  const songDirectorControllerFactory = window.QuarticSongDirectorController;
+  if (!songDirectorControllerFactory) throw new Error('Quartic Song Director controller failed to load.');
   const performancePackageEngineFactory = window.QuarticPerformancePackageEngine;
   if (!performancePackageEngineFactory) throw new Error('Quartic performance package engine failed to load.');
   const exportControllerFactory = window.QuarticExportController;
   if (!exportControllerFactory) throw new Error('Quartic export controller failed to load.');
   const exportSessionEngineFactory = window.QuarticExportSessionEngine;
   if (!exportSessionEngineFactory) throw new Error('Quartic export session engine failed to load.');
+  const exportProgressWorkflowEngineFactory = window.QuarticExportProgressWorkflowEngine;
+  if (!exportProgressWorkflowEngineFactory) throw new Error('Quartic export progress workflow engine failed to load.');
+  const exportProgressCoordinatorFactory = window.QuarticExportProgressCoordinator;
+  if (!exportProgressCoordinatorFactory) throw new Error('Quartic export progress coordinator failed to load.');
+  const exportCommandCoordinatorFactory = window.QuarticExportCommandCoordinator;
+  if (!exportCommandCoordinatorFactory) throw new Error('Quartic export command coordinator failed to load.');
+  const exportJobCoordinatorFactory = window.QuarticExportJobCoordinator;
+  if (!exportJobCoordinatorFactory) throw new Error('Quartic export job coordinator failed to load.');
+  const exportResultWorkflowEngineFactory = window.QuarticExportResultWorkflowEngine;
+  if (!exportResultWorkflowEngineFactory) throw new Error('Quartic export result workflow engine failed to load.');
   const exportEncoderEngineFactory = window.QuarticExportEncoderEngine;
   if (!exportEncoderEngineFactory) throw new Error('Quartic export encoder engine failed to load.');
+  const exportLiveCaptureEngineFactory = window.QuarticExportLiveCaptureEngine;
+  if (!exportLiveCaptureEngineFactory) throw new Error('Quartic Live Capture Engine failed to load.');
+  const exportQuickClipWorkflowEngineFactory = window.QuarticExportQuickClipWorkflowEngine;
+  if (!exportQuickClipWorkflowEngineFactory) throw new Error('Quartic Quick Clip Workflow Engine failed to load.');
+  const exportSamplingEngineFactory = window.QuarticExportSamplingEngine;
+  if (!exportSamplingEngineFactory) throw new Error('Quartic export sampling engine failed to load.');
+  const exportSettingsSnapshotEngineFactory = window.QuarticExportSettingsSnapshotEngine;
+  if (!exportSettingsSnapshotEngineFactory) throw new Error('Quartic export settings snapshot engine failed to load.');
+  const exportPreparationEngineFactory = window.QuarticExportPreparationEngine;
+  if (!exportPreparationEngineFactory) throw new Error('Quartic export preparation engine failed to load.');
+  const exportFrameCaptureEngineFactory = window.QuarticExportFrameCaptureEngine;
+  if (!exportFrameCaptureEngineFactory) throw new Error('Quartic export frame capture engine failed to load.');
+  const exportPlanningEngineFactory = window.QuarticExportPlanningEngine;
+  if (!exportPlanningEngineFactory) throw new Error('Quartic export planning engine failed to load.');
+  const exportPresentationEngineFactory = window.QuarticExportPresentationEngine;
+  if (!exportPresentationEngineFactory) throw new Error('Quartic export presentation engine failed to load.');
+  const exportPreflightEngineFactory = window.QuarticExportPreflightEngine;
+  if (!exportPreflightEngineFactory) throw new Error('Quartic export preflight engine failed to load.');
+  const exportAdvisorEngineFactory = window.QuarticExportAdvisorEngine;
+  if (!exportAdvisorEngineFactory) throw new Error('Quartic export advisor engine failed to load.');
+  const exportSettingsCoordinatorEngineFactory = window.QuarticExportSettingsCoordinatorEngine;
+  if (!exportSettingsCoordinatorEngineFactory) throw new Error('Quartic export settings coordinator failed to load.');
+  const exportRuntimeStateCoordinatorFactory = window.QuarticExportRuntimeStateCoordinator;
+  if (!exportRuntimeStateCoordinatorFactory) throw new Error('Quartic export runtime state coordinator failed to load.');
+  const exportEncoderScanEngineFactory = window.QuarticExportEncoderScanEngine;
+  if (!exportEncoderScanEngineFactory) throw new Error('Quartic export encoder scan engine failed to load.');
+  const exportBenchmarkEngineFactory = window.QuarticExportBenchmarkEngine;
+  if (!exportBenchmarkEngineFactory) throw new Error('Quartic export benchmark engine failed to load.');
+  const exportHistoryEngineFactory = window.QuarticExportHistoryEngine;
+  if (!exportHistoryEngineFactory) throw new Error('Quartic export history engine failed to load.');
+  const exportHistoryActionEngineFactory = window.QuarticExportHistoryActionEngine;
+  if (!exportHistoryActionEngineFactory) throw new Error('Quartic export history action engine failed to load.');
+  const exportRecoveryEngineFactory = window.QuarticExportRecoveryEngine;
+  if (!exportRecoveryEngineFactory) throw new Error('Quartic export recovery engine failed to load.');
+  const exportRenderCoordinatorFactory = window.QuarticExportRenderCoordinator;
+  if (!exportRenderCoordinatorFactory) throw new Error('Quartic export render coordinator failed to load.');
+  const exportWorkflowEngineFactory = window.QuarticExportWorkflowEngine;
+  if (!exportWorkflowEngineFactory) throw new Error('Quartic export workflow engine failed to load.');
+  const exportOfflineLifecycleFactory = window.QuarticExportOfflineLifecycle;
+  if (!exportOfflineLifecycleFactory) throw new Error('Quartic offline export lifecycle failed to load.');
+  const exportLiveLifecycleFactory = window.QuarticExportLiveLifecycle;
+  if (!exportLiveLifecycleFactory) throw new Error('Quartic live export lifecycle failed to load.');
   const canvas = $('#fractalCanvas');
   const stage = $('#stage');
   const audio = $('#audio');
+  const deckOutputStorageKey = 'quarticPulseDeckOutputDevice';
+  let deckOutputDeviceId = localStorage.getItem(deckOutputStorageKey) || '';
   const gl = canvas.getContext('webgl2', {
     antialias: false,
     alpha: false,
@@ -82,6 +149,7 @@
 
     out vec4 fragColor;
     uniform vec2 uResolution;
+    uniform vec2 uSubpixelOffset;
     uniform vec2 uCenter;
     uniform float uScale;
     uniform float uTime;
@@ -94,6 +162,11 @@
     uniform float uEquationMids;
     uniform float uEquationHighs;
     uniform float uEquationBeat;
+    uniform float uMusicMotionBass;
+    uniform float uMusicMotionMids;
+    uniform float uMusicMotionHighs;
+    uniform float uMusicMotionBeat;
+    uniform float uMappedEquation;
     uniform float uFlow;
     uniform float uMotion;
     uniform float uFractalDimensional;
@@ -163,8 +236,6 @@
     uniform float uChromaKey;
     uniform float uChromaThreshold;
     uniform float uHdrExport;
-    uniform sampler2D uMainframeRoom;
-    uniform float uMainframeReady;
 
     vec3 cosinePalette(float t, vec3 a, vec3 b, vec3 c, vec3 d) {
       return a + b * cos(6.2831853 * (c * t + d));
@@ -533,164 +604,226 @@
       return mix(color, background, fog);
     }
 
-    float mainframeEllipse(vec2 uv, vec2 center, vec2 stretch, float radius, float sharpness) {
-      return exp(-abs(length((uv - center) * stretch) - radius) * sharpness);
+    float mainframeHash21(vec2 point) {
+      point = fract(point * vec2(123.34, 456.21));
+      point += dot(point, point + 45.32);
+      return fract(point.x * point.y);
     }
 
-    vec3 renderMainframeRoom(vec2 screenUv, float frequencyShift) {
-      vec2 uv = screenUv;
-      float sourceAspect = 1672.0 / 939.0;
+    float mainframeNoise(vec2 point) {
+      vec2 cell = floor(point);
+      vec2 local = fract(point);
+      local = local * local * (3.0 - 2.0 * local);
+      return mix(
+        mix(mainframeHash21(cell), mainframeHash21(cell + vec2(1.0, 0.0)), local.x),
+        mix(mainframeHash21(cell + vec2(0.0, 1.0)), mainframeHash21(cell + vec2(1.0)), local.x),
+        local.y
+      );
+    }
+
+    vec3 mainframeNeonColor(float position) {
+      vec3 source = palette(position);
+      float luminance = dot(source, vec3(.2126, .7152, .0722));
+      return max(vec3(0.0), vec3(luminance) + (source - vec3(luminance)) * 1.72) * 1.82;
+    }
+
+    float mainframeTerrainHeight(vec2 position, float bassDrive, float midDrive) {
+      float x = position.x;
+      float z = position.y;
+      float rolling = sin(x * .54 + sin(z * .19) * 1.6) * .24;
+      rolling += sin(x * 1.17 - z * .21) * .13;
+      rolling += sin(x * 2.31 + z * .08) * .055;
+      float ridge = pow(.5 + .5 * sin(x * .39 + z * .27 + sin(z * .085) * 2.1), 5.0) * .48;
+      float centerPeak = exp(-length(vec2(x * .19, (z - 14.0) * .15))) * 3.15;
+      float leftPeak = exp(-length(vec2((x + 8.6) * .34, (z - 11.0) * .21))) * 1.55;
+      float rightPeak = exp(-length(vec2((x - 8.2) * .38, (z - 10.5) * .22))) * 1.40;
+      float audioRelief = sin(x * 1.8 + z * .42 - uTime * .45) * (.035 * midDrive);
+      return .08 + rolling + ridge + centerPeak + leftPeak + rightPeak + audioRelief + bassDrive * .035;
+    }
+
+    float mainframeSdBox(vec2 point, vec2 bounds) {
+      vec2 distance = abs(point) - bounds;
+      return length(max(distance, 0.0)) + min(max(distance.x, distance.y), 0.0);
+    }
+
+    vec3 renderMainframeLandscape(vec2 screenUv, float frequencyShift) {
       float outputAspect = uResolution.x / max(1.0, uResolution.y);
-      if (outputAspect > sourceAspect) uv.y = (uv.y - .5) * sourceAspect / outputAspect + .5;
-      else uv.x = (uv.x - .5) * outputAspect / sourceAspect + .5;
+      vec2 view = (screenUv - .5) * vec2(outputAspect, 1.0);
+      float bassDrive = pow(clamp(uEquationBass * 1.45 + uBass * .68 + uRms * .16, 0.0, 1.0), .62);
+      float midDrive = pow(clamp(uEquationMids * 1.42 + uMids * .65 + uRms * .12, 0.0, 1.0), .65);
+      float highDrive = pow(clamp(uEquationHighs * 1.40 + uHighs * .64, 0.0, 1.0), .68);
+      float beatDrive = pow(clamp(max(uEquationBeat, uBeat) * 1.22, 0.0, 1.0), .72);
+      vec3 lowColor = mainframeNeonColor(.82 + frequencyShift);
+      vec3 midColor = mainframeNeonColor(.46 + frequencyShift);
+      vec3 highColor = mainframeNeonColor(.66 + frequencyShift);
 
-      float bassDrive = pow(clamp(uEquationBass * 1.55 + uBass * .72 + uRms * .16, 0.0, 1.0), .58);
-      float midDrive = pow(clamp(uEquationMids * 1.50 + uMids * .68 + uRms * .13, 0.0, 1.0), .62);
-      float highDrive = pow(clamp(uEquationHighs * 1.45 + uHighs * .66, 0.0, 1.0), .64);
-      float beatDrive = pow(clamp(max(uEquationBeat, uBeat) * 1.25, 0.0, 1.0), .70);
-      vec2 perspectiveOrigin = vec2(.5, .47);
-      float cameraPush = (.006 * bassDrive + .011 * beatDrive) * clamp(uMotion, 0.0, 2.0);
-      uv = perspectiveOrigin + (uv - perspectiveOrigin) * (1.0 - cameraPush);
+      float cameraSway = sin(uTime * .085) * (.10 + .16 * uMotion) + sin(uTime * .031) * .12;
+      vec3 rayOrigin = vec3(cameraSway, 2.05 + beatDrive * .045, -4.2);
+      vec3 rayDirection = normalize(vec3(view.x * 1.18, view.y - .075, 1.32));
 
-      vec2 cameraDrift = vec2(
-        sin(uTime * .113) + .38 * sin(uTime * .047),
-        cos(uTime * .091) + .31 * sin(uTime * .061)
-      ) * (.0015 + .0028 * uMotion + .0028 * midDrive);
-      float floorDepth = smoothstep(.57, .02, uv.y);
-      float sideDepth = smoothstep(.30, .49, abs(uv.x - .5));
-      float ceilingDepth = smoothstep(.70, .98, uv.y);
-      float parallaxDepth = clamp(floorDepth * .72 + sideDepth * .48 + ceilingDepth * .24, 0.0, 1.0);
-      vec2 textureUv = clamp(uv + cameraDrift * parallaxDepth, vec2(.001), vec2(.999));
+      float skyFade = smoothstep(-.20, .55, rayDirection.y);
+      vec3 color = vec3(.0015, .004, .011);
+      color += mix(lowColor, highColor, skyFade) * (.012 + .024 * skyFade + .026 * uRms);
+      float horizonGlow = exp(-abs(rayDirection.y) * 23.0);
+      color += midColor * horizonGlow * (.05 + .12 * midDrive);
 
-      vec3 room = uMainframeReady > .5
-        ? texture(uMainframeRoom, textureUv).rgb
-        : palette(.57 + uv.y * .16 + frequencyShift) * (.05 + .18 * (1.0 - uv.y));
-      float roomLuma = dot(room, vec3(.2126, .7152, .0722));
-      float blueCircuit = smoothstep(.015, .34, room.b - room.r * .42);
-      vec2 sourceTexel = vec2(1.0 / 1672.0, 1.0 / 939.0);
-      vec3 roomLeft = texture(uMainframeRoom, clamp(textureUv - vec2(sourceTexel.x, 0.0), vec2(.001), vec2(.999))).rgb;
-      vec3 roomRight = texture(uMainframeRoom, clamp(textureUv + vec2(sourceTexel.x, 0.0), vec2(.001), vec2(.999))).rgb;
-      vec3 roomDown = texture(uMainframeRoom, clamp(textureUv - vec2(0.0, sourceTexel.y), vec2(.001), vec2(.999))).rgb;
-      vec3 roomUp = texture(uMainframeRoom, clamp(textureUv + vec2(0.0, sourceTexel.y), vec2(.001), vec2(.999))).rgb;
-      vec3 lumaWeights = vec3(.2126, .7152, .0722);
-      vec2 lumaGradient = vec2(dot(roomRight - roomLeft, lumaWeights), dot(roomUp - roomDown, lumaWeights));
-      vec2 blueGradient = vec2(roomRight.b - roomLeft.b, roomUp.b - roomDown.b);
-      float structuralContour = smoothstep(.055, .32,
-        length(lumaGradient) * 4.4 + length(blueGradient) * 1.7);
-      float primaryContour = pow(structuralContour, 1.55);
-      float energizedContour = clamp(primaryContour * 1.10 + blueCircuit * .08, 0.0, 1.0);
-      float contourGate = .055 + energizedContour * 1.20;
-      vec3 lowColor = palette(.10 + frequencyShift);
-      vec3 midColor = palette(.46 + frequencyShift);
-      vec3 highColor = palette(.80 + frequencyShift);
-      vec3 color = room * (.74 + .16 * uRms + .05 * bassDrive);
-      color += midColor * blueCircuit * (.045 + .24 * midDrive);
+      vec2 starCell = floor(screenUv * vec2(420.0, 240.0));
+      float starRandom = mainframeHash21(starCell);
+      float star = pow(starRandom, 92.0) * smoothstep(.52, .68, screenUv.y);
+      float starPulse = .55 + .45 * sin(uTime * (1.0 + starRandom * 2.6) + starRandom * 30.0);
+      color += mix(vec3(.56, .75, 1.0), highColor, starRandom) * star * starPulse * (.38 + .52 * highDrive);
+      vec2 nebulaPoint = vec2(view.x * .62 + view.y * .34, view.y * 1.9);
+      float nebulaBand = exp(-abs(nebulaPoint.x - .17) * 5.2) * smoothstep(.57, .96, screenUv.y);
+      float nebulaDust = mainframeNoise(nebulaPoint * 6.0 + vec2(uTime * .004, 0.0));
+      color += mix(lowColor, vec3(.32, .40, .72), .55) * nebulaBand * nebulaDust * .028;
 
-      float perspectiveWidth = .085 + floorDepth * .91;
-      float lanePosition = (uv.x - .5) / max(.025, perspectiveWidth);
-      float laneLines = pow(.5 + .5 * cos(lanePosition * 31.4159), 14.0);
-      float lanePackets = pow(.5 + .5 * cos(
-        floorDepth * 78.0 - uTime * (3.8 + 4.6 * uFlow + 6.5 * bassDrive) + lanePosition * 2.1
-      ), 9.0);
-      float laneSurge = pow(.5 + .5 * cos(
-        floorDepth * 31.0 - uTime * (2.4 + 4.2 * uFlow + 3.2 * midDrive)
-      ), 8.0);
-      float laneBounds = 1.0 - smoothstep(.82, 1.10, abs(lanePosition));
-      float floorData = floorDepth * laneBounds
-        * laneLines * (.16 + .84 * lanePackets + .24 * laneSurge)
-        * contourGate;
-      color += lowColor * floorData * (.14 + .96 * bassDrive + .42 * beatDrive);
+      float skylineX = (screenUv.x - .5) * 96.0;
+      float towerCell = floor(skylineX);
+      float towerRandom = mainframeHash21(vec2(towerCell, 17.0));
+      float towerLocal = abs(fract(skylineX) - .5);
+      float towerHeight = .018 + pow(towerRandom, 2.4) * .15;
+      towerHeight *= .60 + .65 * spectrumAt(fract(towerCell * .071));
+      float towerBody = (1.0 - smoothstep(.30, .47, towerLocal))
+        * step(.535, screenUv.y) * step(screenUv.y, .535 + towerHeight);
+      float towerEdge = smoothstep(.35, .47, towerLocal) * towerBody;
+      float towerScan = pow(.5 + .5 * cos((screenUv.y - .535) * 430.0 - uTime * (2.0 + 4.0 * uFlow)), 14.0);
+      color += lowColor * towerBody * (.07 + .15 * towerScan + .10 * highDrive);
+      color += highColor * towerEdge * (.17 + .30 * highDrive);
 
-      float wallMask = sideDepth
-        * smoothstep(.12, .24, uv.y)
-        * (1.0 - smoothstep(.79, .94, uv.y));
-      float wallTracks = pow(.5 + .5 * cos((uv.x - .5) * 285.0), 17.0);
-      float wallPackets = pow(.5 + .5 * cos(
-        uv.y * 112.0 + sign(uv.x - .5) * uTime * (2.8 + 4.8 * uFlow + 7.0 * highDrive)
-      ), 10.0);
-      float wallData = wallMask * wallTracks * (.20 + .80 * wallPackets) * contourGate;
-      vec2 rackCell = floor(vec2(uv.x * 188.0, uv.y * 104.0));
-      float rackRandom = fract(sin(dot(rackCell, vec2(12.9898, 78.233))) * 43758.5453);
-      float rackBlink = step(.82, rackRandom)
-        * pow(.5 + .5 * cos(uTime * (3.0 + 9.0 * highDrive) + rackRandom * 6.2831853), 12.0)
-        * wallMask * energizedContour;
-      color += highColor * wallData * (.12 + .90 * highDrive + .30 * beatDrive);
-      color += mix(midColor, highColor, rackRandom) * rackBlink * (.08 + .82 * highDrive);
+      float summitY = clamp((screenUv.y - .535) / .255, 0.0, 1.0);
+      float summitHalfWidth = .155 * pow(1.0 - summitY, .78) + .006;
+      float summitX = abs(screenUv.x - .5);
+      float summitMask = step(.535, screenUv.y) * step(screenUv.y, .79)
+        * (1.0 - smoothstep(summitHalfWidth - .006, summitHalfWidth, summitX));
+      float summitEdge = exp(-abs(summitX - summitHalfWidth) * 720.0) * step(.535, screenUv.y) * step(screenUv.y, .79);
+      float summitContours = pow(.5 + .5 * cos((screenUv.y - .535) * 198.0 + summitX * 48.0), 24.0);
+      float summitRibs = pow(.5 + .5 * cos(summitX / max(.008, summitHalfWidth) * 25.0), 28.0);
+      color += mix(lowColor, highColor, summitY) * summitMask
+        * (.018 + .16 * summitContours + .11 * summitRibs) * (1.0 + midDrive * .55);
+      color += highColor * summitEdge * (.20 + .42 * beatDrive);
+      float summitBeacon = exp(-abs(screenUv.x - .5) * 760.0)
+        * step(.785, screenUv.y) * step(screenUv.y, .86);
+      color += lowColor * summitBeacon * (.17 + .52 * beatDrive);
 
-      float reactorBeam = exp(-abs(uv.x - .5) * (72.0 - 16.0 * bassDrive))
-        * smoothstep(.20, .31, uv.y)
-        * (1.0 - smoothstep(.82, .98, uv.y));
-      float reactorPackets = pow(.5 + .5 * cos(
-        uv.y * 62.0 - uTime * (4.0 + 8.0 * midDrive)
-      ), 9.0);
-      float reactorCore = exp(-abs(uv.x - .5) * (22.0 - 6.0 * midDrive))
-        * smoothstep(.23, .37, uv.y)
-        * (1.0 - smoothstep(.63, .78, uv.y));
-      float ringExpansion = .0045 * bassDrive + .0090 * beatDrive;
-      float reactorRings = mainframeEllipse(uv, vec2(.5, .282), vec2(1.0, 3.15), .135 + ringExpansion, 145.0)
-        + mainframeEllipse(uv, vec2(.5, .497), vec2(1.0, 3.85), .128 + ringExpansion * .82, 150.0)
-        + mainframeEllipse(uv, vec2(.5, .731), vec2(1.0, 3.10), .143 + ringExpansion * 1.12, 145.0);
-      float reactorEnergy = .20 + .92 * bassDrive + .54 * midDrive + .72 * beatDrive;
-      float reactorContour = clamp(energizedContour + blueCircuit * .18, 0.0, 1.0);
-      color += midColor * reactorBeam * (.08 + .34 * reactorEnergy)
-        * (.48 + .52 * reactorPackets) * (.18 + 1.08 * reactorContour);
-      color += highColor * reactorCore * (.055 + .32 * midDrive + .14 * highDrive)
-        * (.16 + 1.02 * reactorContour);
-      color += mix(lowColor, highColor, .58) * reactorRings * (.15 + .76 * reactorEnergy)
-        * (.12 + 1.18 * reactorContour);
-
-      vec2 wavePoint = (uv - vec2(.5, .49)) * vec2(1.0, outputAspect);
-      float waveDistance = length(wavePoint);
-      vec3 eventWaves = vec3(0.0);
-      for (int eventIndex = 0; eventIndex < 16; eventIndex++) {
-        if (eventIndex >= uPulseEventCount) break;
-        float age = max(0.0, uPulseEventAge[eventIndex]);
-        float strength = uPulseEventStrength[eventIndex];
-        float band = uPulseEventBand[eventIndex];
-        float waveRadius = .035 + age * (.13 + band * .018);
-        float wave = exp(-abs(waveDistance - waveRadius) * (84.0 - band * 8.0));
-        float echo = exp(-abs(waveDistance - max(.0, waveRadius - .028)) * (68.0 - band * 6.0));
-        float life = exp(-age * .82) * (1.0 - smoothstep(.72, .96, waveRadius));
-        eventWaves += palette(.10 + band * .34 + frequencyShift)
-          * (wave + echo * .42) * life * strength * (.52 + .95 * uMotion);
+      float travel = .35;
+      float hit = 0.0;
+      vec3 terrainPoint = rayOrigin;
+      for (int march = 0; march < 72; march++) {
+        terrainPoint = rayOrigin + rayDirection * travel;
+        float height = mainframeTerrainHeight(terrainPoint.xz, bassDrive, midDrive);
+        float clearance = terrainPoint.y - height;
+        if (clearance < .006) {
+          hit = 1.0;
+          break;
+        }
+        travel += clamp(clearance * .34, .03, .30);
+        if (travel > 38.0) break;
       }
-      color += eventWaves * contourGate;
 
-      float stormRegion = smoothstep(.69, .91, uv.y)
-        * (1.0 - smoothstep(.18, .46, abs(uv.x - .5)));
-      float sourceLightning = pow(clamp(room.b * 1.20 - room.r * .32 - roomLuma * .18, 0.0, 1.0), 1.45);
-      float stormFlicker = .04 + .32 * highDrive + .44 * beatDrive + .08 * uRms;
-      color += highColor * stormRegion * sourceLightning * stormFlicker;
+      if (hit > .5) {
+        for (int refine = 0; refine < 4; refine++) {
+          float height = mainframeTerrainHeight(terrainPoint.xz, bassDrive, midDrive);
+          travel -= (terrainPoint.y - height) * .36;
+          terrainPoint = rayOrigin + rayDirection * travel;
+        }
+        float epsilon = .035;
+        float height = mainframeTerrainHeight(terrainPoint.xz, bassDrive, midDrive);
+        float heightX = mainframeTerrainHeight(terrainPoint.xz + vec2(epsilon, 0.0), bassDrive, midDrive);
+        float heightZ = mainframeTerrainHeight(terrainPoint.xz + vec2(0.0, epsilon), bassDrive, midDrive);
+        vec3 normal = normalize(vec3(height - heightX, epsilon, height - heightZ));
+        float diffuse = .22 + .78 * max(0.0, dot(normal, normalize(vec3(-.45, .86, -.28))));
+        float rim = pow(1.0 - max(0.0, dot(normal, -rayDirection)), 2.2);
 
-      float consoleMask = smoothstep(.25, .34, uv.x)
-        * (1.0 - smoothstep(.66, .75, uv.x))
-        * smoothstep(.025, .075, uv.y)
-        * (1.0 - smoothstep(.16, .22, uv.y));
-      float consoleSweep = pow(.5 + .5 * cos(
-        uv.x * 74.0 - uTime * (2.0 + 5.0 * midDrive)
-      ), 11.0);
-      color += mix(lowColor, midColor, .58) * consoleMask * consoleSweep
-        * energizedContour * (.06 + .58 * midDrive);
+        float distanceFade = exp(-travel * .038);
+        vec3 terrainColor = vec3(.014, .034, .088) * (.72 + diffuse * 1.02);
+        terrainColor += mix(lowColor, highColor, clamp(.22 + height * .16, 0.0, 1.0))
+          * (.035 + diffuse * .042);
+        terrainColor += mix(lowColor, midColor, clamp(height * .22, 0.0, 1.0)) * rim * .28;
 
-      float reactorZone = (1.0 - smoothstep(.10, .30, abs(uv.x - .5)))
-        * smoothstep(.18, .30, uv.y) * (1.0 - smoothstep(.77, .90, uv.y));
-      float contourEnergy = floorDepth * bassDrive
-        + wallMask * highDrive
-        + reactorZone * (midDrive + beatDrive * .72)
-        + stormRegion * highDrive * .55;
-      vec3 routedContourColor = mix(lowColor, highColor, clamp(uv.y, 0.0, 1.0));
-      color += routedContourColor * primaryContour * contourEnergy * (.20 + .62 * uMotion);
+        float gridX = pow(.5 + .5 * cos(terrainPoint.x * 6.2831853), 26.0);
+        float gridZ = pow(.5 + .5 * cos(terrainPoint.z * 6.2831853), 24.0);
+        float majorX = pow(.5 + .5 * cos(terrainPoint.x * 1.5707963), 42.0);
+        float majorZ = pow(.5 + .5 * cos(terrainPoint.z * 1.5707963), 40.0);
+        float contours = pow(.5 + .5 * cos(height * 15.5), 34.0);
+        float wireGrid = max(max(gridX, gridZ) * .34, max(majorX, majorZ) * .78);
+        terrainColor += lowColor * wireGrid * (.68 + .56 * highDrive) * distanceFade;
+        terrainColor += midColor * contours * (.30 + .36 * midDrive) * distanceFade;
 
-      float depthShade = 1.0 - parallaxDepth * (.05 - .025 * uEquationBass);
-      color *= depthShade;
-      color += midColor * blueCircuit * blueCircuit * (.028 + .09 * uFrequencyColor + .06 * midDrive);
-      float peakLuma = dot(color, vec3(.2126, .7152, .0722));
-      color *= 1.0 / (1.0 + max(0.0, peakLuma - .68) * .78);
-      return color / (1.0 + color * .16);
+        float centerPath = exp(-abs(terrainPoint.x - sin(terrainPoint.z * .18) * 1.15) * 2.8);
+        float leftPath = exp(-abs(terrainPoint.x + 4.4 + sin(terrainPoint.z * .24 + 1.7) * 1.5) * 3.2);
+        float rightPath = exp(-abs(terrainPoint.x - 4.8 - sin(terrainPoint.z * .20 + .8) * 1.25) * 3.0);
+        float packetClock = uTime * (4.0 + 7.0 * uFlow + 3.5 * bassDrive);
+        float centerPackets = pow(.5 + .5 * cos(terrainPoint.z * 4.7 - packetClock), 17.0);
+        float sidePackets = pow(.5 + .5 * cos(terrainPoint.z * 5.6 - packetClock * 1.18), 20.0);
+        terrainColor += lowColor * centerPath * (.44 + 1.28 * centerPackets) * (1.0 + bassDrive * .82);
+        terrainColor += midColor * leftPath * (.36 + 1.24 * sidePackets) * (1.0 + midDrive * .78);
+        terrainColor += highColor * rightPath * (.36 + 1.24 * sidePackets) * (1.0 + highDrive * .80);
+
+        vec2 dataCell = floor(vec2(terrainPoint.x * 2.2, (terrainPoint.z - uTime * (2.2 + 3.0 * uFlow)) * 2.6));
+        vec2 dataLocal = fract(vec2(terrainPoint.x * 2.2, (terrainPoint.z - uTime * (2.2 + 3.0 * uFlow)) * 2.6));
+        float bitRandom = mainframeHash21(dataCell);
+        float bit = step(.58, bitRandom)
+          * smoothstep(.42, .30, abs(dataLocal.x - .5))
+          * smoothstep(.38, .25, abs(dataLocal.y - .5));
+        float dataField = max(centerPath, max(leftPath, rightPath));
+        terrainColor += mix(lowColor, highColor, bitRandom) * bit * dataField * (.34 + .72 * highDrive);
+
+        for (int eventIndex = 0; eventIndex < 16; eventIndex++) {
+          if (eventIndex >= uPulseEventCount) break;
+          float age = max(0.0, uPulseEventAge[eventIndex]);
+          float strength = uPulseEventStrength[eventIndex];
+          float band = uPulseEventBand[eventIndex];
+          float radius = 1.2 + age * (3.7 + band * .55);
+          float ring = exp(-abs(length(terrainPoint.xz - vec2(0.0, 3.0)) - radius) * 3.4);
+          terrainColor += palette(.08 + band * .34 + frequencyShift) * ring * strength * exp(-age * .65) * .55;
+        }
+
+        float peakBeacon = exp(-abs(terrainPoint.x) * 2.2) * exp(-abs(terrainPoint.z - 14.0) * .8);
+        terrainColor += highColor * peakBeacon * (.34 + .86 * beatDrive);
+        float fog = 1.0 - exp(-travel * .055);
+        vec3 fogColor = mix(vec3(.004, .010, .026), midColor * .09, horizonGlow);
+        color = mix(terrainColor, fogColor, fog) + terrainColor * distanceFade * .28;
+      }
+
+      float rainSide = smoothstep(.10, .015, screenUv.x) + smoothstep(.90, .985, screenUv.x);
+      vec2 rainCell = floor(vec2(screenUv.x * 150.0, (screenUv.y + uTime * (.10 + .22 * uFlow)) * 94.0));
+      vec2 rainLocal = fract(vec2(screenUv.x * 150.0, (screenUv.y + uTime * (.10 + .22 * uFlow)) * 94.0));
+      float rainRandom = mainframeHash21(vec2(rainCell.x, floor(rainCell.y * .13)));
+      float rainGlyph = step(.42, rainRandom) * smoothstep(.40, .25, abs(rainLocal.x - .5))
+        * smoothstep(.43, .26, abs(rainLocal.y - .5));
+      color += mix(lowColor, highColor, rainRandom) * rainGlyph * rainSide * (.20 + .52 * highDrive);
+
+      float leftPanel = exp(-abs(mainframeSdBox((screenUv - vec2(.205, .795)) * vec2(outputAspect, 1.0), vec2(.145, .078))) * 520.0);
+      float rightPanel = exp(-abs(mainframeSdBox((screenUv - vec2(.805, .805)) * vec2(outputAspect, 1.0), vec2(.13, .088))) * 520.0);
+      float panelMask = leftPanel + rightPanel;
+      color += lowColor * panelMask * (.20 + .24 * highDrive);
+      float panelWaveX = clamp((screenUv.x - .105) / .20, 0.0, 1.0);
+      float panelWave = waveformAt(panelWaveX) * (.020 + .022 * uRms);
+      float panelTrace = exp(-abs(screenUv.y - (.795 + panelWave)) * 390.0)
+        * step(.105, screenUv.x) * step(screenUv.x, .305)
+        * step(.735, screenUv.y) * step(screenUv.y, .855);
+      color += midColor * panelTrace * (.24 + .62 * midDrive);
+      float panelRows = pow(.5 + .5 * cos(screenUv.y * 520.0), 20.0)
+        * step(.725, screenUv.x) * step(screenUv.x, .885)
+        * step(.75, screenUv.y) * step(screenUv.y, .86);
+      color += highColor * panelRows * (.035 + .11 * highDrive);
+
+      vec2 reticlePoint = (screenUv - vec2(.69, .72)) * vec2(outputAspect, 1.0);
+      float reticleRadius = length(reticlePoint);
+      float reticle = exp(-abs(reticleRadius - .045 - beatDrive * .004) * 440.0)
+        + exp(-abs(reticleRadius - .027) * 390.0) * .55;
+      float reticleCross = exp(-abs(reticlePoint.x) * 700.0) * step(abs(reticlePoint.y), .062)
+        + exp(-abs(reticlePoint.y) * 700.0) * step(abs(reticlePoint.x), .062);
+      color += lowColor * (reticle + reticleCross * .24) * (.14 + .34 * beatDrive);
+
+      float scanline = pow(.5 + .5 * cos(screenUv.y * uResolution.y * 3.1415926), 26.0);
+      color *= .985 + scanline * .015;
+      return color / (1.0 + color * .22);
     }
 
     void main() {
-      vec2 p = (gl_FragCoord.xy - .5 * uResolution.xy) / uResolution.y;
+      vec2 sampleCoord = gl_FragCoord.xy + uSubpixelOffset;
+      vec2 p = (sampleCoord - .5 * uResolution.xy) / uResolution.y;
       float cs = cos(uRotation);
       float sn = sin(uRotation);
       p = mat2(cs, -sn, sn, cs) * p;
@@ -737,6 +870,18 @@
       vec2 c = uCenter + dimensionalPlane * uScale * pulse;
       float coreCScale = mix(.35, 1.65, uCoreCStrength);
       vec2 recurrenceC = c * coreCScale + uCoreBias;
+      // Musical motion is kept separate from the slower equation/color
+      // envelopes. It follows rhythmic contrast without turning each onset
+      // into a full-frame brightness flash.
+      vec2 musicalRecurrenceDrift = uEquation * vec2(
+        (.010 * uMusicMotionBass + .006 * uMusicMotionBeat) * sin(uTime * .71),
+        (.008 * uMusicMotionMids - .003 * uMusicMotionHighs) * cos(uTime * .89)
+      );
+      musicalRecurrenceDrift += uMappedEquation * vec2(
+        .014 * sin(uTime * .79),
+        .011 * cos(uTime * 1.03)
+      );
+      recurrenceC += musicalRecurrenceDrift;
       float frequencyShift = uFrequencyHue * uFrequencyColor;
       vec3 color = vec3(0.0);
       if (uVisualStyle == 0) {
@@ -751,11 +896,20 @@
       float convergenceHit = 0.0;
       int escapedAt = uIterations;
 
-      float trapAngle = uTime * (.12 + .12 * uEquationHighs) * uMotion;
+      float trapAngle = uTime * (.12 + .12 * uEquationHighs) * uMotion
+        + .09 * uMusicMotionHighs;
       vec2 trapDir = vec2(cos(trapAngle), sin(trapAngle));
       vec2 equationMu = uEquation * vec2(
-        (.070 * uEquationBass + .025 * uEquationBeat) * cos(uTime * .43),
+        (.070 * uEquationBass + .025 * uEquationBeat) * cos(uTime * .43)
+          + .040 * uMusicMotionBass * sin(uTime * 1.13)
+          + .018 * uMusicMotionBeat * cos(uTime * .83),
         .060 * uEquationMids * sin(uTime * .59)
+          + .034 * uMusicMotionMids * cos(uTime * .97)
+          + .014 * uMusicMotionHighs * sin(uTime * 1.71)
+      );
+      equationMu += uMappedEquation * vec2(
+        .065 * cos(uTime * .73),
+        .052 * sin(uTime * .91)
       );
 
       mat2 equationFoldRotation = mat2(1.0, 0.0, 0.0, 1.0);
@@ -952,8 +1106,8 @@
       color += palette(.18 + dimensionalPoint.z * .22 + frequencyShift) * depthSheen;
       }
 
-      vec2 screenUv = gl_FragCoord.xy / uResolution.xy;
-      vec2 visualPoint = (gl_FragCoord.xy - .5 * uResolution.xy) / uResolution.y;
+      vec2 screenUv = sampleCoord / uResolution.xy;
+      vec2 visualPoint = (sampleCoord - .5 * uResolution.xy) / uResolution.y;
       if (uVisualStyle == 1) {
         float style = floor(uBarStyle + .5);
         float warpedX = screenUv.x + sin(screenUv.y * 7.0 - uTime * (1.1 + uMids))
@@ -1188,7 +1342,7 @@
       } else if (uVisualStyle == 5) {
         color = renderMandelbulb(visualPoint * 2.0, frequencyShift);
       } else if (uVisualStyle == 6) {
-        color = renderMainframeRoom(screenUv, frequencyShift);
+        color = renderMainframeLandscape(screenUv, frequencyShift);
       }
 
       float vignette = 1.0 - .48 * dot(p, p);
@@ -1240,10 +1394,10 @@
   gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
 
   const uniforms = {};
-  for (const name of ['uResolution','uCenter','uScale','uTime','uBass','uMids','uHighs','uRms','uBeat','uFlow','uMotion','uFractalDimensional','uFractalTilt','uFractalDepthSpeed','uFractalPerspective','uFractalSlice','uFractalLighting','uFractalAudioDepth','uEquationFolding','uEquationFold','uEquationWarp','uEquationFoldMotion','uEquationFoldOffset','uEquationWarpScale','uEquationFoldAudio','uCoreCStrength','uCoreBias','uBarWidth','uBarGlow','uBarReflection','uBarMotion','uBarEcho','uBarGrid','uBarStyle','uRadialSize','uRadialGlow','uRadialWaves','uRadialTwist','uRadialSpokes','uRadialAtmosphere','uPulseJagged','uPulseTrail','uPulseDetail','uPulseSize','uPulseEventCount','uBulbPower','uBulbWarp','uBulbDetail','uBulbAudio','uBulbOrbit','uBulbFold','uBulbGlow','uBulbCamera','uBulbYaw','uBulbPitch','uBulbSteps','uRotation','uEquation','uFrequencyHue','uFrequencyColor','uFractalType','uVisualStyle','uCustom0','uCustom1','uCustom2','uCustom3','uIterations','uPalette','uChromaKey','uChromaThreshold','uHdrExport','uMainframeReady']) {
+  for (const name of ['uResolution','uSubpixelOffset','uCenter','uScale','uTime','uBass','uMids','uHighs','uRms','uBeat','uFlow','uMotion','uFractalDimensional','uFractalTilt','uFractalDepthSpeed','uFractalPerspective','uFractalSlice','uFractalLighting','uFractalAudioDepth','uEquationFolding','uEquationFold','uEquationWarp','uEquationFoldMotion','uEquationFoldOffset','uEquationWarpScale','uEquationFoldAudio','uCoreCStrength','uCoreBias','uBarWidth','uBarGlow','uBarReflection','uBarMotion','uBarEcho','uBarGrid','uBarStyle','uRadialSize','uRadialGlow','uRadialWaves','uRadialTwist','uRadialSpokes','uRadialAtmosphere','uPulseJagged','uPulseTrail','uPulseDetail','uPulseSize','uPulseEventCount','uBulbPower','uBulbWarp','uBulbDetail','uBulbAudio','uBulbOrbit','uBulbFold','uBulbGlow','uBulbCamera','uBulbYaw','uBulbPitch','uBulbSteps','uRotation','uEquation','uFrequencyHue','uFrequencyColor','uFractalType','uVisualStyle','uCustom0','uCustom1','uCustom2','uCustom3','uIterations','uPalette','uChromaKey','uChromaThreshold','uHdrExport']) {
     uniforms[name] = gl.getUniformLocation(program, name);
   }
-  for (const name of ['uEquationBass','uEquationMids','uEquationHighs','uEquationBeat']) {
+  for (const name of ['uEquationBass','uEquationMids','uEquationHighs','uEquationBeat','uMusicMotionBass','uMusicMotionMids','uMusicMotionHighs','uMusicMotionBeat','uMappedEquation']) {
     uniforms[name] = gl.getUniformLocation(program, name);
   }
   uniforms.uSpectrum = gl.getUniformLocation(program, 'uSpectrum[0]');
@@ -1253,34 +1407,6 @@
   uniforms.uPulseEventBand = gl.getUniformLocation(program, 'uPulseEventBand[0]');
   uniforms.uPulseEventSeed = gl.getUniformLocation(program, 'uPulseEventSeed[0]');
   uniforms.uBulbHotspots = gl.getUniformLocation(program, 'uBulbHotspots[0]');
-  uniforms.uMainframeRoom = gl.getUniformLocation(program, 'uMainframeRoom');
-
-  const mainframeRoomTexture = gl.createTexture();
-  let mainframeRoomReady = false;
-  gl.activeTexture(gl.TEXTURE0);
-  gl.bindTexture(gl.TEXTURE_2D, mainframeRoomTexture);
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE,
-    new Uint8Array([2, 5, 12, 255]));
-  gl.generateMipmap(gl.TEXTURE_2D);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-  const mainframeRoomImage = new Image();
-  mainframeRoomImage.addEventListener('load', () => {
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, mainframeRoomTexture);
-    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, mainframeRoomImage);
-    gl.generateMipmap(gl.TEXTURE_2D);
-    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
-    mainframeRoomReady = true;
-  });
-  mainframeRoomImage.addEventListener('error', () => {
-    console.warn('Tempest Mainframe Room texture could not be loaded.');
-  });
-  mainframeRoomImage.src = new URL('../../assets/tempest-mainframe-room.png', window.location.href).href;
-
   const defaultFrequencyBands = Object.freeze({
     floor: 25,
     lowMid: 180,
@@ -1399,6 +1525,7 @@
     songDirectorEnabled: false,
     songDirectorStyle: 'cinematic',
     songDirectorBehavior: 'auto',
+    songDirectorTransition: 'auto',
     songDirectorIntensity: .55,
     songDirectorValues: {},
     analysisBassGain: 1,
@@ -1420,6 +1547,13 @@
     equationMids: 0,
     equationHighs: 0,
     equationBeat: 0,
+    musicMotionBass: 0,
+    musicMotionMids: 0,
+    musicMotionHighs: 0,
+    musicMotionBeat: 0,
+    musicBaselineBass: 0,
+    musicBaselineMids: 0,
+    musicBaselineHighs: 0,
     equationSmoothing: .9,
     beatAverage: 0.05,
     beatFastEnvelope: 0,
@@ -1462,8 +1596,13 @@
     exportWidth: 1920,
     exportHeight: 1080,
     exportDetail: 1.6,
-    exportIterations: 480,
+    exportIterations: 600,
     exportIterationTarget: 0,
+    exportSupersampling: false,
+    offlineSamplePass: 0,
+    exportSampleOffsetX: 0,
+    exportSampleOffsetY: 0,
+    offlineBaseModulation: null,
     autoDrift: true,
     beatPulse: true,
     drag: null,
@@ -1471,10 +1610,10 @@
     audioName: '',
     playlist: [],
     playlistIndex: -1,
+    playlistLoadedId: null,
     playlistId: 0,
     audioMode: 'deck',
     liveAudioLabel: '',
-    exportedPath: null,
     obsChromaKey: false,
     obsChromaThreshold: .08,
     modulationEnabled: true,
@@ -1489,6 +1628,7 @@
     hardwareRecommendation: 'balanced',
     offlineExporting: false,
     offlineHdrExport: false,
+    offlineTenBitExport: false,
     offlineFps: 60,
     nowPlayingEnabled: false,
     nowPlayingTitle: '',
@@ -1513,10 +1653,14 @@
     'pulseDensity', 'pulseSize', 'pulseCooldown', 'pulseJagged', 'pulseTrail', 'pulseDetail',
     'bulbPower', 'bulbDetail', 'bulbAudio', 'bulbOrbit', 'bulbFold', 'bulbGlow', 'bulbCamera', 'bulbYaw', 'bulbPitch',
     'spin', 'modulationRotationPhase', 'equation', 'equationSmoothing', 'visualTime', 'palette', 'reactivity', 'frequencyColorEnabled', 'frequencyColorAmount', 'frequencyHue',
-    'bass', 'mids', 'highs', 'rms', 'beat', 'autoDrift', 'beatPulse', 'obsChromaKey', 'obsChromaThreshold',
+    'bass', 'mids', 'highs', 'rms', 'beat',
+    'equationBass', 'equationMids', 'equationHighs', 'equationBeat',
+    'musicMotionBass', 'musicMotionMids', 'musicMotionHighs', 'musicMotionBeat',
+    'musicBaselineBass', 'musicBaselineMids', 'musicBaselineHighs',
+    'autoDrift', 'beatPulse', 'obsChromaKey', 'obsChromaThreshold',
     'modulationEnabled', 'showTransitionBlack', 'performanceBlackout',
     'nowPlayingEnabled', 'nowPlayingTitle', 'nowPlayingArtist', 'nowPlayingPosition', 'cameraMotionPreset'
-    ,'songDirectorEnabled', 'songDirectorStyle', 'songDirectorBehavior', 'songDirectorIntensity'
+    ,'songDirectorEnabled', 'songDirectorStyle', 'songDirectorBehavior', 'songDirectorTransition', 'songDirectorIntensity'
   ];
   let obsSyncFps = Number(pageParameters.get('fps')) === 30 ? 30 : 60;
   let obsLastStateSent = 0;
@@ -1531,6 +1675,7 @@
     snapshot.waveformData = Array.from(state.waveformData);
     snapshot.pulseEvents = state.pulseEvents.map((event) => ({ ...event }));
     snapshot.modulationValues = { ...state.modulationValues };
+    snapshot.modulationMappings = state.modulationMappings.map((mapping) => ({ ...mapping }));
     snapshot.songDirectorValues = { ...state.songDirectorValues };
     snapshot.audioActive = audioIsActive();
     snapshot.nowPlayingTitle = currentNowPlayingTitle();
@@ -1548,6 +1693,7 @@
     if (Array.isArray(snapshot.waveformData)) state.waveformData.set(snapshot.waveformData.slice(0, 64));
     if (Array.isArray(snapshot.pulseEvents)) state.pulseEvents = snapshot.pulseEvents.map((event) => ({ ...event }));
     if (snapshot.modulationValues && typeof snapshot.modulationValues === 'object') state.modulationValues = { ...snapshot.modulationValues };
+    if (Array.isArray(snapshot.modulationMappings)) state.modulationMappings = snapshot.modulationMappings.slice(0, 8).map(createModulationMapping);
     if (snapshot.songDirectorValues && typeof snapshot.songDirectorValues === 'object') state.songDirectorValues = { ...snapshot.songDirectorValues };
     obsRemoteAudioActive = Boolean(snapshot.audioActive);
     if (isObsOutput) {
@@ -1567,21 +1713,25 @@
     rms: { label: 'Overall Level', stateKey: 'rms' }
   });
   const modulationTargets = Object.freeze({
-    equation: { label: 'Equation Modulation', scale: .35 },
+    equation: { label: 'Equation Modulation', scale: .35, bipolar: true },
     equationFold: { label: 'Equation Fold', scale: .75 },
     equationWarp: { label: 'Equation Warp', scale: 1.0 },
     fractalTilt: { label: 'Dimensional Tilt', scale: .7 },
     fractalSlice: { label: 'Dimensional Slice', scale: .7 },
-    zoom: { label: 'Camera Zoom', scale: .45 },
-    rotation: { label: 'Rotation', scale: .8 },
-    frequencyHue: { label: 'Color Position', scale: .55 },
-    flow: { label: 'Color Flow', scale: .55 },
+    zoom: { label: 'Camera Zoom', scale: .45, bipolar: true },
+    rotation: { label: 'Rotation', scale: .8, bipolar: true },
+    frequencyHue: { label: 'Color Position', scale: .55, bipolar: true },
+    flow: { label: 'Color Flow', scale: .55, bipolar: true },
     motion: { label: 'Visual Motion', scale: 1.0 },
     pulseJagged: { label: 'Pulse Jaggedness', scale: .9 },
-    bulbPower: { label: '3D Recurrence Warp', scale: 1.5 },
+    bulbPower: { label: '3D Recurrence Warp', scale: 1.5, bipolar: true },
     bulbFold: { label: '3D Volumetric Fold', scale: .7 },
     bulbGlow: { label: '3D Surface Glow', scale: 1.0 }
   });
+
+  function modulationAmountMinimum(target) {
+    return modulationTargets[target]?.bipolar ? -100 : 0;
+  }
   const modulationPresets = Object.freeze({
     math: [
       { source: 'bass', target: 'equation', amount: 22, attack: 36, release: 22 },
@@ -1613,7 +1763,7 @@
       id: String(values.id || crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`),
       source,
       target,
-      amount: clamp(finiteOr(values.amount, 35), -100, 100),
+      amount: clamp(finiteOr(values.amount, 35), modulationAmountMinimum(target), 100),
       attack: clamp(finiteOr(values.attack, 70), 0, 100),
       release: clamp(finiteOr(values.release, 35), 0, 100),
       floor,
@@ -1652,6 +1802,13 @@
     }
     state.modulationValues = values;
     return values;
+  }
+
+  function modulationTargetIsRouted(...targets) {
+    if (!state.modulationEnabled) return false;
+    return state.modulationMappings.some((mapping) => mapping.enabled
+      && mapping.amount !== 0
+      && targets.includes(mapping.target));
   }
 
   const fractalEquationProfiles = Object.freeze({
@@ -1799,7 +1956,7 @@
     beatSensitivity: { defaultRange: .65, min: 0, max: 100, step: 1, decimals: 0, fromRange: (value) => value * 100, toRange: (value) => value / 100, tip: 'Controls the independent adaptive onset detector. Higher values recognize quieter and less bass-heavy beats without changing visual or equation smoothing.' },
     beatCooldown: { defaultRange: 150, min: 80, max: 300, step: 5, decimals: 0, tip: 'Minimum time between detected beats. Raise it if a single drum hit triggers twice; lower it for very fast music.' },
     iterations: { defaultRange: 220, min: 80, max: 500, step: 10, decimals: 0, tip: 'Higher iteration counts reveal finer boundaries but require more GPU work.' },
-    exportIterations: { defaultRange: 480, min: 240, max: 1200, step: 20, decimals: 0, tip: 'Sets the minimum mathematical depth for offline export. Resolution-aware protection automatically raises lower values to 480 at 1080p, 640 at 1440p, and 800 at 4K.' },
+    exportIterations: { defaultRange: 600, min: 240, max: 1200, step: 20, decimals: 0, tip: 'Directly controls mathematical depth for offline export. Selecting a resolution suggests 320 at 480p, 400 at 720p, 600 at 1080p, 800 at 1440p, or 1000 at 4K; you can then choose any value.' },
     obsChromaThreshold: { defaultRange: .08, min: 0, max: 100, step: 1, decimals: 0, fromRange: (value) => value / .5 * 100, toRange: (value) => value / 100 * .5, tip: 'Higher values replace more dark pixels with pure key green. Chroma-safe mode automatically shifts green subject colors away from the OBS key.' }
     ,beatBpm: { defaultRange: 120, min: 60, max: 200, step: .1, decimals: 1, tip: 'Manual tempo used when Automatic BPM is off or has not found a reliable beat.' }
     ,beatOffset: { defaultRange: 0, min: -500, max: 500, step: 5, decimals: 0, tip: 'Moves the beat grid earlier or later in milliseconds so visual changes land on the music.' }
@@ -1810,14 +1967,15 @@
     frequencyBandMode: { defaultValue: 'basic', tip: 'Basic uses the recommended frequency bands. Advanced enables custom continuous boundaries for low, mid, and high analysis.' },
     visualStyle: { defaultValue: '0', tip: 'Chooses the GPU-rendered visual composition. Every style uses the active palette and music analysis and is included in video exports.' },
     fractalType: { defaultValue: '0', tip: 'Selects the equation used for the live view and exported video.' },
-    resolution: { defaultValue: '1920x1080', tip: 'Sets exported frame size. Higher resolutions require substantially more GPU work.' },
+    resolution: { defaultValue: '1920x1080', tip: 'Sets exported frame size and loads a visible recommended iteration starting point. You can adjust the iteration value afterward.' },
     fps: { defaultValue: '60', tip: 'Sets captured frames per second. 90 and 120 FPS require a fast GPU and storage.' },
-    videoFormat: { defaultValue: 'youtube_hdr', tip: 'Choose a YouTube HEVC master, playback-friendly lossless RGB, or archive-grade lossless RGB. HDR is controlled separately.' },
+    videoFormat: { defaultValue: 'gpu_auto', tip: 'Automatic GPU Master chooses hardware AV1 when supported or hardware HEVC Main 10 on GPUs such as the RTX 3080. Manual HEVC, H.264, VP9, AV1, editing, and lossless profiles remain available.' },
     exportMode: { defaultValue: 'offline', tip: 'Offline rendering completes and submits every exact frame before advancing the music timeline.' },
     exportDetail: { defaultValue: '1.6', tip: 'Multiplies the selected base detail. Offline export also applies a resolution-aware minimum so 1440p and 4K receive enough mathematical definition.' },
     obsResolution: { defaultValue: '1920x1080', tip: 'Sets the exact client size of the clean window selected by OBS Window Capture.' },
     obsFps: { defaultValue: '60', tip: 'Sets how often the control window sends visual and music-analysis state to the OBS output.' }
     ,songDirectorBehavior: { defaultValue: 'auto', tip: 'Auto follows the Music Personality stored with the Song Map. An override changes directing behavior without changing analyzer bands or the visual preset.' }
+    ,songDirectorTransition: { defaultValue: 'auto', tip: 'Controls how sections blend. Every option remains continuous: Gentle uses longer blends, while Theatrical concentrates the change without creating a hard cut.' }
     ,songDirectorCueEmphasis: { defaultValue: 'auto', tip: 'Focuses this section on one family of visual controls while retaining a smaller amount of the other automatically generated cues.' }
     ,showAdvanceMode: { defaultValue: 'beats', tip: 'Advance each show entry after musical beats or elapsed seconds.' }
     ,showTransition: { defaultValue: 'black', tip: 'Cut immediately or briefly fade through black without layering conventional and fractal visuals.' }
@@ -1837,6 +1995,7 @@
     autoDrift: true,
     fractalDimensional: false,
     equationFolding: false,
+    exportSupersampling: false,
     exportHdrOutput: false,
     showExportPreview: false,
     exportCompleteSound: true,
@@ -1868,8 +2027,7 @@
   let windowsOutputScanGeneration = 0;
   let monitorGain;
   let recordingDestination;
-  let liveExportEncoder;
-  let exportProgressHideTimer;
+  let liveExportCapture;
   let pendingOfflineRender = null;
   let hdrExportFramebuffer = null;
   let hdrExportTexture = null;
@@ -1889,9 +2047,24 @@
   });
   const exportController = exportControllerFactory.create({
     query: $,
+    root: document.body,
     onEnd: endAndFinishExport,
     onCancel: cancelExport,
-    onPause: togglePauseExport
+    onPause: togglePauseExport,
+    onResolutionChange: (event) => coordinateExportSettingsChange('resolution', { announce: event.isTrusted }),
+    onIterationsInput: (event) => coordinateExportSettingsChange('iterations', { value: event.target.value }),
+    onFpsChange: () => coordinateExportSettingsChange('fps'),
+    onModeChange: () => coordinateExportSettingsChange('mode'),
+    onDetailChange: () => coordinateExportSettingsChange('detail'),
+    onSupersamplingChange: (event) => coordinateExportSettingsChange('supersampling', { checked: event.target.checked }),
+    onFormatChange: () => coordinateExportSettingsChange('format'),
+    onHdrChange: () => coordinateExportSettingsChange('hdr'),
+    onScanEncoders: scanExportEncoderCapabilities,
+    onBenchmark: benchmarkSelectedExportSettings,
+    onAdvisorApply: applyExportAdvisorRecommendation,
+    onClearHistory: clearExportHistory,
+    onHistoryAction: handleExportHistoryAction,
+    onRecoveryAction: handleExportRecoveryAction
   });
   const audioController = audioControllerFactory.create({
     query: $,
@@ -1984,8 +2157,30 @@
   });
   const songMapDataEngine = songMapDataEngineFactory.create();
   const songDirectorEngine = songDirectorEngineFactory.create({ hashText: songMapDataEngine.hashText });
+  const songDirectorController = songDirectorControllerFactory.create({
+    query: $,
+    documentRef: document,
+    state,
+    audio,
+    styles: songDirectorEngine.styles,
+    behaviors: songDirectorEngine.behaviors,
+    transitions: songDirectorEngine.transitions,
+    clamp,
+    formatTime,
+    getActiveMap: () => activeSongMap,
+    getPlan: () => activeSongDirectorPlan,
+    setPlan: (plan) => { activeSongDirectorPlan = plan; },
+    generatePlan: generateSongDirectorPlan,
+    resolveBehavior: resolveSongDirectorBehavior,
+    getOverride: songDirectorOverrideFor,
+    writeOverride: writeSongDirectorOverride,
+    updateSongMapPlayhead,
+    updateDirector: updateSongDirector,
+    getDirectorTime: () => state.offlineExporting ? (state.offlineCurrentTime || 0) : audio.currentTime,
+    showToast
+  });
   const performancePackageEngine = performancePackageEngineFactory.create({
-    appVersion: '0.30.1-dev.1',
+    appVersion: appMetadata.version,
     hashText: songMapDataEngine.hashText,
     sanitizeEntry: serializeShowEntry,
     isValidProfile: validProfile,
@@ -1993,8 +2188,94 @@
     createId: () => crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`
   });
   const exportSessionEngine = exportSessionEngineFactory.create();
+  const exportProgressWorkflowEngine = exportProgressWorkflowEngineFactory.create({
+    sessionEngine: exportSessionEngine,
+    formatTime,
+    fileName: exportedFileName
+  });
+  const exportProgressCoordinator = exportProgressCoordinatorFactory.create({
+    workflow: exportProgressWorkflowEngine,
+    controller: exportController,
+    shouldPlayStinger: () => Boolean($('#exportCompleteSound')?.checked),
+    playStinger: playExportCompleteStinger,
+    isExporting: () => state.exporting
+  });
+  exportProgressCoordinator.bindNative((callback) => window.quarticDesktop.onExportProgress?.(callback));
   const exportEncoderEngine = exportEncoderEngineFactory.create();
-  window.__quarticControllers = Object.freeze({ audio: audioController, performance: performanceController, showComposer: showComposerController, profileManager: profileManagerController, export: exportController });
+  const exportLiveCaptureEngine = exportLiveCaptureEngineFactory.create({ encoderEngine: exportEncoderEngine });
+  const exportQuickClipWorkflowEngine = exportQuickClipWorkflowEngineFactory.create();
+  const exportSamplingEngine = exportSamplingEngineFactory.create();
+  const exportSettingsSnapshotEngine = exportSettingsSnapshotEngineFactory.create({
+    profiles: exportProfileCatalog,
+    samplingEngine: exportSamplingEngine
+  });
+  const exportPreparationEngine = exportPreparationEngineFactory.create();
+  const exportFrameCaptureEngine = exportFrameCaptureEngineFactory.create({
+    gl,
+    samplingEngine: exportSamplingEngine,
+    requestFrame: requestOfflineVisualFrame,
+    onSampleState: ({ sampleIndex, offset }) => {
+      state.offlineSamplePass = sampleIndex;
+      state.exportSampleOffsetX = offset[0];
+      state.exportSampleOffsetY = offset[1];
+    }
+  });
+  const exportPlanningEngine = exportPlanningEngineFactory.create({ profiles: exportProfileCatalog });
+  const exportPresentationEngine = exportPresentationEngineFactory.create({
+    profiles: exportProfileCatalog,
+    planningEngine: exportPlanningEngine,
+    formatTime,
+    fileName: exportedFileName
+  });
+  const exportPreflightEngine = exportPreflightEngineFactory.create({
+    encoderEngine: exportEncoderEngine,
+    samplingEngine: exportSamplingEngine
+  });
+  const exportAdvisorEngine = exportAdvisorEngineFactory.create();
+  const exportSettingsCoordinatorEngine = exportSettingsCoordinatorEngineFactory.create({
+    advisorEngine: exportAdvisorEngine
+  });
+  const exportRuntimeStateCoordinator = exportRuntimeStateCoordinatorFactory.create({ state });
+  const exportEncoderScanEngine = exportEncoderScanEngineFactory.create();
+  const exportBenchmarkEngine = exportBenchmarkEngineFactory.create({ planningEngine: exportPlanningEngine });
+  const exportHistoryEngine = exportHistoryEngineFactory.create({
+    storage: localStorage,
+    createId: () => crypto.randomUUID(),
+    now: () => new Date().toISOString()
+  });
+  const exportResultWorkflowEngine = exportResultWorkflowEngineFactory.create({
+    historyEngine: exportHistoryEngine,
+    sessionEngine: exportSessionEngine
+  });
+  const exportHistoryActionEngine = exportHistoryActionEngineFactory.create({ historyEngine: exportHistoryEngine });
+  const exportRecoveryEngine = exportRecoveryEngineFactory.create({ sessionEngine: exportSessionEngine });
+  const exportRenderCoordinator = exportRenderCoordinatorFactory.create();
+  const exportWorkflowEngine = exportWorkflowEngineFactory.create();
+  const exportOfflineLifecycle = exportOfflineLifecycleFactory.create({
+    sessionEngine: exportSessionEngine,
+    finishOfflineExport: (...args) => window.quarticDesktop.finishOfflineExport(...args),
+    abortOfflineExport: (...args) => window.quarticDesktop.abortOfflineExport(...args)
+  });
+  const exportLiveLifecycle = exportLiveLifecycleFactory.create({
+    sessionEngine: exportSessionEngine,
+    abortExport: (...args) => window.quarticDesktop.abortExport(...args)
+  });
+  const exportCommandCoordinator = exportCommandCoordinatorFactory.create({
+    sessionEngine: exportSessionEngine,
+    progressWorkflow: exportProgressWorkflowEngine,
+    liveLifecycle: exportLiveLifecycle
+  });
+  const exportJobCoordinator = exportJobCoordinatorFactory.create({
+    offlineLifecycle: exportOfflineLifecycle,
+    liveLifecycle: exportLiveLifecycle,
+    buildOfflineJob: createOfflineExportJob,
+    buildLiveJob: createLiveExportJob,
+    validateLive: () => {
+      if (!state.unleashedMode) throw new Error('Live export requires Unleashed mode. Use Offline export for exact frames.');
+      return Boolean(audio.src);
+    }
+  });
+  window.__quarticControllers = Object.freeze({ audio: audioController, performance: performanceController, showComposer: showComposerController, profileManager: profileManagerController, songDirector: songDirectorController, export: exportController });
   window.__quarticEngines = Object.freeze({
     audioAnalysis: audioAnalysisEngine,
     performanceSequencer: performanceSequencerEngine,
@@ -2003,7 +2284,33 @@
     songDirector: songDirectorEngine,
     performancePackage: performancePackageEngine,
     exportSession: exportSessionEngine,
-    exportEncoder: exportEncoderEngine
+    exportProgressWorkflow: exportProgressWorkflowEngine,
+    exportProgressCoordinator,
+    exportCommandCoordinator,
+    exportJobCoordinator,
+    exportResultWorkflow: exportResultWorkflowEngine,
+    exportEncoder: exportEncoderEngine,
+    exportLiveCapture: exportLiveCaptureEngine,
+    exportQuickClipWorkflow: exportQuickClipWorkflowEngine,
+    exportSampling: exportSamplingEngine,
+    exportSettingsSnapshot: exportSettingsSnapshotEngine,
+    exportPreparation: exportPreparationEngine,
+    exportFrameCapture: exportFrameCaptureEngine,
+    exportPlanning: exportPlanningEngine,
+    exportPresentation: exportPresentationEngine,
+    exportPreflight: exportPreflightEngine,
+    exportAdvisor: exportAdvisorEngine,
+    exportSettingsCoordinator: exportSettingsCoordinatorEngine,
+    exportRuntimeState: exportRuntimeStateCoordinator,
+    exportEncoderScan: exportEncoderScanEngine,
+    exportBenchmark: exportBenchmarkEngine,
+    exportHistory: exportHistoryEngine,
+    exportHistoryAction: exportHistoryActionEngine,
+    exportRecovery: exportRecoveryEngine,
+    exportRenderCoordinator,
+    exportWorkflow: exportWorkflowEngine,
+    exportOfflineLifecycle,
+    exportLiveLifecycle
   });
 
   function createAudioGraph() {
@@ -2033,6 +2340,11 @@
     analyser.connect(recordingDestination);
     updateMonitorGain();
     audioAnalysisEngine.attach(audioContext, analyser, beatAnalyser);
+    if (deckOutputDeviceId && typeof audioContext.setSinkId === 'function') {
+      audioContext.setSinkId(deckOutputDeviceId)
+        .then(() => $('#exportCompleteStinger')?.setSinkId?.(deckOutputDeviceId))
+        .catch(() => {});
+    }
   }
 
   function audioIsActive() {
@@ -2208,7 +2520,22 @@
     state.pulseCooldowns.fill(0);
     state.pulseGlobalCooldown = 0;
     state.pulseAcceptedTotal = 0;
+    resetEquationAudioEnvelope();
     resetBeatDetector();
+  }
+
+  function resetEquationAudioEnvelope() {
+    state.equationBass = 0;
+    state.equationMids = 0;
+    state.equationHighs = 0;
+    state.equationBeat = 0;
+    state.musicMotionBass = 0;
+    state.musicMotionMids = 0;
+    state.musicMotionHighs = 0;
+    state.musicMotionBeat = 0;
+    state.musicBaselineBass = 0;
+    state.musicBaselineMids = 0;
+    state.musicBaselineHighs = 0;
   }
 
   function resetBeatDetector({ keepTotal = false } = {}) {
@@ -2315,16 +2642,48 @@
     const smoothingCurve = smoothing * smoothing;
     const frameDelta = clamp(Number(delta) || 0, 1 / 240, .1);
     const shaped = (value) => Math.pow(clamp(Number(value) || 0, 0, 1), 1.45);
+    const compressed = (value) => Math.pow(clamp(Number(value) || 0, 0, 1), .78);
     const follow = (current, target, attackBase, releaseBase) => {
       const timeConstant = target > current
         ? attackBase + .32 * smoothingCurve
         : releaseBase + .58 * smoothingCurve;
       return current + (target - current) * (1 - Math.exp(-frameDelta / timeConstant));
     };
+    const followMotion = (current, target, attackBase, releaseBase) => {
+      // Even at maximum equation smoothing, rhythmic motion remains legible.
+      // The release is deliberately longer than the attack so hits become
+      // flowing gestures instead of single-frame jumps.
+      const timeConstant = target > current
+        ? attackBase + .075 * smoothingCurve
+        : releaseBase + .20 * smoothingCurve;
+      return current + (target - current) * (1 - Math.exp(-frameDelta / timeConstant));
+    };
+    const followBaseline = (current, target, seconds) => current
+      + (target - current) * (1 - Math.exp(-frameDelta / seconds));
+
+    const bassBody = compressed(state.bass);
+    const midsBody = compressed(state.mids);
+    const highsBody = compressed(state.highs);
+    state.musicBaselineBass = followBaseline(state.musicBaselineBass, bassBody, 1.35);
+    state.musicBaselineMids = followBaseline(state.musicBaselineMids, midsBody, 1.55);
+    state.musicBaselineHighs = followBaseline(state.musicBaselineHighs, highsBody, 1.15);
+
+    const bassAccent = clamp((bassBody - state.musicBaselineBass) * 2.65, 0, 1);
+    const midsAccent = clamp((midsBody - state.musicBaselineMids) * 2.35, 0, 1);
+    const highsAccent = clamp((highsBody - state.musicBaselineHighs) * 2.15, 0, 1);
+    const bassMotionTarget = clamp(bassBody * .30 + bassAccent * .70, 0, 1);
+    const midsMotionTarget = clamp(midsBody * .34 + midsAccent * .66, 0, 1);
+    const highsMotionTarget = clamp(highsBody * .24 + highsAccent * .58, 0, .82);
+    const beatMotionTarget = clamp(Math.pow(clamp(state.beat, 0, 1), .82) * .72, 0, .72);
+
     state.equationBass = follow(state.equationBass, shaped(state.bass), .045, .12);
     state.equationMids = follow(state.equationMids, shaped(state.mids), .050, .14);
     state.equationHighs = follow(state.equationHighs, shaped(state.highs), .055, .16);
     state.equationBeat = follow(state.equationBeat, shaped(state.beat) * .55, .035, .18);
+    state.musicMotionBass = followMotion(state.musicMotionBass, bassMotionTarget, .040, .18);
+    state.musicMotionMids = followMotion(state.musicMotionMids, midsMotionTarget, .055, .24);
+    state.musicMotionHighs = followMotion(state.musicMotionHighs, highsMotionTarget, .045, .16);
+    state.musicMotionBeat = followMotion(state.musicMotionBeat, beatMotionTarget, .030, .20);
   }
 
   function beatClock() {
@@ -2898,7 +3257,7 @@
   function combinedRenderModulation(base = {}, director = {}) {
     const combined = { ...base };
     for (const [key, value] of Object.entries(director)) {
-      if (!Number.isFinite(value) || ['cueIndex', 'sectionProgress', 'rotationOffset', 'panX', 'panY'].includes(key)) continue;
+      if (!Number.isFinite(value) || ['cueIndex', 'sectionProgress', 'phraseEnergy', 'phraseContour', 'phraseProgress', 'rotationOffset', 'panX', 'panY'].includes(key)) continue;
       combined[key] = clamp((combined[key] || 0) + value, -2, 2);
     }
     combined.rotationOffset = Number(director.rotationOffset) || 0;
@@ -2914,7 +3273,10 @@
       requestAnimationFrame(render);
       return;
     }
-    const delta = state.offlineExporting ? 1 / state.offlineFps : Math.min(.05, rawDelta);
+    const secondaryOfflineSample = state.offlineExporting && state.offlineSamplePass > 0;
+    const delta = state.offlineExporting
+      ? (secondaryOfflineSample ? 0 : 1 / state.offlineFps)
+      : Math.min(.05, rawDelta);
     state.lastFrame = now;
     if (!state.offlineExporting) collectPerformanceSample(rawDelta * 1000, now);
     if (!isObsOutput && !state.offlineExporting) updateCameraPath(now);
@@ -2928,23 +3290,43 @@
       state.performanceScale = Math.min(1, state.performanceScale + delta * .8);
     }
     setCanvasSize();
-    const renderingHdrExport = state.offlineExporting && state.offlineHdrExport && hdrExportFramebuffer;
-    gl.bindFramebuffer(gl.FRAMEBUFFER, renderingHdrExport ? hdrExportFramebuffer : null);
+    const renderingTenBitExport = state.offlineExporting && state.offlineTenBitExport && hdrExportFramebuffer;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, renderingTenBitExport ? hdrExportFramebuffer : null);
     gl.viewport(0, 0, canvas.width, canvas.height);
-    advancePulseEvents(delta);
+    if (!secondaryOfflineSample) advancePulseEvents(delta);
     if (!isObsOutput && !state.offlineExporting) updateAudioAnalysis(delta);
-    updateEquationAudioEnvelope(delta);
+    if (!secondaryOfflineSample) updateEquationAudioEnvelope(delta);
 
     if (!state.offlineExporting) state.visualTime = state.exporting
       ? audio.currentTime
       : state.visualTime + delta * ((isObsOutput ? obsRemoteAudioActive : audioIsActive()) ? 1 : .18);
-    const baseModulation = updateAudioModulation(delta);
+    const baseModulation = secondaryOfflineSample && state.offlineBaseModulation
+      ? state.offlineBaseModulation
+      : updateAudioModulation(delta);
+    if (state.offlineExporting && !secondaryOfflineSample) state.offlineBaseModulation = baseModulation;
     const directorTime = state.offlineExporting
       ? (state.offlineCurrentTime || 0)
       : (state.audioMode === 'deck' && Number.isFinite(audio.currentTime) ? audio.currentTime : state.visualTime);
     const director = isObsOutput ? (state.songDirectorValues || {}) : updateSongDirector(directorTime);
     const modulation = combinedRenderModulation(baseModulation, director);
     const cameraMotion = cameraPresetTransform();
+    const matrixOwnsFractalAudio = state.modulationEnabled
+      && (state.visualStyle === 0 || state.visualStyle === 5);
+    const directBass = matrixOwnsFractalAudio ? 0 : state.bass;
+    const directMids = matrixOwnsFractalAudio ? 0 : state.mids;
+    const directHighs = matrixOwnsFractalAudio ? 0 : state.highs;
+    const directRms = matrixOwnsFractalAudio ? 0 : state.rms;
+    const directBeat = matrixOwnsFractalAudio ? 0 : state.beat;
+    const equationBass = matrixOwnsFractalAudio ? 0 : state.equationBass;
+    const equationMids = matrixOwnsFractalAudio ? 0 : state.equationMids;
+    const equationHighs = matrixOwnsFractalAudio ? 0 : state.equationHighs;
+    const equationBeat = matrixOwnsFractalAudio ? 0 : state.equationBeat;
+    const musicMotionBass = matrixOwnsFractalAudio ? 0 : state.musicMotionBass;
+    const musicMotionMids = matrixOwnsFractalAudio ? 0 : state.musicMotionMids;
+    const musicMotionHighs = matrixOwnsFractalAudio ? 0 : state.musicMotionHighs;
+    const musicMotionBeat = matrixOwnsFractalAudio ? 0 : state.musicMotionBeat;
+    const routedDimensional = modulationTargetIsRouted('fractalTilt', 'fractalSlice');
+    const routedFolding = modulationTargetIsRouted('equationFold', 'equationWarp');
     const beatChanged = (isObsOutput || state.offlineExporting) ? false : updateBeatGrid();
     if (!isObsOutput && !state.offlineExporting) updateShowSequencer(beatChanged);
     if (!isObsOutput && !state.offlineExporting && obsOutputOpen && now - obsLastStateSent >= 1000 / obsSyncFps) {
@@ -2953,17 +3335,17 @@
     }
     const modulatedMotion = clamp(state.motion + (modulation.motion || 0), 0, 4);
     const modulatedZoom = Math.max(.15, 1 + (modulation.zoom || 0));
-    const motionEnergy = modulatedMotion * (.32 + state.rms * .34 + state.mids * .26);
-    const orbitRadius = state.autoDrift ? (.012 + .022 * state.mids) * motionEnergy / Math.sqrt(state.zoom * modulatedZoom) : 0;
-    const orbitAngle = state.visualTime * (.21 + .12 * state.mids) * Math.sign(state.spin || 1);
+    const motionEnergy = modulatedMotion * (.32 + directRms * .34 + directMids * .26);
+    const orbitRadius = state.autoDrift ? (.012 + .022 * directMids) * motionEnergy / Math.sqrt(state.zoom * modulatedZoom) : 0;
+    const orbitAngle = state.visualTime * (.21 + .12 * directMids) * Math.sign(state.spin || 1);
     const renderCenterX = state.center.x + Math.cos(orbitAngle) * orbitRadius + cameraMotion.x + modulation.panX;
     const renderCenterY = state.center.y + Math.sin(orbitAngle * 1.17) * orbitRadius + cameraMotion.y + modulation.panY;
-    if (!isObsOutput) {
+    if (!isObsOutput && !secondaryOfflineSample) {
       const nextModulationRotationPhase = state.modulationRotationPhase + (modulation.rotation || 0) * delta;
       state.modulationRotationPhase = Math.atan2(Math.sin(nextModulationRotationPhase), Math.cos(nextModulationRotationPhase));
     }
     const rotation = state.visualTime * state.spin * modulatedMotion
-      + Math.sin(state.visualTime * .63) * .035 * state.mids * modulatedMotion
+      + Math.sin(state.visualTime * .63) * .035 * directMids * modulatedMotion
       + state.modulationRotationPhase
       + modulation.rotationOffset;
     if (Number.isFinite(window.__quarticPulseRotation)) {
@@ -2973,28 +3355,38 @@
     window.__quarticPulseRotation = rotation;
 
     gl.uniform2f(uniforms.uResolution, canvas.width, canvas.height);
+    gl.uniform2f(
+      uniforms.uSubpixelOffset,
+      state.offlineExporting ? state.exportSampleOffsetX : 0,
+      state.offlineExporting ? state.exportSampleOffsetY : 0
+    );
     gl.uniform2f(uniforms.uCenter, renderCenterX, renderCenterY);
     gl.uniform1f(uniforms.uScale, 3.15 / (state.zoom * modulatedZoom * cameraMotion.zoom));
     gl.uniform1f(uniforms.uTime, state.visualTime);
-    gl.uniform1f(uniforms.uBass, state.bass);
-    gl.uniform1f(uniforms.uMids, state.mids);
-    gl.uniform1f(uniforms.uHighs, state.highs);
-    gl.uniform1f(uniforms.uRms, state.rms);
-    gl.uniform1f(uniforms.uBeat, state.beatPulse ? state.beat : 0);
-    gl.uniform1f(uniforms.uEquationBass, state.equationBass);
-    gl.uniform1f(uniforms.uEquationMids, state.equationMids);
-    gl.uniform1f(uniforms.uEquationHighs, state.equationHighs);
-    gl.uniform1f(uniforms.uEquationBeat, state.beatPulse ? state.equationBeat : 0);
+    gl.uniform1f(uniforms.uBass, directBass);
+    gl.uniform1f(uniforms.uMids, directMids);
+    gl.uniform1f(uniforms.uHighs, directHighs);
+    gl.uniform1f(uniforms.uRms, directRms);
+    gl.uniform1f(uniforms.uBeat, state.beatPulse ? directBeat : 0);
+    gl.uniform1f(uniforms.uEquationBass, equationBass);
+    gl.uniform1f(uniforms.uEquationMids, equationMids);
+    gl.uniform1f(uniforms.uEquationHighs, equationHighs);
+    gl.uniform1f(uniforms.uEquationBeat, state.beatPulse ? equationBeat : 0);
+    gl.uniform1f(uniforms.uMusicMotionBass, musicMotionBass);
+    gl.uniform1f(uniforms.uMusicMotionMids, musicMotionMids);
+    gl.uniform1f(uniforms.uMusicMotionHighs, musicMotionHighs);
+    gl.uniform1f(uniforms.uMusicMotionBeat, state.beatPulse ? musicMotionBeat : 0);
+    gl.uniform1f(uniforms.uMappedEquation, Number(modulation.equation) || 0);
     gl.uniform1f(uniforms.uFlow, clamp(state.flow + (modulation.flow || 0), 0, 2));
     gl.uniform1f(uniforms.uMotion, modulatedMotion);
-    gl.uniform1f(uniforms.uFractalDimensional, state.fractalDimensional ? 1 : 0);
+    gl.uniform1f(uniforms.uFractalDimensional, state.fractalDimensional || routedDimensional ? 1 : 0);
     gl.uniform1f(uniforms.uFractalTilt, clamp(state.fractalTilt + (modulation.fractalTilt || 0), 0, 2));
     gl.uniform1f(uniforms.uFractalDepthSpeed, state.fractalDepthSpeed);
     gl.uniform1f(uniforms.uFractalPerspective, state.fractalPerspective);
     gl.uniform1f(uniforms.uFractalSlice, clamp(state.fractalSlice + (modulation.fractalSlice || 0), 0, 2));
     gl.uniform1f(uniforms.uFractalLighting, state.fractalLighting);
     gl.uniform1f(uniforms.uFractalAudioDepth, state.fractalAudioDepth);
-    gl.uniform1f(uniforms.uEquationFolding, state.equationFolding ? 1 : 0);
+    gl.uniform1f(uniforms.uEquationFolding, state.equationFolding || routedFolding ? 1 : 0);
     gl.uniform1f(uniforms.uEquationFold, clamp(state.equationFold + (modulation.equationFold || 0), 0, 2));
     gl.uniform1f(uniforms.uEquationWarp, clamp(state.equationWarp + (modulation.equationWarp || 0), 0, 2.5));
     gl.uniform1f(uniforms.uEquationFoldMotion, state.equationFoldMotion);
@@ -3030,10 +3422,6 @@
     gl.uniform1f(uniforms.uBulbCamera, state.bulbCamera);
     gl.uniform1f(uniforms.uBulbYaw, state.bulbYaw);
     gl.uniform1f(uniforms.uBulbPitch, state.bulbPitch);
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, mainframeRoomTexture);
-    gl.uniform1i(uniforms.uMainframeRoom, 0);
-    gl.uniform1f(uniforms.uMainframeReady, mainframeRoomReady ? 1 : 0);
     updateBulbHotspots(state.visualTime);
     let bulbSteps = 42 + state.bulbDetail * 54;
     if (state.exporting) bulbSteps *= 1.12 + Math.min(2.5, state.exportDetail) * .32;
@@ -3043,7 +3431,9 @@
     state.pulseEventStrengths.fill(0);
     state.pulseEventBands.fill(0);
     state.pulseEventSeeds.fill(0);
-    const pulseEventCount = Math.min(maximumPulseEvents, state.pulseEvents.length);
+    const pulseEventCount = matrixOwnsFractalAudio
+      ? 0
+      : Math.min(maximumPulseEvents, state.pulseEvents.length);
     for (let index = 0; index < pulseEventCount; index++) {
       const event = state.pulseEvents[index];
       state.pulseEventAges[index] = event.age;
@@ -3062,8 +3452,8 @@
     window.__quarticPulseEventLimit = activePulseEventLimit();
     window.__quarticPulseAcceptedTotal = state.pulseAcceptedTotal;
     gl.uniform1f(uniforms.uRotation, rotation);
-    gl.uniform1f(uniforms.uEquation, clamp(state.equation + (modulation.equation || 0), 0, 2.5));
-    gl.uniform1f(uniforms.uFrequencyHue, state.frequencyHue + (modulation.frequencyHue || 0));
+    gl.uniform1f(uniforms.uEquation, clamp(state.equation, 0, 2.5));
+    gl.uniform1f(uniforms.uFrequencyHue, (matrixOwnsFractalAudio ? 0 : state.frequencyHue) + (modulation.frequencyHue || 0));
     gl.uniform1f(uniforms.uFrequencyColor, state.frequencyColorEnabled ? state.frequencyColorAmount : 0);
     gl.uniform1i(uniforms.uFractalType, state.fractalType);
     gl.uniform1i(uniforms.uVisualStyle, state.visualStyle);
@@ -3081,14 +3471,14 @@
     gl.uniform1i(uniforms.uPalette, state.palette);
     gl.uniform1f(uniforms.uChromaKey, isObsOutput && state.obsChromaKey ? 1 : 0);
     gl.uniform1f(uniforms.uChromaThreshold, state.obsChromaThreshold);
-    gl.uniform1f(uniforms.uHdrExport, renderingHdrExport ? 1 : 0);
+    gl.uniform1f(uniforms.uHdrExport, renderingTenBitExport && state.offlineHdrExport ? 1 : 0);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
-    if (renderingHdrExport && $('#showExportPreview')?.checked) {
+    if (renderingTenBitExport && $('#showExportPreview')?.checked) {
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
       gl.uniform1f(uniforms.uHdrExport, 0);
       gl.drawArrays(gl.TRIANGLES, 0, 6);
       gl.bindFramebuffer(gl.FRAMEBUFFER, hdrExportFramebuffer);
-      gl.uniform1f(uniforms.uHdrExport, 1);
+      gl.uniform1f(uniforms.uHdrExport, state.offlineHdrExport ? 1 : 0);
     }
     if (pendingOfflineRender && state.offlineExporting) {
       gl.finish();
@@ -3139,10 +3529,10 @@
       updateSongMapPlayhead(displayTime);
       const liveRecordingActive = state.exporting
         && exportSessionEngine.mode === 'live'
-        && liveExportEncoder?.state === 'recording';
+        && liveExportCapture?.state === 'recording';
       if (liveRecordingActive) {
         const overall = progress * .80;
-        setExportProgress(
+        exportProgressCoordinator.update(
           overall,
           `Live recording ${Math.round(progress * 100)}% | overall ${Math.round(overall * 100)}% | ${formatTime(audio.currentTime)} / ${formatTime(audio.duration)}`,
           `Live recording ${Math.round(progress * 100)}% | overall ${Math.round(overall * 100)}%`
@@ -3242,55 +3632,7 @@
     return String(filePath || '').split(/[\\/]/).pop() || 'video';
   }
 
-  function setExportProgress(overall, panelText, stageText = panelText) {
-    const timing = exportSessionEngine.updateProgress(overall);
-    let metaText;
-    if (exportSessionEngine.diagnostics.snapshot.startedAt) {
-      if (timing.paused) metaText = `Paused · elapsed ${formatTime(timing.elapsedSeconds)}`;
-      else if (timing.remainingSeconds !== null) {
-        metaText = `Elapsed ${formatTime(timing.elapsedSeconds)} · estimated remaining ${formatTime(timing.remainingSeconds)}`;
-      } else metaText = `Elapsed ${formatTime(timing.elapsedSeconds)}`;
-    }
-    exportController.renderProgress({ overall: timing.progress, panelText, stageText, metaText });
-  }
-
-  function beginExportProgress(panelText, stageText = panelText) {
-    clearTimeout(exportProgressHideTimer);
-    exportSessionEngine.startProgress();
-    exportController.begin();
-    setExportProgress(0, panelText, stageText);
-  }
-
-  function setStageExportMode(mode) {
-    exportController.setMode(mode);
-    setExportActionButtons(true, true);
-  }
-
-  function setExportActionButtons(endEnabled, cancelEnabled) {
-    exportController.setActions(endEnabled, cancelEnabled);
-  }
-
-  function completeExportProgress(outputPath) {
-    exportSessionEngine.markCompleted();
-    setExportProgress(1, `Saved 100% | ${exportedFileName(outputPath)}`, 'Export saved 100%');
-    exportController.setNote('The finished video has been saved successfully.');
-    const elapsedSeconds = exportSessionEngine.elapsed();
-    exportController.renderProgress({
-      overall: 1,
-      panelText: `Saved 100% | ${exportedFileName(outputPath)}`,
-      stageText: 'Export saved 100%',
-      metaText: `Completed in ${formatTime(elapsedSeconds)}`
-    });
-    setExportActionButtons(false, false);
-    playExportCompleteStinger();
-    clearTimeout(exportProgressHideTimer);
-    exportProgressHideTimer = setTimeout(() => {
-      if (!state.exporting) exportController.hide();
-    }, 2200);
-  }
-
   function playExportCompleteStinger() {
-    if (!$('#exportCompleteSound')?.checked) return;
     const stinger = $('#exportCompleteStinger');
     if (!stinger) return;
     stinger.pause();
@@ -3299,28 +3641,6 @@
     const playback = stinger.play();
     playback?.catch?.((error) => console.warn('Export completion stinger could not play:', error));
   }
-
-  window.quarticDesktop.onExportProgress?.((update) => {
-    if (!update || !exportSessionEngine.matches(update.id)) return;
-    const phaseProgress = clamp(Number(update.progress) || 0, 0, 1);
-    const renderShare = exportSessionEngine.mode === 'offline' ? .85 : .80;
-    let overall;
-    let phaseLabel;
-    if (update.stage === 'saving') {
-      const start = Math.max(renderShare, exportSessionEngine.progress);
-      overall = start + (.995 - start) * phaseProgress;
-      phaseLabel = `Saving ${Math.round(phaseProgress * 100)}%`;
-    } else {
-      overall = renderShare + (.99 - renderShare) * phaseProgress;
-      phaseLabel = `Finalizing ${Math.round(phaseProgress * 100)}%`;
-    }
-    const overallPercent = overall >= 1 ? 100 : Math.min(99, Math.floor(overall * 100));
-    const detail = String(update.message || phaseLabel).replace(/\.{3}$/, '');
-    exportController.setNote(update.stage === 'saving'
-      ? 'The completed video is being written to the selected destination.'
-      : 'All visual frames are complete; audio and the final video container are being finished.');
-    setExportProgress(overall, `${phaseLabel} | overall ${overallPercent}% | ${detail}`, `${phaseLabel} | overall ${overallPercent}%`);
-  });
 
   function showToast(message, error = false) {
     const toast = $('#toast');
@@ -3476,269 +3796,350 @@
     });
   }
 
-  function resolutionIterationFloor(width, height) {
-    const pixels = Math.max(1, Number(width) || 0) * Math.max(1, Number(height) || 0);
-    if (pixels <= 854 * 480) return 240;
-    if (pixels <= 1280 * 720) return 320;
-    if (pixels <= 1920 * 1080) return 480;
-    if (pixels <= 2560 * 1440) return 640;
-    return 800;
+  function recommendedExportIterations(width, height) {
+    return exportSamplingEngine.recommendedIterations(width, height);
   }
+  window.__quarticRecommendedExportIterations = recommendedExportIterations;
 
   function effectiveExportIterations(width, height, requestedIterations = state.exportIterations) {
-    const requested = Math.round(Math.max(1, Number(requestedIterations) || 1));
-    const maximum = state.unleashedMode ? 2400 : 1200;
-    return Math.min(maximum, Math.max(requested, resolutionIterationFloor(width, height)));
+    return exportSamplingEngine.effectiveIterations(requestedIterations, { unleashed: state.unleashedMode });
+  }
+  window.__quarticEffectiveExportIterations = effectiveExportIterations;
+
+  function applyResolutionIterationRecommendation({ announce = false } = {}) {
+    const { width, height } = exportSettingsSnapshotEngine.parseResolution(exportController.readSettings().resolution);
+    const recommendation = recommendedExportIterations(width, height);
+    state.exportIterations = recommendation;
+    $('#exportIterations').value = String(recommendation);
+    $('#exportIterationsValue').value = recommendation;
+    if (announce) showToast(`${width}×${height} selected · ${recommendation} export iterations recommended`);
+    return recommendation;
+  }
+
+  function currentExportSettings(audioDuration = Number(audio.duration) || 0) {
+    return exportSettingsSnapshotEngine.capture(exportController.readSettings(), {
+      unleashed: state.unleashedMode,
+      audioDuration
+    });
+  }
+
+  function selectedExportProfile() {
+    return currentExportSettings().profile;
   }
 
   function updateExportPerformanceNote() {
-    const [width, height] = $('#resolution').value.split('x').map(Number);
-    const fps = Number($('#fps').value);
-    const iterationTarget = effectiveExportIterations(width, height, state.exportIterations);
-    const note = $('#exportPerformanceNote');
-    const load = width * height * fps;
-    const profile = $('#videoFormat')?.value || 'youtube_hdr';
-    const hdrOutput = profile === 'youtube_hdr' && Boolean($('#exportHdrOutput')?.checked);
-    const rawGbPerMinute = width * height * fps * 4 * 60 / 1073741824;
-    const estimatedGbPerMinute = rawGbPerMinute * (profile === 'utvideo' ? .62 : .58);
-    let message = profile === 'youtube_hdr'
-      ? hdrOutput
-        ? `YouTube HDR · ${width}×${height} at ${fps} FPS · 10-bit Rec.2020 HLG · quality-priority HEVC`
-        : `YouTube SDR · ${width}×${height} at ${fps} FPS · standard BT.709 color · quality-priority HEVC`
-      : profile === 'utvideo'
-      ? `Playback lossless · ${width}×${height} at ${fps} FPS · roughly ${estimatedGbPerMinute.toFixed(1)} GB/min · exact RGB`
-      : `Archive lossless · ${width}×${height} at ${fps} FPS · roughly ${estimatedGbPerMinute.toFixed(1)} GB/min · exact RGB`;
-    message += ` · ${iterationTarget} math iterations`;
-    let warning = false;
-    if (load >= 3840 * 2160 * 90) {
-      message += ' · extreme GPU, encoder, and storage load';
-      warning = true;
-    } else if (load >= 2560 * 1440 * 60) {
-      message += ' · high GPU and storage load';
-      warning = true;
-    }
-    note.textContent = message;
-    note.classList.toggle('warning', warning);
+    const settings = currentExportSettings();
+    const estimate = exportPlanningEngine.profileEstimate({
+      profileId: settings.format,
+      width: settings.width,
+      height: settings.height,
+      fps: settings.fps,
+      duration: settings.audioDuration,
+      hdrOutput: settings.hdrOutput
+    });
+    exportController.renderPerformance(exportPresentationEngine.performanceView({
+      estimate,
+      iterations: settings.effectiveIterations,
+      supersampling: settings.supersampling
+    }));
   }
 
   function formatByteSize(bytes) {
-    const value = Math.max(0, Number(bytes) || 0);
-    if (value >= 1073741824) return `${(value / 1073741824).toFixed(value >= 10737418240 ? 1 : 2)} GB`;
-    if (value >= 1048576) return `${(value / 1048576).toFixed(1)} MB`;
-    return `${Math.round(value / 1024)} KB`;
+    return exportPlanningEngine.formatByteSize(bytes);
   }
 
-  async function requestExportPreflight(durationOverride = null, refreshEncoder = false) {
-    const [width, height] = $('#resolution').value.split('x').map(Number);
-    const fps = Number($('#fps').value);
-    const detail = Number($('#exportDetail').value);
-    const iterations = effectiveExportIterations(width, height, state.exportIterations);
-    const mode = 'offline';
-    const duration = Math.max(.1, Number(durationOverride) || Number(audio.duration) || 0);
-    const masterBitrate = exportEncoderEngine.offlineVideoBitrate(width, height, fps, detail);
-    const result = await window.quarticDesktop.getExportPreflight({
-      width, height, fps, detail, mode, duration, masterBitrate,
-      format: $('#videoFormat').value,
-      hdrOutput: Boolean($('#exportHdrOutput')?.checked),
-      refreshEncoder
-    });
-    return { ...result, width, height, fps, detail, iterations, mode, duration, masterBitrate };
+  function currentExportPreflightSettings(durationOverride = null, refreshEncoder = false) {
+    return exportSettingsSnapshotEngine.preflight(currentExportSettings(), { durationOverride, refreshEncoder });
+  }
+
+  function requestExportPreflight(durationOverride = null, refreshEncoder = false) {
+    return exportPreflightEngine.load(
+      currentExportPreflightSettings(durationOverride, refreshEncoder),
+      (request) => window.quarticDesktop.getExportPreflight(request)
+    );
   }
 
   function updateEncoderStatus(preflight) {
-    if (!preflight?.encoder) return;
-    const status = $('#exportEncoderStatus');
-    status.classList.add('ready');
-    status.querySelector('strong').textContent = preflight.encoder.label.toUpperCase();
-    const hdrOutput = $('#videoFormat').value === 'youtube_hdr' && Boolean($('#exportHdrOutput')?.checked);
-    status.querySelector('small').textContent = preflight.encoder.id === 'ffv1'
-      ? 'Archive-grade exact RGB 4:4:4 with FLAC; optimized for preservation rather than playback'
-      : preflight.encoder.id === 'utvideo'
-      ? 'Playback-friendly exact RGB 4:4:4 with FLAC; very high storage bandwidth required'
-      : preflight.encoder.hardware
-      ? `NVIDIA HEVC Main 10 verified · ${hdrOutput ? 'Rec.2020 HLG HDR' : 'BT.709 SDR'} · quality-priority bitrate controls`
-      : `CPU HEVC Main 10 fallback selected · ${hdrOutput ? 'Rec.2020 HLG HDR' : 'BT.709 SDR'} · expect a long render`;
+    const view = exportPresentationEngine.encoderStatusView(preflight, currentExportSettings().format);
+    if (view) exportController.renderEncoderStatus(view);
   }
 
   function populateExportPreflight(preflight) {
-    $('#preflightVideo').textContent = `${preflight.width}×${preflight.height} · ${preflight.fps} FPS · ${preflight.iterations} math iterations · ${$('#videoFormat').value.toUpperCase()}`;
-    $('#preflightEncoder').textContent = preflight.encoder.label;
-    $('#preflightOutput').textContent = `About ${formatByteSize(preflight.estimatedOutputBytes)}`;
-    $('#preflightSpace').textContent = formatByteSize(preflight.requiredBytes);
-    $('#preflightFree').textContent = preflight.freeBytes ? `${formatByteSize(preflight.freeBytes)} · Videos drive` : 'Checked after destination selection';
-    $('#preflightDuration').textContent = formatTime(preflight.duration);
-    const profile = $('#videoFormat').value;
-    $('#exportPreflightSummary').textContent = profile === 'youtube_hdr'
-      ? $('#exportHdrOutput').checked
-        ? 'Every frame is rendered offline into a 10-bit Rec.2020 HLG target, then encoded as a YouTube-ready HEVC Main 10 MP4.'
-        : 'Every frame is rendered offline in standard BT.709 color, then encoded as a broadly compatible YouTube HEVC Main 10 MP4.'
-      : profile === 'utvideo'
-      ? 'Exact RGB frames are stored in a playback-friendly Ut Video/FLAC Matroska master without a bitrate ceiling.'
-      : 'Exact RGB frames are stored in an archive-grade FFV1/FLAC Matroska master without a bitrate ceiling.';
-    const lowSpace = preflight.freeBytes > 0 && preflight.freeBytes < preflight.requiredBytes;
-    $('#preflightWarning').hidden = !lowSpace;
-    $('#preflightWarning').textContent = lowSpace
-      ? 'The default Videos drive may not have enough space. Choose another destination when prompted.'
-      : '';
-    $('#preflightTestButton').disabled = state.audioMode !== 'deck' || !currentPlaylistItem()?.filePath;
+    const settings = currentExportSettings();
+    exportController.renderPreflight(exportPresentationEngine.preflightView({
+      preflight,
+      fallbackProfileId: settings.format,
+      hdrOutput: settings.hdrOutput,
+      testDisabled: state.audioMode !== 'deck' || !currentPlaylistItem()?.filePath
+    }));
     updateEncoderStatus(preflight);
   }
 
-  async function showExportPreflight() {
-    const dialog = $('#exportPreflightDialog');
-    $('#exportPreflightSummary').textContent = 'Testing encoders and estimating storage…';
-    dialog.hidden = false;
-    const preflight = await requestExportPreflight();
-    lastExportPreflight = preflight;
-    populateExportPreflight(preflight);
-    return new Promise((resolve) => {
-      const close = (choice) => {
-        dialog.hidden = true;
-        resolve(choice);
-      };
-      $('#preflightCancelButton').onclick = () => close(null);
-      $('#preflightStartButton').onclick = () => close({ preflight, test: false });
-      $('#preflightTestButton').onclick = async () => {
-        $('#preflightTestButton').disabled = true;
-        try {
-          const testPreflight = await requestExportPreflight(Math.min(5, preflight.duration));
-          close({ preflight: testPreflight, test: true });
-        } catch (error) {
-          $('#preflightTestButton').disabled = false;
-          showToast(error.message, true);
-        }
-      };
+  function refreshExportEncoderStatus() {
+    return exportPreflightEngine.refresh({
+      settings: currentExportPreflightSettings(1),
+      requestPreflight: (request) => window.quarticDesktop.getExportPreflight(request),
+      started: () => exportController.renderEncoderStatus(exportPresentationEngine.encoderCheckingView()),
+      completed: ({ preflight }) => updateEncoderStatus(preflight),
+      failed: ({ error }) => exportController.renderEncoderStatus(exportPresentationEngine.encoderFailureView(error))
     });
   }
 
-  async function refreshExportEncoderStatus() {
-    try {
-      updateEncoderStatus(await requestExportPreflight(1));
-    } catch (error) {
-      const status = $('#exportEncoderStatus');
-      status.querySelector('strong').textContent = 'ENCODER CHECK FAILED';
-      status.querySelector('small').textContent = error.message;
-    }
+  function scanExportEncoderCapabilities() {
+    return exportEncoderScanEngine.run({
+      started: () => exportController.renderEncoderScanState(
+        'running',
+        exportPresentationEngine.encoderScanRunningView()
+      ),
+      scan: () => window.quarticDesktop.getExportEncoderCapabilities(),
+      completed: ({ report }) => {
+        exportController.renderEncoderScanState(
+          'completed',
+          exportPresentationEngine.encoderScanCompletedView(report)
+        );
+        if (currentExportSettings().format === 'gpu_auto') {
+          updateEncoderStatus({ encoder: report.selected, profile: selectedExportProfile() });
+        }
+        showToast('Encoder compatibility scan complete');
+      },
+      failed: ({ error }) => {
+        exportController.renderEncoderScanState(
+          'failed',
+          exportPresentationEngine.encoderScanFailedView(error)
+        );
+        showToast(error?.message || String(error), true);
+      },
+      restored: () => exportController.renderEncoderScanState(
+        'restored',
+        exportPresentationEngine.encoderScanRestoredView()
+      )
+    }).catch(() => {});
   }
 
-  const exportHistoryStorageKey = 'quarticPulseExportHistoryV1';
-  let exportHistory = [];
+  function modeledExportRenderFps(width, height, exportIterations) {
+    const settings = currentExportSettings();
+    return exportPlanningEngine.modeledRenderFps({
+      liveFps: 1000 / Math.max(1, state.frameTime),
+      livePixels: Math.max(1, canvas.width * canvas.height),
+      width,
+      height,
+      visualStyle: state.visualStyle,
+      liveIterations: state.iterations,
+      exportIterations,
+      supersampling: settings.supersampling
+    });
+  }
+
+  let lastExportBenchmark = null;
+
+  function exportAdvisorRecommendations(reference) {
+    const settings = currentExportSettings();
+    const resolutions = Array.from($('#resolution').options).map((option) => {
+      const [width, height] = option.value.split('x').map(Number);
+      return { value: option.value, width, height };
+    });
+    const frameRates = Array.from($('#fps').options).map((option) => Number(option.value));
+    return exportPlanningEngine.advisorRecommendations({
+      reference,
+      resolutions,
+      frameRates,
+      currentIterations: settings.requestedIterations,
+      unleashed: state.unleashedMode,
+      recommendedIterations: recommendedExportIterations,
+      liveContext: {
+        liveFps: 1000 / Math.max(1, state.frameTime),
+        livePixels: Math.max(1, canvas.width * canvas.height),
+        visualStyle: state.visualStyle,
+        liveIterations: state.iterations,
+        supersampling: settings.supersampling
+      }
+    });
+  }
+
+  function renderExportAdvisor(reference) {
+    const settings = currentExportSettings();
+    exportController.renderAdvisor(exportPresentationEngine.advisorView({
+      recommendations: exportAdvisorRecommendations(reference),
+      currentResolution: settings.resolution,
+      currentFps: settings.fps,
+      currentIterations: settings.requestedIterations
+    }));
+  }
+
+  function applyExportAdvisorRecommendation(selection) {
+    return exportSettingsCoordinatorEngine.applyAdvisor(selection, {
+      readChoices: () => exportController.readSettingChoices(),
+      applySettings: (recommendation) => exportController.applyAdvisorSelection(recommendation, { dispatch: false }),
+      syncIterations: syncExportIterations,
+      refreshPerformance: updateExportPerformanceNote,
+      invalidateBenchmark: invalidateExportBenchmark,
+      completed: ({ recommendation }) => showToast(`${recommendation.label} applied · benchmark again to verify`),
+      failed: ({ error }) => showToast(error?.message || String(error), true)
+    }).catch(() => {});
+  }
+
+  function invalidateExportBenchmark() {
+    exportController.invalidateBenchmark();
+    lastExportBenchmark = null;
+  }
+
+  function syncExportIterations(value) {
+    state.exportIterations = Number(value);
+    $('#exportIterationsValue').value = state.exportIterations;
+  }
+
+  function syncExportSupersampling(checked) {
+    state.exportSupersampling = Boolean(checked);
+  }
+
+  function coordinateExportSettingsChange(kind, payload = {}) {
+    return exportSettingsCoordinatorEngine.change(kind, payload, {
+      recommendIterations: applyResolutionIterationRecommendation,
+      syncIterations: syncExportIterations,
+      syncSupersampling: syncExportSupersampling,
+      updateHdrAvailability: updateExportHdrAvailability,
+      refreshPerformance: updateExportPerformanceNote,
+      invalidateBenchmark: invalidateExportBenchmark,
+      refreshEncoder: isObsOutput ? null : refreshExportEncoderStatus,
+      failed: ({ error }) => showToast(error?.message || String(error), true)
+    }).catch(() => {});
+  }
+
+  async function benchmarkSelectedExportSettings() {
+    return exportBenchmarkEngine.run({
+      prepare: async () => {
+        const settings = currentExportSettings();
+        return {
+          width: settings.width,
+          height: settings.height,
+          fps: settings.fps,
+          iterations: settings.effectiveIterations,
+          format: settings.format,
+          visualKind: state.visualStyle === 0 ? 'fractal iteration' : 'visual shader'
+        };
+      },
+      started: async ({ context }) => {
+        exportController.renderBenchmarkState('running', exportPresentationEngine.benchmarkRunningView(context));
+      },
+      benchmarkEncoder: (context) => window.quarticDesktop.benchmarkExportEncoder({
+        format: context.format,
+        width: context.width,
+        height: context.height,
+        fps: context.fps
+      }),
+      estimateRenderFps: (context) => modeledExportRenderFps(context.width, context.height, context.iterations),
+      skipped: async ({ result, renderFps }) => {
+        exportController.renderBenchmarkState('skipped', exportPresentationEngine.benchmarkSkippedView({ result, renderFps }));
+      },
+      completed: async ({ context, result, renderFps, benchmark }) => {
+        exportController.renderBenchmarkState('completed', exportPresentationEngine.benchmarkCompletedView({
+          result,
+          renderFps,
+          benchmark,
+          visualKind: context.visualKind
+        }));
+        lastExportBenchmark = { ...result, encodedFps: benchmark.encoderFps };
+        renderExportAdvisor(lastExportBenchmark);
+        showToast('Export readiness benchmark complete');
+      },
+      failed: async ({ error }) => {
+        exportController.renderBenchmarkState('failed', exportPresentationEngine.benchmarkFailedView(error));
+        showToast(error.message, true);
+      },
+      restored: async () => exportController.renderBenchmarkState('restored')
+    }).catch(() => {});
+  }
 
   function loadExportHistory() {
-    try {
-      const stored = JSON.parse(localStorage.getItem(exportHistoryStorageKey) || '[]');
-      exportHistory = Array.isArray(stored) ? stored.slice(0, 30) : [];
-    } catch (_) { exportHistory = []; }
+    exportHistoryEngine.load();
     renderExportHistory();
   }
 
   function renderExportHistory() {
-    const list = $('#exportHistoryList');
-    list.replaceChildren();
-    if (!exportHistory.length) {
-      const empty = document.createElement('p');
-      empty.textContent = 'No completed exports yet.';
-      list.appendChild(empty);
-      return;
+    exportController.renderHistory(exportPresentationEngine.historyView(exportHistoryEngine.list(12)));
+  }
+
+  function clearExportHistory() {
+    return exportHistoryActionEngine.clear({
+      confirm: () => window.confirm('Clear the recent export history? Exported video files will not be deleted.'),
+      completed: renderExportHistory,
+      failed: ({ error }) => showToast(error?.message || String(error), true)
+    }).catch(() => {});
+  }
+
+  function handleExportHistoryAction(action, id) {
+    return exportHistoryActionEngine.perform(action, id, {
+      open: (outputPath) => window.quarticDesktop.openExport(outputPath),
+      reveal: (outputPath) => window.quarticDesktop.revealExport(outputPath),
+      failed: ({ error }) => showToast(error?.message || String(error), true)
+    }).catch(() => {});
+  }
+
+  function completeExportResult(result, details = {}, presentCompleted) {
+    const settings = currentExportSettings();
+    return exportResultWorkflowEngine.complete(result, {
+      details,
+      defaults: {
+        mode: exportSessionEngine.mode || 'offline',
+        width: settings.width,
+        height: settings.height,
+        fps: settings.fps
+      },
+      historyChanged: renderExportHistory,
+      progressCompleted: ({ outputPath }) => exportProgressCoordinator.complete(outputPath),
+      presentCompleted,
+      notify: ({ message, error }) => showToast(message, error)
+    });
+  }
+
+  function refreshRecoverableExports() {
+    return exportHistoryActionEngine.refreshRecoveries({
+      load: () => window.quarticDesktop.getRecoverableExports(),
+      completed: ({ recoveries }) => exportController.renderRecoveries(exportPresentationEngine.recoveryView(recoveries)),
+      failed: ({ recoveries }) => exportController.renderRecoveries(exportPresentationEngine.recoveryView(recoveries))
+    });
+  }
+
+  function handleExportRecoveryAction(action, id) {
+    if (state.exporting) return;
+    if (action === 'recover') {
+      recoverInterruptedExport(id);
+    } else if (window.confirm('Discard this interrupted export and its temporary master?')) {
+      exportRecoveryEngine.discard(id, {
+        discard: (recoveryId) => window.quarticDesktop.discardRecoverableExport(recoveryId),
+        completed: async () => {
+          await refreshRecoverableExports();
+          showToast('Interrupted export discarded');
+        },
+        failed: ({ error }) => showToast(error?.message || String(error), true)
+      }).catch(() => {});
     }
-    for (const entry of exportHistory.slice(0, 12)) {
-      const row = document.createElement('div');
-      row.className = 'export-history-entry';
-      const details = document.createElement('div');
-      const name = document.createElement('strong');
-      const meta = document.createElement('small');
-      name.textContent = exportedFileName(entry.outputPath);
-      meta.textContent = `${String(entry.mode || 'offline').toUpperCase()} · ${entry.width || '?'}×${entry.height || '?'} · ${entry.fps || '?'} FPS · ${formatByteSize(entry.sizeBytes)} · ${entry.encoderLabel || 'encoder unknown'}`;
-      details.append(name, meta);
-      const actions = document.createElement('div');
-      actions.className = 'export-entry-actions';
-      for (const [action, label] of [['open', 'OPEN'], ['reveal', 'FOLDER']]) {
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.dataset.exportAction = action;
-        button.dataset.exportId = entry.id;
-        button.textContent = label;
-        actions.appendChild(button);
+  }
+
+  function recoverInterruptedExport(id) {
+    return exportRecoveryEngine.recover(id, {
+      started: () => {
+        state.exporting = true;
+        exportResultWorkflowEngine.reset();
+        exportController.renderRecoveryState('preparing', exportPresentationEngine.recoveryPreparingView());
+        exportSessionEngine.startProgress();
+      },
+      recover: (recoveryId) => window.quarticDesktop.recoverExport(recoveryId),
+      completed: ({ result }) => completeExportResult(
+        result,
+        { mode: 'recovered' },
+        () => exportController.renderRecoveryState('completed', exportPresentationEngine.recoveryCompletedView())
+      ),
+      failed: ({ error }) => {
+        exportController.renderRecoveryState('failed', exportPresentationEngine.recoveryFailedView(error));
+        showToast(`Recovery failed: ${error?.message || String(error)}`, true);
+      },
+      restored: async ({ completed }) => {
+        state.exporting = false;
+        exportController.renderRecoveryState('restored', { completed });
+        await refreshRecoverableExports();
       }
-      row.append(details, actions);
-      list.appendChild(row);
-    }
-  }
-
-  function recordExportResult(result, details = {}) {
-    if (!result?.outputPath) return;
-    const [width, height] = $('#resolution').value.split('x').map(Number);
-    const entry = {
-      id: crypto.randomUUID(),
-      completedAt: new Date().toISOString(),
-      outputPath: result.outputPath,
-      sizeBytes: Number(result.sizeBytes) || 0,
-      encoderLabel: result.encoderLabel || details.encoderLabel || '',
-      mode: details.mode || exportSessionEngine.mode || 'offline',
-      width: details.width || width,
-      height: details.height || height,
-      fps: details.fps || Number($('#fps').value),
-      duration: details.duration || 0,
-      partial: Boolean(result.partial),
-      recovered: Boolean(result.recovered)
-    };
-    exportHistory.unshift(entry);
-    exportHistory = exportHistory.slice(0, 30);
-    localStorage.setItem(exportHistoryStorageKey, JSON.stringify(exportHistory));
-    renderExportHistory();
-  }
-
-  async function refreshRecoverableExports() {
-    const recoveries = await window.quarticDesktop.getRecoverableExports().catch(() => []);
-    const card = $('#exportRecoveryCard');
-    const list = $('#exportRecoveryList');
-    list.replaceChildren();
-    card.hidden = !recoveries.length;
-    for (const entry of recoveries) {
-      const row = document.createElement('div');
-      row.className = 'export-recovery-entry';
-      const details = document.createElement('div');
-      const name = document.createElement('strong');
-      const meta = document.createElement('small');
-      name.textContent = exportedFileName(entry.outputPath);
-      meta.textContent = `${entry.width}×${entry.height} · ${entry.fps} FPS · ${entry.encodedFrames || 0} saved frames · ${formatByteSize(entry.tempBytes)}`;
-      details.append(name, meta);
-      const actions = document.createElement('div');
-      actions.className = 'export-entry-actions';
-      for (const [action, label] of [['recover', 'FINISH'], ['discard', 'DISCARD']]) {
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.dataset.recoveryAction = action;
-        button.dataset.recoveryId = entry.id;
-        button.textContent = label;
-        actions.appendChild(button);
-      }
-      row.append(details, actions);
-      list.appendChild(row);
-    }
-  }
-
-  async function recoverInterruptedExport(id) {
-    state.exporting = true;
-    exportSessionEngine.begin({ id }, 'offline');
-    document.body.classList.add('exporting', 'hide-export-preview');
-    setStageExportMode('offline');
-    setExportActionButtons(false, false);
-    beginExportProgress('Recovering interrupted export | overall 0%', 'Inspecting saved frames…');
-    exportController.setNote('Quartic Pulse is validating the saved master and finishing the interrupted video.');
-    try {
-      const result = await window.quarticDesktop.recoverExport(id);
-      recordExportResult(result, { mode: 'recovered' });
-      completeExportProgress(result.outputPath);
-      $('#revealButton').hidden = false;
-      state.exportedPath = result.outputPath;
-      showToast(`Recovered export complete: ${result.outputPath}`);
-    } finally {
-      state.exporting = false;
-      exportSessionEngine.clear();
-      document.body.classList.remove('exporting', 'hide-export-preview');
-      await refreshRecoverableExports();
-    }
+    }).catch(() => {});
   }
 
   let obsOutputOpen = false;
@@ -4358,7 +4759,6 @@
   const creativeToolsStorageKey = 'quarticPulseCreativeToolsV1';
   let cameraBookmarks = [];
   let randomizerUndoSnapshot = null;
-  let quickCaptureActive = false;
   let performanceAnalysis = null;
   let performanceReport = null;
   let pendingScreenshotRequest = null;
@@ -4599,51 +4999,49 @@
   }
 
   async function captureQuickClip() {
-    if (quickCaptureActive || state.exporting) return showToast('A recording is already active.', true);
-    const duration = clamp(Number($('#quickClipDuration').value) || 10, 5, 15);
-    const session = await window.quarticDesktop.beginExport({ suggestedName: `${state.audioName || 'Quartic-Pulse'}-clip`, format: 'mp4' });
-    if (!session) return;
-    let quickEncoder;
-    let captureStream;
-    let progressTimer;
-    try {
-      createAudioGraph();
-      await audioContext.resume();
-      const canvasStream = canvas.captureStream(60);
-      captureStream = new MediaStream([...canvasStream.getVideoTracks(), ...recordingDestination.stream.getAudioTracks()]);
-      quickEncoder = exportEncoderEngine.createLive({
-        stream: captureStream,
-        videoBitsPerSecond: Math.round(canvas.width * canvas.height * 60 * .1),
-        onChunk: (bytes) => window.quarticDesktop.appendExport(session.id, bytes)
-      });
-      quickCaptureActive = true;
-      $('#quickCaptureStatus').textContent = `RECORDING ${duration}s`;
-      $('#captureClipButton').disabled = true;
-      const startedAt = performance.now();
-      progressTimer = setInterval(() => {
-        $('#quickCaptureProgress').style.width = `${clamp((performance.now() - startedAt) / (duration * 10), 0, 100)}%`;
-      }, 100);
-      quickEncoder.start(1000);
-      setTimeout(() => quickEncoder.stop(), duration * 1000);
-      await quickEncoder.waitForStop();
-      clearInterval(progressTimer);
-      await quickEncoder.drain();
-      const result = await window.quarticDesktop.finishExport(session.id);
-      $('#quickCaptureProgress').style.width = '100%';
-      $('#quickCaptureStatus').textContent = 'SAVED';
-      showToast(result.warning || `Quick clip saved: ${result.outputPath}`, Boolean(result.warning));
-    } catch (error) {
-      quickEncoder?.stop();
-      await window.quarticDesktop.abortExport(session.id).catch(() => {});
-      $('#quickCaptureStatus').textContent = 'FAILED';
-      throw error;
-    } finally {
-      clearInterval(progressTimer);
-      quickCaptureActive = false;
-      captureStream?.getVideoTracks().forEach((track) => track.stop());
-      $('#captureClipButton').disabled = false;
-      setTimeout(() => { if (!quickCaptureActive) $('#quickCaptureProgress').style.width = '0%'; }, 1200);
+    if (exportQuickClipWorkflowEngine.diagnostics.active || state.exporting) {
+      return showToast('A recording is already active.', true);
     }
+    return exportQuickClipWorkflowEngine.run({
+      duration: $('#quickClipDuration').value,
+      beginSession: () => window.quarticDesktop.beginExport({
+        suggestedName: `${state.audioName || 'Quartic-Pulse'}-clip`,
+        format: 'mp4'
+      }),
+      prepare: async () => {
+        createAudioGraph();
+        await audioContext.resume();
+      },
+      createCapture: ({ session }) => exportLiveCaptureEngine.createCapture({
+        canvas,
+        audioStream: recordingDestination.stream,
+        width: canvas.width,
+        height: canvas.height,
+        fps: 60,
+        onChunk: (bytes) => window.quarticDesktop.appendExport(session.id, bytes)
+      }),
+      started: ({ duration }) => {
+        $('#quickCaptureStatus').textContent = `RECORDING ${duration}s`;
+        $('#captureClipButton').disabled = true;
+      },
+      progress: ({ progress }) => {
+        $('#quickCaptureProgress').style.width = `${Math.round(progress * 1000) / 10}%`;
+      },
+      finalize: (sessionId) => window.quarticDesktop.finishExport(sessionId),
+      abort: (sessionId) => window.quarticDesktop.abortExport(sessionId),
+      completed: ({ result }) => {
+        $('#quickCaptureProgress').style.width = '100%';
+        $('#quickCaptureStatus').textContent = 'SAVED';
+        showToast(result.warning || `Quick clip saved: ${result.outputPath}`, Boolean(result.warning));
+      },
+      failed: () => { $('#quickCaptureStatus').textContent = 'FAILED'; },
+      restored: () => {
+        $('#captureClipButton').disabled = false;
+        setTimeout(() => {
+          if (!exportQuickClipWorkflowEngine.diagnostics.active) $('#quickCaptureProgress').style.width = '0%';
+        }, 1200);
+      }
+    });
   }
 
   function initializeCreativeTools() {
@@ -4800,7 +5198,7 @@
       }
       if (Number($('#exportDetail').value) > 2.3) $('#exportDetail').value = '2.3';
     }
-    updateExportPerformanceNote();
+    coordinateExportSettingsChange('unleashed');
     persistPerformanceMode();
     if (announce) showToast(state.unleashedMode
       ? 'Unleashed mode enabled · raised shader limits and live export unlocked'
@@ -5140,6 +5538,10 @@
       element.hidden = basic;
       if (basic && element.matches('details')) element.open = false;
     });
+    if (basic && $('#videoFormat')?.value === 'av1_quality') {
+      $('#videoFormat').value = 'gpu_auto';
+      coordinateExportSettingsChange('format');
+    }
     const activeTab = document.querySelector('.tab-panel.active')?.dataset.tabPanel || 'music';
     activateTab(workspaceShell.normalizeTab(activeTab, mode));
     if (persist) {
@@ -5402,7 +5804,7 @@
     }
     applyControlDefaults({ flow: .28, motion: .85, reactivity: .9 });
     showToast(state.visualStyle === 6
-      ? 'Mainframe Room quick controls reset'
+      ? 'Data Horizon quick controls reset'
       : 'Waveform Field quick controls reset');
   }
 
@@ -5560,9 +5962,9 @@
     'bulbPower', 'bulbDetail', 'bulbAudio', 'bulbOrbit', 'bulbFold', 'bulbGlow', 'bulbCamera',
     'zoom', 'flow', 'autoReactivity', 'reactivity', 'motion', 'spin', 'equationSmoothing', 'equationMod',
     'adaptiveQuality', 'beatPulse', 'autoDrift',
-    'iterations', 'exportIterations', 'resolution', 'fps', 'videoFormat', 'exportDetail', 'exportHdrOutput', 'showExportPreview', 'exportCompleteSound',
+    'iterations', 'resolution', 'exportIterations', 'fps', 'videoFormat', 'exportDetail', 'exportSupersampling', 'exportHdrOutput', 'showExportPreview', 'exportCompleteSound',
     'obsResolution', 'obsFps', 'obsAlwaysOnTop', 'obsChromaKey', 'obsChromaThreshold',
-    'musicPersonality', 'songDirectorStyle', 'songDirectorBehavior', 'songDirectorIntensity'
+    'musicPersonality', 'songDirectorStyle', 'songDirectorBehavior', 'songDirectorTransition', 'songDirectorIntensity'
   ];
   let savedProfiles = [];
 
@@ -5718,7 +6120,7 @@
   }
 
   function quickSaveCurrentVisualProfile() {
-    const visualNames = ['Fractal', 'Spectrum Bars', 'Radial Spectrum', 'Pulse Rings', 'Waveform Field', '3D Mandelbulb', 'Mainframe Room'];
+    const visualNames = ['Fractal', 'Spectrum Bars', 'Radial Spectrum', 'Pulse Rings', 'Waveform Field', '3D Mandelbulb', 'Data Horizon'];
     const stamp = new Date().toISOString().replace('T', ' ').slice(0, 19).replaceAll(':', '-');
     $('#profileName').value = `${visualNames[state.visualStyle] || visualNames[0]} · ${stamp}`.slice(0, 60);
     $('#profileKind').value = 'settings';
@@ -5849,6 +6251,7 @@
         enabled: state.songDirectorEnabled,
         style: state.songDirectorStyle,
         behavior: state.songDirectorBehavior,
+        transition: state.songDirectorTransition,
         intensity: Number(state.songDirectorIntensity.toFixed(4)),
         map: portableSongMap(),
         cueOverrides: currentDirectorCuePackage()
@@ -5956,6 +6359,9 @@
     state.songDirectorBehavior = director.behavior === 'auto' || songDirectorBehaviors[director.behavior]
       ? director.behavior
       : state.songDirectorBehavior;
+    state.songDirectorTransition = songDirectorTransitions[director.transition]
+      ? director.transition
+      : state.songDirectorTransition;
     const importedDirectorIntensity = Number(director.intensity);
     state.songDirectorIntensity = Number.isFinite(importedDirectorIntensity)
       ? clamp(importedDirectorIntensity, 0, 1)
@@ -5963,6 +6369,7 @@
     $('#songDirectorEnabled').checked = false;
     $('#songDirectorStyle').value = state.songDirectorStyle;
     $('#songDirectorBehavior').value = state.songDirectorBehavior;
+    $('#songDirectorTransition').value = state.songDirectorTransition;
     $('#songDirectorIntensity').value = String(state.songDirectorIntensity);
     $('#songDirectorIntensity')._syncNumericValue?.();
     $('#songDirectorIntensityValue').value = `${Math.round(state.songDirectorIntensity * 100)}%`;
@@ -6121,6 +6528,8 @@
     const list = $('#modulationRouteList');
     list.replaceChildren();
     for (const mapping of state.modulationMappings) {
+      const amountMinimum = modulationAmountMinimum(mapping.target);
+      const amountIsBipolar = amountMinimum < 0;
       const route = document.createElement('article');
       route.className = `modulation-route${mapping.enabled ? '' : ' disabled'}`;
       route.dataset.mappingId = mapping.id;
@@ -6134,7 +6543,17 @@
           <label>SOURCE<select data-modulation-select="source">${modulationSelectOptions(modulationSources, mapping.source)}</select></label>
           <label>TARGET<select data-modulation-select="target">${modulationSelectOptions(modulationTargets, mapping.target)}</select></label>
         </div>
-        ${modulationControlMarkup('AMOUNT (− / +)', 'amount', mapping.amount, -100, 100, 35, 'Negative values reverse the source response. Positive values add to the target.')}
+        ${modulationControlMarkup(
+          amountIsBipolar ? 'AMOUNT (− / +)' : 'AMOUNT',
+          'amount',
+          mapping.amount,
+          amountMinimum,
+          100,
+          35,
+          amountIsBipolar
+            ? 'Negative values reverse the source response. Positive values add to the target.'
+            : 'Controls how strongly the source increases this target.'
+        )}
         <div class="modulation-route-meter"><i></i></div>
         <details>
           <summary>ADVANCED RESPONSE</summary>
@@ -6157,7 +6576,8 @@
 
   function setModulationField(mapping, field, requestedValue, route) {
     const limits = {
-      amount: [-100, 100], attack: [0, 100], release: [0, 100], floor: [0, 99], ceiling: [1, 100]
+      amount: [modulationAmountMinimum(mapping.target), 100],
+      attack: [0, 100], release: [0, 100], floor: [0, 99], ceiling: [1, 100]
     };
     if (!limits[field]) return;
     let value = Math.round(clamp(Number(requestedValue) || 0, limits[field][0], limits[field][1]));
@@ -6246,10 +6666,16 @@
       }
       const selectField = event.target.dataset.modulationSelect;
       if (selectField === 'source' && Object.hasOwn(modulationSources, event.target.value)) mapping.source = event.target.value;
-      if (selectField === 'target' && Object.hasOwn(modulationTargets, event.target.value)) mapping.target = event.target.value;
+      let targetRangeChanged = false;
+      if (selectField === 'target' && Object.hasOwn(modulationTargets, event.target.value)) {
+        mapping.target = event.target.value;
+        mapping.amount = clamp(mapping.amount, modulationAmountMinimum(mapping.target), 100);
+        targetRangeChanged = true;
+      }
       const title = event.target.closest('.modulation-route').querySelector('.modulation-route-title');
       title.textContent = `${modulationSources[mapping.source].label} → ${modulationTargets[mapping.target].label}`;
       persistModulationMatrix();
+      if (targetRangeChanged) renderModulationRoutes();
     });
     renderModulationRoutes();
   }
@@ -6648,16 +7074,86 @@
     return preservedCount;
   }
 
+  async function applyDeckOutput(deviceId, { quiet = false } = {}) {
+    createAudioGraph();
+    const requestedId = String(deviceId || '');
+    if (typeof audioContext?.setSinkId !== 'function') {
+      if (requestedId) throw new Error('Direct playback-output routing is not supported by this Windows audio runtime.');
+      return false;
+    }
+    await audioContext.setSinkId(requestedId);
+    const stinger = $('#exportCompleteStinger');
+    if (typeof stinger?.setSinkId === 'function') await stinger.setSinkId(requestedId).catch(() => {});
+    deckOutputDeviceId = requestedId;
+    if (requestedId) localStorage.setItem(deckOutputStorageKey, requestedId);
+    else localStorage.removeItem(deckOutputStorageKey);
+    const select = $('#deckOutputSelect');
+    if (select && [...select.options].some((option) => option.value === requestedId)) select.value = requestedId;
+    const label = select?.selectedOptions?.[0]?.textContent || (requestedId ? 'Direct output' : 'Windows default');
+    $('#deckOutputStatus').textContent = requestedId ? 'DIRECT' : 'WINDOWS DEFAULT';
+    if (!quiet) showToast(`Music Deck playback routed to ${label}`);
+    return true;
+  }
+
+  async function refreshDeckOutputs({ silent = false } = {}) {
+    if (!navigator.mediaDevices?.enumerateDevices) return 0;
+    try {
+      const devices = (await navigator.mediaDevices.enumerateDevices()).filter((device) => device.kind === 'audiooutput');
+      const select = $('#deckOutputSelect');
+      const group = $('#deckOutputOptions');
+      const options = devices
+        .filter((device) => device.deviceId && device.deviceId !== 'default')
+        .map((device, index) => {
+          const option = document.createElement('option');
+          option.value = device.deviceId;
+          option.textContent = device.label || `Windows playback device ${index + 1}`;
+          return option;
+        });
+      group.replaceChildren(...options);
+      if ([...select.options].some((option) => option.value === deckOutputDeviceId)) {
+        select.value = deckOutputDeviceId;
+        $('#deckOutputStatus').textContent = deckOutputDeviceId ? 'DIRECT' : 'WINDOWS DEFAULT';
+      } else if (deckOutputDeviceId) {
+        select.value = '';
+        $('#deckOutputStatus').textContent = 'SAVED OUTPUT';
+      }
+      if (!silent) showToast(`${devices.length} direct playback ${devices.length === 1 ? 'device' : 'devices'} found`);
+      return devices.length;
+    } catch (error) {
+      if (!silent) showToast(`Playback output scan failed: ${error.message}`, true);
+      return 0;
+    }
+  }
+
   async function refreshAllAudioDevices() {
-    const [outputs, inputs] = await Promise.all([
+    const inputs = await refreshAudioInputs({ requestPermission: true, silent: true });
+    const [outputs, deckOutputs] = await Promise.all([
       refreshWindowsOutputs({ silent: true }),
-      refreshAudioInputs({ requestPermission: true, silent: true })
+      refreshDeckOutputs({ silent: true })
     ]);
-    showToast(`${outputs} playback endpoints and ${inputs} input devices found`);
+    showToast(`${outputs} capture endpoints, ${inputs} inputs, and ${deckOutputs} direct playback devices found`);
+  }
+
+  function currentPlaylistIndex() {
+    if (state.playlistLoadedId == null) return -1;
+    return state.playlist.findIndex((item) => item.id === state.playlistLoadedId);
   }
 
   function currentPlaylistItem() {
-    return state.playlist[state.playlistIndex] || null;
+    const index = currentPlaylistIndex();
+    return index >= 0 ? state.playlist[index] : null;
+  }
+
+  function selectPlaylistRow(index) {
+    if (state.exporting) return showToast('Finish the current export before changing the playlist.', true);
+    if (!state.playlist[index]) return;
+    state.playlistIndex = index;
+    Array.from($('#playlistList').children).forEach((row, rowIndex) => {
+      const selected = rowIndex === index;
+      row.classList.toggle('active', selected);
+      row.setAttribute('aria-selected', String(selected));
+    });
+    updatePlaylistControls();
   }
 
   function updateTrackControls() {
@@ -6672,11 +7168,13 @@
   function updatePlaylistControls() {
     const count = state.playlist.length;
     const selected = state.playlistIndex >= 0 && state.playlistIndex < count;
+    const loadedIndex = currentPlaylistIndex();
+    const navigationIndex = loadedIndex >= 0 ? loadedIndex : state.playlistIndex;
     $('#playlistCount').textContent = `${count} ${count === 1 ? 'TRACK' : 'TRACKS'}`;
     $('#playlistEmpty').hidden = count > 0;
     $('#playlistCurrentLabel').textContent = selected ? `SELECTED ${state.playlistIndex + 1} / ${count}` : 'NOTHING SELECTED';
-    $('#playlistPreviousButton').disabled = !selected || state.playlistIndex <= 0 || state.exporting;
-    $('#playlistNextButton').disabled = !selected || state.playlistIndex >= count - 1 || state.exporting;
+    $('#playlistPreviousButton').disabled = navigationIndex <= 0 || state.exporting;
+    $('#playlistNextButton').disabled = navigationIndex < 0 || navigationIndex >= count - 1 || state.exporting;
     $('#playlistMoveUpButton').disabled = !selected || state.playlistIndex <= 0 || state.exporting;
     $('#playlistMoveDownButton').disabled = !selected || state.playlistIndex >= count - 1 || state.exporting;
     $('#playlistRemoveButton').disabled = !selected || state.exporting;
@@ -6694,9 +7192,12 @@
       const meta = document.createElement('small');
       const kind = document.createElement('span');
       button.type = 'button';
-      button.className = `playlist-item${index === state.playlistIndex ? ' active' : ''}`;
+      const selected = index === state.playlistIndex;
+      const loaded = item.id === state.playlistLoadedId;
+      button.className = `playlist-item${selected ? ' active' : ''}${loaded ? ' loaded' : ''}`;
+      button.title = loaded ? 'Loaded in the Music Deck' : 'Click to select · double-click to load and play';
       button.setAttribute('role', 'option');
-      button.setAttribute('aria-selected', String(index === state.playlistIndex));
+      button.setAttribute('aria-selected', String(selected));
       number.className = 'playlist-item-index';
       number.textContent = String(index + 1).padStart(2, '0');
       copy.className = 'playlist-item-copy';
@@ -6704,9 +7205,9 @@
       meta.textContent = item.meta;
       copy.append(title, meta);
       kind.className = 'playlist-item-kind';
-      kind.textContent = 'FILE';
+      kind.textContent = loaded ? 'LOADED' : 'FILE';
       button.append(number, copy, kind);
-      button.addEventListener('click', () => selectPlaylistIndex(index, false).catch((error) => showToast(error.message, true)));
+      button.addEventListener('click', () => selectPlaylistRow(index));
       button.addEventListener('dblclick', () => selectPlaylistIndex(index, true).catch((error) => showToast(error.message, true)));
       list.appendChild(button);
     });
@@ -6726,12 +7227,13 @@
     activeSongMap = null;
     resetPulseEvents();
     state.playlistIndex = index;
+    state.playlistLoadedId = item.id;
     state.audioName = item.name;
     audio.src = item.source;
     audio.load();
     // A source swap can occur before the media element's asynchronous pause
     // event updates the HUD. Reset the transport immediately for a newly
-    // selected track unless this selection explicitly requested autoplay.
+    // loaded track unless this activation explicitly requested autoplay.
     setPlayState();
     $('#trackName').textContent = item.name;
     $('#trackMeta').textContent = item.meta;
@@ -6740,7 +7242,7 @@
     updateTrackControls();
     renderPlaylist();
     loadSongMapForCurrentTrack();
-    showToast(`${item.name} selected`);
+    showToast(`${item.name} loaded${autoplay ? ' and playing' : ''}`);
     if (autoplay) {
       createAudioGraph();
       await audioContext.resume();
@@ -6788,20 +7290,25 @@
     state.playlist.splice(to, 0, item);
     state.playlistIndex = to;
     renderPlaylist();
+    showToast(`${item.name} moved`);
   }
 
-  async function removeCurrentPlaylistItem() {
+  function removeCurrentPlaylistItem() {
     const index = state.playlistIndex;
     if (index < 0 || state.exporting) return;
     const [removed] = state.playlist.splice(index, 1);
-    audio.pause();
-    audio.removeAttribute('src');
-    audio.load();
+    const removedLoadedTrack = removed.id === state.playlistLoadedId;
     URL.revokeObjectURL(removed.source);
-    state.playlistIndex = -1;
-    if (state.playlist.length) await selectPlaylistIndex(Math.min(index, state.playlist.length - 1), false);
-    else resetAudioDeck();
+    state.playlistIndex = state.playlist.length ? Math.min(index, state.playlist.length - 1) : -1;
+    if (removedLoadedTrack) {
+      audio.pause();
+      audio.removeAttribute('src');
+      audio.load();
+      state.playlistLoadedId = null;
+      resetAudioDeck();
+    }
     renderPlaylist();
+    showToast(`${removed.name} removed${removedLoadedTrack ? ' · playback stopped' : ''}`);
   }
 
   function resetAudioDeck() {
@@ -6827,13 +7334,16 @@
     state.playlist.forEach((item) => URL.revokeObjectURL(item.source));
     state.playlist = [];
     state.playlistIndex = -1;
+    state.playlistLoadedId = null;
     resetAudioDeck();
     renderPlaylist();
     showToast('Playlist cleared');
   }
 
   async function changePlaylistTrack(direction, forcePlay = false) {
-    const nextIndex = state.playlistIndex + direction;
+    const loadedIndex = currentPlaylistIndex();
+    const referenceIndex = loadedIndex >= 0 ? loadedIndex : state.playlistIndex;
+    const nextIndex = referenceIndex + direction;
     if (nextIndex < 0 || nextIndex >= state.playlist.length) return;
     const autoplay = forcePlay || !audio.paused;
     await selectPlaylistIndex(nextIndex, autoplay);
@@ -6985,14 +7495,11 @@
   let songMapInitialized = false;
   let songMapRefreshTimer = 0;
   let activeSongDirectorPlan = [];
-  let songDirectorInitialized = false;
-  let songDirectorLastUiUpdate = 0;
-  let selectedSongDirectorCueIndex = -1;
-  let selectedSongDirectorMapKey = '';
   const songDirectorOverridesStorageKey = 'quarticPulseDirectorOverridesV1';
 
   const songDirectorStyles = songDirectorEngine.styles;
   const songDirectorBehaviors = songDirectorEngine.behaviors;
+  const songDirectorTransitions = songDirectorEngine.transitions;
 
   function resolveSongDirectorBehavior(map = activeSongMap) {
     return songDirectorEngine.resolveBehavior(state.songDirectorBehavior, map);
@@ -7029,155 +7536,27 @@
       map: activeSongMap,
       time,
       styleId: state.songDirectorStyle,
+      transitionId: state.songDirectorTransition,
       intensity: state.songDirectorIntensity,
       getOverride: songDirectorOverrideFor,
       dimensionalEnabled: state.fractalDimensional,
       foldingEnabled: state.equationFolding
     });
     state.songDirectorValues = result.values;
-    updateSongDirectorNow(result.cue, result.values, result.songTime);
+    updateSongDirectorNow(result.cue, result.values, result.songTime, result.dynamics);
     return result.values;
   }
 
-  function updateSongDirectorNow(cue, values, time) {
-    if (!songDirectorInitialized || performance.now() - songDirectorLastUiUpdate < 120) return;
-    songDirectorLastUiUpdate = performance.now();
-    const now = $('#songDirectorNow');
-    if (!now) return;
-    const label = now.querySelector('strong');
-    if (!activeSongMap) label.textContent = 'WAITING FOR SONG MAP';
-    else if (!state.songDirectorEnabled) label.textContent = 'DIRECTOR STANDBY';
-    else label.textContent = `${cue?.label || 'MOVEMENT'} · ${formatTime(time)}`;
-    const meters = now.querySelectorAll('.song-director-meters i');
-    const levels = [Math.abs(values.motion || 0) * 4, Math.abs(values.equation || 0) * 7, Math.abs(values.frequencyHue || 0) * 6, Math.abs(values.zoom || 0) * 7];
-    meters.forEach((meter, index) => { meter.style.height = `${8 + clamp(levels[index], 0, 1) * 92}%`; });
-    document.querySelectorAll('.song-director-cue').forEach((button) => button.classList.toggle('active', Number(button.dataset.cueIndex) === values.cueIndex));
+  function updateSongDirectorNow(cue, values, time, dynamics = null) {
+    songDirectorController.updateNow(cue, values, time, dynamics);
   }
 
   function renderSongDirector() {
-    if (!songDirectorInitialized) return;
-    activeSongDirectorPlan = generateSongDirectorPlan(activeSongMap);
-    const ready = activeSongDirectorPlan.length > 0;
-    const resolvedBehaviorId = resolveSongDirectorBehavior(activeSongMap);
-    const resolvedBehavior = songDirectorBehaviors[resolvedBehaviorId];
-    const status = $('#songDirectorStatus');
-    status.textContent = ready ? (state.songDirectorEnabled ? 'ACTIVE' : 'PLAN READY') : 'NEEDS SONG MAP';
-    status.dataset.tone = state.songDirectorEnabled && ready ? 'active' : '';
-    $('#songDirectorEnabled').disabled = !ready;
-    $('#songDirectorEnabled').checked = state.songDirectorEnabled && ready;
-    $('#songDirectorIntensity').disabled = !ready;
-    $('#songDirectorBehavior').disabled = !ready;
-    $('#songDirectorBehavior').value = state.songDirectorBehavior;
-    $('#songDirectorBehaviorResolved').textContent = `${state.songDirectorBehavior === 'auto' ? 'AUTO · ' : ''}${resolvedBehavior.label.toUpperCase()}`;
-    if ((activeSongMap?.key || '') !== selectedSongDirectorMapKey) {
-      selectedSongDirectorMapKey = activeSongMap?.key || '';
-      selectedSongDirectorCueIndex = -1;
-    }
-    if (selectedSongDirectorCueIndex >= activeSongDirectorPlan.length) selectedSongDirectorCueIndex = -1;
-    document.querySelectorAll('[data-director-style]').forEach((button) => {
-      const active = button.dataset.directorStyle === state.songDirectorStyle;
-      button.disabled = !ready;
-      button.classList.toggle('active', active);
-      button.setAttribute('aria-checked', String(active));
-    });
-    const plan = $('#songDirectorPlan');
-    plan.replaceChildren(...activeSongDirectorPlan.map((cue, index) => {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'song-director-cue';
-      button.classList.toggle('edited', Boolean(songDirectorOverrideFor(index)));
-      button.classList.toggle('selected', selectedSongDirectorCueIndex === index);
-      button.dataset.cueIndex = String(index);
-      button.style.setProperty('--cue-color', songMapSectionColors[index % songMapSectionColors.length]);
-      button.innerHTML = `<strong>${cue.label}</strong><small>${formatTime(cue.start)} · ${cue.kind.toUpperCase()}</small>`;
-      button.addEventListener('click', () => {
-        selectedSongDirectorCueIndex = index;
-        renderSongDirectorCueEditor();
-        document.querySelectorAll('.song-director-cue').forEach((cueButton) => cueButton.classList.toggle('selected', Number(cueButton.dataset.cueIndex) === index));
-        if (state.audioMode !== 'deck' || !Number.isFinite(audio.duration)) return;
-        audio.currentTime = Math.min(audio.duration, cue.start);
-        updateSongMapPlayhead(audio.currentTime);
-        updateSongDirector(audio.currentTime);
-      });
-      return button;
-    }));
-    renderSongDirectorCueEditor();
-    updateSongDirectorNow(null, {}, audio.currentTime);
-  }
-
-  function renderSongDirectorCueEditor() {
-    if (!songDirectorInitialized) return;
-    const editor = $('#songDirectorCueEditor');
-    const cue = activeSongDirectorPlan[selectedSongDirectorCueIndex];
-    editor.hidden = !cue;
-    if (!cue) return;
-    const override = songDirectorOverrideFor(selectedSongDirectorCueIndex);
-    $('#songDirectorCueName').textContent = cue.label;
-    $('#songDirectorCueState').textContent = override ? 'EDITED' : 'AUTO';
-    $('#songDirectorCueEmphasis').value = override?.emphasis || 'auto';
-    $('#songDirectorCueStrength').value = String(override?.strength ?? 1);
-    $('#songDirectorCueStrength')._syncNumericValue?.();
-    $('#songDirectorCueStrengthValue').value = `${Math.round((override?.strength ?? 1) * 100)}%`;
-    $('#resetSongDirectorCue').disabled = !override;
+    songDirectorController.render();
   }
 
   function initializeSongDirector() {
-    songDirectorInitialized = true;
-    $('#songDirectorEnabled').addEventListener('change', (event) => {
-      state.songDirectorEnabled = event.target.checked;
-      if (!state.songDirectorEnabled) state.songDirectorValues = {};
-      renderSongDirector();
-      showToast(state.songDirectorEnabled ? 'Mathematical Song Director enabled' : 'Song Director standing by');
-    });
-    $('#songDirectorIntensity').addEventListener('input', (event) => {
-      state.songDirectorIntensity = Number(event.target.value);
-      $('#songDirectorIntensityValue').value = `${Math.round(state.songDirectorIntensity * 100)}%`;
-    });
-    $('#songDirectorStyleGrid').addEventListener('click', (event) => {
-      const button = event.target.closest('[data-director-style]');
-      if (!button || button.disabled) return;
-      state.songDirectorStyle = button.dataset.directorStyle;
-      $('#songDirectorStyle').value = state.songDirectorStyle;
-      renderSongDirector();
-      showToast(`${songDirectorStyles[state.songDirectorStyle].label} Song Director selected`);
-    });
-    $('#songDirectorStyle').addEventListener('change', (event) => {
-      state.songDirectorStyle = songDirectorStyles[event.target.value] ? event.target.value : 'cinematic';
-      renderSongDirector();
-    });
-    $('#songDirectorBehavior').addEventListener('change', (event) => {
-      state.songDirectorBehavior = event.target.value === 'auto' || songDirectorBehaviors[event.target.value]
-        ? event.target.value
-        : 'auto';
-      renderSongDirector();
-      const resolved = songDirectorBehaviors[resolveSongDirectorBehavior(activeSongMap)];
-      showToast(`${resolved.label} musical behavior ${state.songDirectorBehavior === 'auto' ? 'selected automatically' : 'selected'}`);
-    });
-    const saveCueEditor = () => {
-      if (!activeSongDirectorPlan[selectedSongDirectorCueIndex]) return;
-      writeSongDirectorOverride(selectedSongDirectorCueIndex, {
-        strength: Number($('#songDirectorCueStrength').value),
-        emphasis: $('#songDirectorCueEmphasis').value
-      });
-      const edited = Boolean(songDirectorOverrideFor(selectedSongDirectorCueIndex));
-      document.querySelector(`.song-director-cue[data-cue-index="${selectedSongDirectorCueIndex}"]`)?.classList.toggle('edited', edited);
-      renderSongDirectorCueEditor();
-      updateSongDirector(state.offlineExporting ? (state.offlineCurrentTime || 0) : audio.currentTime);
-    };
-    $('#songDirectorCueStrength').addEventListener('input', (event) => {
-      $('#songDirectorCueStrengthValue').value = `${Math.round(Number(event.target.value) * 100)}%`;
-      saveCueEditor();
-    });
-    $('#songDirectorCueEmphasis').addEventListener('change', saveCueEditor);
-    $('#resetSongDirectorCue').addEventListener('click', () => {
-      if (selectedSongDirectorCueIndex < 0) return;
-      writeSongDirectorOverride(selectedSongDirectorCueIndex, null);
-      document.querySelector(`.song-director-cue[data-cue-index="${selectedSongDirectorCueIndex}"]`)?.classList.remove('edited');
-      renderSongDirectorCueEditor();
-      updateSongDirector(state.offlineExporting ? (state.offlineCurrentTime || 0) : audio.currentTime);
-      showToast('Section cue returned to its automatic plan');
-    });
-    renderSongDirector();
+    songDirectorController.initialize();
   }
 
   function hashSongMapText(text) {
@@ -7738,337 +8117,281 @@
     return new Promise((resolve) => { pendingOfflineRender = resolve; });
   }
 
-  async function startOfflineExport(options = {}) {
+  if (isSmokeTest) {
+    window.__quarticTestExportSampling = () => exportSamplingEngine.selfTest();
+  }
+
+  function createOfflineExportJob(options = {}) {
     const item = currentPlaylistItem();
-    if (!item?.file || !item.filePath) throw new Error('Offline export requires a local song file. Reload the song if it was added by an older session.');
-    if (state.audioMode !== 'deck') stopLiveAudio();
-    audio.pause();
-    const [width, height] = $('#resolution').value.split('x').map(Number);
-    const fps = Number($('#fps').value);
-    const format = $('#videoFormat').value;
-    const hdrProfile = format === 'youtube_hdr' && Boolean($('#exportHdrOutput').checked);
-    const exportDetail = Number($('#exportDetail').value);
-    const exportIterations = effectiveExportIterations(width, height, state.exportIterations);
-    $('#exportLabel').textContent = 'PREPARING OFFLINE AUDIO…';
-    $('#exportButton').disabled = true;
-    createAudioGraph();
-    const audioBuffer = await audioContext.decodeAudioData((await item.file.arrayBuffer()).slice(0));
-    const duration = Math.min(audioBuffer.duration, Math.max(.1, Number(options.durationLimit) || audioBuffer.duration));
-    const frameCount = Math.max(1, Math.ceil(duration * fps));
-    if (hdrProfile && !ensureHdrExportTarget(width, height)) {
-      throw new Error('This GPU/driver could not create the required 10-bit RGB export framebuffer. Use a lossless RGB profile or update the graphics driver.');
-    }
-    const session = await window.quarticDesktop.beginOfflineExport({
-      suggestedName: `${state.audioName || 'quartic-pulse'}${options.test ? '-5-second-test' : ''}`,
-      format, width, height, fps, frameCount,
-      pixelFormat: hdrProfile ? 'x2bgr10le' : 'rgba', hdrOutput: hdrProfile, audioPath: item.filePath,
-      requiredBytes: options.preflight?.requiredBytes,
-      finalEncoder: options.preflight?.encoder?.id
-    });
-    if (!session) {
-      $('#exportButton').disabled = false;
-      $('#exportLabel').textContent = 'EXPORT VIDEO';
-      return;
-    }
-
-    exportSessionEngine.begin(session, 'offline');
-    state.loopBeforeExport = audio.loop;
-    const previousVisualTime = state.visualTime;
-    const previousModulationRotationPhase = state.modulationRotationPhase;
-    const rawFrame = hdrProfile
-      ? new Uint32Array(width * height)
-      : new Uint8Array(width * height * 4);
-    const rawFrameBytes = hdrProfile ? new Uint8Array(rawFrame.buffer) : rawFrame;
-    let exportCompleted = false;
-    let renderedFrameCount = 0;
-    try {
-      state.exportWidth = width;
-      state.exportHeight = height;
-      state.exportDetail = exportDetail;
-      state.exportIterationTarget = exportIterations;
-      state.offlineFps = fps;
-      state.offlineExporting = true;
-      state.offlineHdrExport = hdrProfile;
-      state.exporting = true;
-      state.visualTime = 0;
-      state.modulationRotationPhase = 0;
-      state.autoReactivityGain = 1;
-      resetPulseEvents();
-      state.spectrumData.fill(0);
-      state.waveformData.fill(0);
-      renderPlaylist();
-      document.body.classList.add('exporting');
-      document.body.classList.toggle('hide-export-preview', !$('#showExportPreview').checked);
-      state.exportedPath = null;
-      setStageExportMode('offline');
-      beginExportProgress(`Rendering frames 0 / ${frameCount} | overall 0%`, 'Rendering frames 0% | overall 0%');
-      $('#revealButton').hidden = true;
-      $('#exportButton').disabled = false;
-      $('#exportButton').classList.add('recording');
-      $('#exportLabel').textContent = 'END & FINISH';
-      $('#exportIcon').textContent = '■';
-      for (const id of ['resolution', 'fps', 'videoFormat', 'exportIterations', 'exportDetail', 'exportHdrOutput', 'exportMode']) $(`#${id}`).disabled = true;
-      $('#unleashedMode').disabled = true;
-      $('#performanceMode').disabled = true;
-      audioController.renderLiveStatus('OFFLINE RENDER', true);
-      setCanvasSize();
-      const analyzeFrame = createOfflineAudioAnalyzer(audioBuffer, fps);
-      setExportProgress(
-        0,
-        hdrProfile
-          ? '10-bit Rec.2020 HLG target ready | HEVC Main 10 pipeline | rendering next'
-          : `${format === 'utvideo' ? 'Ut Video playback' : 'FFV1 archive'} master ready | exact RGB frames | rendering next`,
-        hdrProfile
-          ? 'YouTube HDR master ready | quality-priority HEVC'
-          : 'Lossless RGB master ready | no bitrate ceiling'
-      );
-
-      for (let frameIndex = 0; frameIndex < frameCount; frameIndex++) {
-        if (exportSessionEngine.cancelRequested) throw new DOMException('Offline export cancelled.', 'AbortError');
-        if (exportSessionEngine.finishRequested && frameIndex > 0) break;
-        while (exportSessionEngine.paused && !exportSessionEngine.cancelRequested && !exportSessionEngine.finishRequested) {
-          await new Promise((resolve) => setTimeout(resolve, 100));
+    return {
+      prepare: async () => {
+        if (state.audioMode !== 'deck') stopLiveAudio();
+        audio.pause();
+        const settings = currentExportSettings();
+        exportController.renderOfflineState('preparing');
+        createAudioGraph();
+        return exportPreparationEngine.prepareOffline({
+          item,
+          settings,
+          audioName: state.audioName,
+          test: options.test,
+          durationLimit: options.durationLimit,
+          preflight: options.preflight
+        }, {
+          readAudioData: (track) => track.file.arrayBuffer(),
+          decodeAudioData: (bytes) => audioContext.decodeAudioData(bytes)
+        });
+      },
+      beginSession: (context) => window.quarticDesktop.beginOfflineExport(context.sessionRequest),
+      activate: ({ context }) => {
+        const {
+          width, height, fps, format, frameCount, hdrProfile, tenBitProfile,
+          supersampling, exportDetail, exportIterations
+        } = context;
+        if (tenBitProfile && !ensureHdrExportTarget(width, height)) {
+          throw new Error('This GPU/driver could not create the required 10-bit RGB export framebuffer. Use a lossless RGB profile or update the graphics driver.');
         }
-        if (exportSessionEngine.cancelRequested) throw new DOMException('Offline export cancelled.', 'AbortError');
-        if (exportSessionEngine.finishRequested && frameIndex > 0) break;
-        const time = frameIndex / fps;
-        state.offlineCurrentTime = time;
-        state.visualTime = time;
-        analyzeFrame(time);
-        await requestOfflineVisualFrame();
-        gl.readPixels(
-          0, 0, width, height, gl.RGBA,
-          hdrProfile ? gl.UNSIGNED_INT_2_10_10_10_REV : gl.UNSIGNED_BYTE,
-          rawFrame
+        context.frameCapture = exportFrameCaptureEngine.createCapture({
+          width,
+          height,
+          tenBit: tenBitProfile,
+          supersampling
+        });
+        exportRuntimeStateCoordinator.activate('offline', {
+          width, height, fps, hdrProfile, tenBitProfile, exportDetail, exportIterations
+        }, { loopPlayback: audio.loop });
+        resetPulseEvents();
+        state.spectrumData.fill(0);
+        state.waveformData.fill(0);
+        renderPlaylist();
+        exportResultWorkflowEngine.reset();
+        exportController.renderOfflineState('rendering', { hidePreview: !context.showPreview });
+        exportProgressCoordinator.begin(`Rendering frames 0 / ${frameCount} | overall 0%`, 'Rendering frames 0% | overall 0%');
+        audioController.renderLiveStatus('OFFLINE RENDER', true);
+        setCanvasSize();
+        const exportProfile = exportProfileCatalog.profiles[format];
+        exportProgressCoordinator.update(
+          0,
+          hdrProfile
+            ? '10-bit Rec.2020 HLG target ready | HEVC Main 10 pipeline | rendering next'
+            : `${exportProfile.container} | ${exportProfile.videoCodec} | rendering next`,
+          hdrProfile
+            ? 'YouTube HDR master ready | quality-priority HEVC'
+            : `${exportProfile.label} ready`
         );
-        await window.quarticDesktop.appendOfflineFrame(session.id, rawFrameBytes);
-        renderedFrameCount = frameIndex + 1;
-        const progress = (frameIndex + 1) / frameCount;
-        if (frameIndex % Math.max(1, Math.floor(fps / 5)) === 0 || frameIndex + 1 === frameCount) {
-          const overall = progress * .80;
-          setExportProgress(
-            overall,
-            `Rendering frames ${frameIndex + 1} / ${frameCount} | render ${Math.round(progress * 100)}% | overall ${Math.round(overall * 100)}%`,
-            `Rendering frames ${Math.round(progress * 100)}% | overall ${Math.round(overall * 100)}%`
-          );
-        }
+      },
+      render: ({ context, session }) => {
+        const { fps, frameCount, supersampling, audioBuffer, frameCapture } = context;
+        const analyzeFrame = createOfflineAudioAnalyzer(audioBuffer, fps);
+        return exportRenderCoordinator.renderFrames({
+          sessionEngine: exportSessionEngine,
+          frameCount,
+          fps,
+          supersampling,
+          sampleOffsets: exportSamplingEngine.offsets,
+          onFrameStart: ({ time }) => {
+            state.offlineCurrentTime = time;
+            state.visualTime = time;
+            analyzeFrame(time);
+            state.offlineBaseModulation = null;
+            frameCapture.beginFrame();
+          },
+          onSample: (sample) => frameCapture.captureSample(sample),
+          onFrameReady: () => frameCapture.resolveFrame(),
+          onAppendFrame: () => window.quarticDesktop.appendOfflineFrame(session.id, frameCapture.outputBytes),
+          onFrameEnd: () => frameCapture.cleanup(),
+          onProgress: ({ renderedFrameCount, progress, overallProgress }) => {
+            exportProgressCoordinator.update(
+              overallProgress,
+              `Rendering frames ${renderedFrameCount} / ${frameCount} | render ${Math.round(progress * 100)}% | overall ${Math.round(overallProgress * 100)}%`,
+              `Rendering frames ${Math.round(progress * 100)}% | overall ${Math.round(overallProgress * 100)}%`
+            );
+          }
+        });
+      },
+      beforeFinalize: () => {
+        exportProgressCoordinator.update(.80, 'Frames rendered | closing the quality master and audio | overall 80%', 'Frames rendered | finalizing master | overall 80%');
+        exportProgressCoordinator.update(.85, 'Encoded frames written | preparing final video | overall 85%', 'Encoded frames written | finalizing next | overall 85%');
+        exportRuntimeStateCoordinator.markFinalizing('offline');
+        exportController.renderOfflineState('finalizing', { shortened: exportSessionEngine.finishRequested });
+        exportProgressCoordinator.update(.85, 'Frames complete | finalizing and saving | overall 85%', 'Frames complete | finalizing 0% | overall 85%');
+      },
+      complete: ({ context, renderedFrameCount, result }) => completeExportResult(result, {
+          mode: options.test ? 'test' : 'offline',
+          width: context.width,
+          height: context.height,
+          fps: context.fps,
+          duration: renderedFrameCount / context.fps
+        }, () => exportController.renderOfflineState('completed')),
+      cancelled: () => {
+        exportController.renderOfflineState('cancelled');
+        showToast('Offline export cancelled and temporary files discarded');
+      },
+      failed: () => exportController.renderOfflineState('failed'),
+      restore: ({ context, completed }) => {
+        pendingOfflineRender = null;
+        context?.frameCapture?.cleanup();
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        if (context?.tenBitProfile) releaseHdrExportTarget();
+        exportRuntimeStateCoordinator.restore('offline');
+        resetPulseEvents();
+        exportController.renderOfflineState('restored', { completed });
+        updateUnleashedMode(state.unleashedMode);
+        audioController.renderLiveStatus('IDLE');
+        updateTrackControls();
+        renderPlaylist();
+        setCanvasSize();
+        setPlayState();
       }
-      setExportProgress(
-        .80,
-        'Frames rendered | closing the quality master and audio | overall 80%',
-        'Frames rendered | finalizing master | overall 80%'
-      );
-      if (exportSessionEngine.cancelRequested) throw new DOMException('Offline export cancelled.', 'AbortError');
-      setExportProgress(.85, 'Encoded frames written | preparing final video | overall 85%', 'Encoded frames written | finalizing next | overall 85%');
-      state.offlineExporting = false;
-      setExportActionButtons(false, true);
-      $('#exportLabel').textContent = exportSessionEngine.finishRequested
-        ? 'FINISHING SHORT EXPORT…'
-        : 'FINALIZING QUALITY MASTER…';
-      $('#exportButton').disabled = true;
-      setExportProgress(.85, 'Frames complete | finalizing and saving | overall 85%', 'Frames complete | finalizing 0% | overall 85%');
-      const result = await window.quarticDesktop.finishOfflineExport(session.id, {
-        allowPartial: exportSessionEngine.finishRequested,
-        renderedFrameCount
-      });
-      state.exportedPath = result.outputPath;
-      exportCompleted = true;
-      recordExportResult(result, { mode: options.test ? 'test' : 'offline', width, height, fps, duration: renderedFrameCount / fps });
-      completeExportProgress(result.outputPath);
-      exportSessionEngine.clear();
-      $('#revealButton').hidden = false;
-      showToast(result.warning || `${result.partial ? 'Shortened export' : 'Offline export'} complete: ${result.outputPath}`, Boolean(result.warning));
-    } catch (error) {
-      pendingOfflineRender = null;
-      if (exportSessionEngine.session?.id) await window.quarticDesktop.abortOfflineExport(exportSessionEngine.session.id).catch(() => {});
-      exportSessionEngine.clear();
-      if (error.name === 'AbortError' || exportSessionEngine.cancelRequested) showToast('Offline export cancelled and temporary files discarded');
-      else throw error;
-    } finally {
-      state.offlineExporting = false;
-      state.offlineHdrExport = false;
-      state.exporting = false;
-      state.exportIterationTarget = 0;
-      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-      if (hdrProfile) releaseHdrExportTarget();
-      state.visualTime = previousVisualTime;
-      state.modulationRotationPhase = previousModulationRotationPhase;
-      exportSessionEngine.resetRequests();
-      resetPulseEvents();
-      document.body.classList.remove('exporting', 'hide-export-preview');
-      $('#exportButton').classList.remove('recording');
-      $('#exportButton').disabled = false;
-      $('#exportLabel').textContent = 'EXPORT VIDEO';
-      $('#exportIcon').textContent = '●';
-      for (const id of ['resolution', 'fps', 'videoFormat', 'exportIterations', 'exportDetail', 'exportHdrOutput', 'exportMode']) $(`#${id}`).disabled = false;
-      $('#unleashedMode').disabled = false;
-      $('#performanceMode').disabled = false;
-      updateUnleashedMode(state.unleashedMode);
-      if (!exportCompleted) exportController.hide();
-      audioController.renderLiveStatus('IDLE');
-      updateTrackControls();
-      renderPlaylist();
-      setCanvasSize();
-      setPlayState();
-    }
+    };
+  }
+
+  async function startOfflineExport(options = {}) {
+    return exportJobCoordinator.startOffline(options);
   }
 
   async function startExport() {
-    try {
-      const choice = await showExportPreflight();
-      if (!choice) return;
-      if (choice.test) return await startOfflineExport({
-        preflight: choice.preflight,
-        durationLimit: Math.min(5, choice.preflight.duration),
-        test: true
-      });
-      return await startOfflineExport({ preflight: choice.preflight });
-    } catch (error) {
-      if (!state.exporting) {
-        $('#exportButton').disabled = false;
-        $('#exportButton').classList.remove('recording');
-        $('#exportLabel').textContent = 'EXPORT VIDEO';
-        $('#exportIcon').textContent = '●';
+    return exportWorkflowEngine.run({
+      requestChoice: () => exportController.requestPreflightChoice({
+        load: () => requestExportPreflight(),
+        loaded: (preflight) => {
+          lastExportPreflight = preflight;
+          populateExportPreflight(preflight);
+        },
+        loadTest: (preflight) => requestExportPreflight(Math.min(5, preflight.duration)),
+        failed: (error) => showToast(error.message, true)
+      }),
+      startOffline: startOfflineExport,
+      failed: () => {
+        if (!state.exporting) exportController.renderOfflineState('restored', { completed: false });
       }
-      throw error;
-    }
+    });
+  }
+
+  function createLiveExportJob(options = {}) {
+    const settings = currentExportSettings();
+    return {
+      prepare: async () => {
+        exportController.renderLiveState('preparing');
+        if (state.audioMode !== 'deck') stopLiveAudio();
+        createAudioGraph();
+        await audioContext.resume();
+        return exportPreparationEngine.prepareLive({
+          settings,
+          audioName: state.audioName,
+          preflight: options.preflight
+        });
+      },
+      beginSession: (context) => window.quarticDesktop.beginExport(context.sessionRequest),
+      activate: async ({ context }) => {
+        exportRuntimeStateCoordinator.activate('live', context, { loopPlayback: audio.loop });
+        resetPulseEvents();
+        renderPlaylist();
+        audio.loop = false;
+        exportResultWorkflowEngine.reset();
+        exportController.renderLiveState('recording', { hidePreview: !context.showPreview });
+        exportProgressCoordinator.begin('Live recording 0% | overall 0%', 'Live recording 0% | overall 0%');
+        setCanvasSize();
+      },
+      record: async ({ context, session }) => {
+        liveExportCapture = exportLiveCaptureEngine.createCapture({
+          canvas,
+          audioStream: recordingDestination.stream,
+          width: context.width,
+          height: context.height,
+          fps: context.fps,
+          onChunk: (bytes) => window.quarticDesktop.appendExport(session.id, bytes),
+          onError: (error) => showToast(`Recorder error: ${error?.message || 'unknown error'}`, true),
+          onStop: finishLiveExport
+        });
+        audio.currentTime = 0;
+        liveExportCapture.start(1000);
+        await audio.play();
+      },
+      started: async ({ context }) => {
+        audioController.renderLiveStatus('RECORDING', true);
+        showToast(`Recording ${context.width}×${context.height} at ${context.fps} FPS for ${context.format.toUpperCase()} export`);
+      },
+      finishing: () => exportController.renderLiveState('stopping'),
+      cancelling: () => exportController.renderLiveState('cancelling'),
+      beforeFinalize: async () => {
+        if (!exportSessionEngine.cancelRequested) exportController.renderLiveState('finalizing');
+        await liveExportCapture?.drain();
+      },
+      finalize: async ({ session }) => {
+        exportProgressCoordinator.update(.80, 'Recording complete | finalizing and saving | overall 80%', 'Recording complete | finalizing 0% | overall 80%');
+        return window.quarticDesktop.finishExport(session.id);
+      },
+      complete: ({ context, result }) => completeExportResult(
+        result,
+        { mode: 'live', width: context.width, height: context.height, fps: context.fps, duration: audio.currentTime },
+        () => exportController.renderLiveState('completed')
+      ),
+      cancelled: async () => {
+        exportController.renderLiveState('cancelled');
+        showToast('Live export cancelled and temporary files discarded');
+      },
+      failed: async ({ error }) => {
+        exportController.renderLiveState('failed');
+        showToast(error?.message || 'Video export failed.', true);
+      },
+      restore: async ({ completed }) => {
+        const runtime = exportRuntimeStateCoordinator.restore('live');
+        if (runtime.restored) audio.loop = runtime.loopPlayback;
+        await liveExportCapture?.dispose();
+        liveExportCapture = null;
+        exportController.renderLiveState('restored', { completed });
+        updateTrackControls();
+        renderPlaylist();
+        updateUnleashedMode(state.unleashedMode);
+        audioController.renderLiveStatus('IDLE');
+        setCanvasSize();
+        setPlayState();
+      }
+    };
   }
 
   async function startLiveExport(options = {}) {
-    if (!state.unleashedMode) throw new Error('Live export requires Unleashed mode. Use Offline export for exact frames.');
-    if (!audio.src) return;
-    if (state.audioMode !== 'deck') stopLiveAudio();
-    const [width, height] = $('#resolution').value.split('x').map(Number);
-    const fps = Number($('#fps').value);
-    const format = $('#videoFormat').value;
-    const session = await window.quarticDesktop.beginExport({
-      suggestedName: state.audioName || 'quartic-pulse', format,
-      requiredBytes: options.preflight?.requiredBytes,
-      finalEncoder: options.preflight?.encoder?.id
-    });
-    if (!session) return;
-    exportSessionEngine.begin(session, 'live');
-    state.loopBeforeExport = audio.loop;
-
-    try {
-      createAudioGraph();
-      await audioContext.resume();
-      state.exportWidth = width;
-      state.exportHeight = height;
-      state.exportDetail = Number($('#exportDetail').value);
-      state.visualTime = 0;
-      state.modulationRotationPhase = 0;
-      resetPulseEvents();
-      state.exporting = true;
-      renderPlaylist();
-      audio.loop = false;
-      $('#loopPlayback').disabled = true;
-      document.body.classList.add('exporting');
-      document.body.classList.toggle('hide-export-preview', !$('#showExportPreview').checked);
-      state.exportedPath = null;
-      setStageExportMode('live');
-      beginExportProgress('Live recording 0% | overall 0%', 'Live recording 0% | overall 0%');
-      setCanvasSize();
-
-      const canvasStream = canvas.captureStream(fps);
-      const combinedStream = new MediaStream([
-        ...canvasStream.getVideoTracks(),
-        ...recordingDestination.stream.getAudioTracks()
-      ]);
-      const bitsPerPixel = width >= 3840 ? .13 : .1;
-      const videoBitsPerSecond = Math.round(width * height * fps * bitsPerPixel);
-      liveExportEncoder = exportEncoderEngine.createLive({
-        stream: combinedStream,
-        videoBitsPerSecond,
-        onChunk: (bytes) => window.quarticDesktop.appendExport(session.id, bytes),
-        onError: (error) => showToast(`Recorder error: ${error?.message || 'unknown error'}`, true),
-        onStop: finishLiveExport
-      });
-
-      audio.currentTime = 0;
-      liveExportEncoder.start(1000);
-      await audio.play();
-      $('#exportButton').classList.add('recording');
-      $('#exportLabel').textContent = 'STOP & SAVE';
-      $('#exportIcon').textContent = '■';
-      $('#revealButton').hidden = true;
-      $('#resolution').disabled = true;
-      $('#fps').disabled = true;
-      $('#videoFormat').disabled = true;
-      $('#exportDetail').disabled = true;
-      $('#exportMode').disabled = true;
-      $('#unleashedMode').disabled = true;
-      $('#performanceMode').disabled = true;
-      audioController.renderLiveStatus('RECORDING', true);
-      showToast(`Recording ${width}×${height} at ${fps} FPS for ${format.toUpperCase()} export`);
-    } catch (error) {
-      if (exportSessionEngine.session?.id) await window.quarticDesktop.abortExport(exportSessionEngine.session.id).catch(() => {});
-      exportSessionEngine.clear();
-      state.exporting = false;
-      renderPlaylist();
-      audio.loop = state.loopBeforeExport;
-      $('#loopPlayback').disabled = false;
-      document.body.classList.remove('exporting', 'hide-export-preview');
-      exportController.hide();
-      setCanvasSize();
-      showToast(error.message, true);
-    }
-  }
-
-  function resumeOfflineExportClock() {
-    exportSessionEngine.resume();
-    exportController.setPaused(false);
+    return exportJobCoordinator.startLive(options);
   }
 
   function togglePauseExport() {
-    if (exportSessionEngine.mode !== 'offline' || !state.offlineExporting || exportSessionEngine.cancelRequested) return;
-    if (exportSessionEngine.paused) {
-      resumeOfflineExportClock();
-      exportController.setNote('Offline rendering resumed from the next exact frame.');
-      setExportProgress(exportSessionEngine.progress, exportController.getPanelText(), `Rendering resumed · overall ${Math.floor(exportSessionEngine.progress * 100)}%`);
-    } else {
-      const timing = exportSessionEngine.pause();
-      exportController.setPaused(true, {
-        note: 'Offline rendering is paused safely between frames.',
-        stageText: `Paused at ${Math.floor(exportSessionEngine.progress * 100)}%`,
-        metaText: `Paused · elapsed ${formatTime(timing.elapsedSeconds)}`
-      });
-    }
+    return exportCommandCoordinator.togglePause({
+      offlineRendering: state.offlineExporting,
+      paused: (view) => exportController.setPaused(true, view),
+      resumed: ({ progress, percent }) => {
+        exportController.setPaused(false, { note: 'Offline rendering resumed from the next exact frame.' });
+        exportProgressCoordinator.update(progress, exportController.getPanelText(), `Rendering resumed · overall ${percent}%`);
+      }
+    });
   }
 
   function endAndFinishExport() {
-    if (exportSessionEngine.mode === 'offline') {
-      if (!state.offlineExporting) return;
-      resumeOfflineExportClock();
-      exportSessionEngine.requestFinish();
-      exportController.setNote('Stopping after the current frame, then finishing and saving the shortened video.');
-      $('#exportLabel').textContent = 'ENDING & FINISHING…';
-      $('#exportButton').disabled = true;
-      setExportActionButtons(false, true);
-      return;
-    }
-    if (liveExportEncoder && liveExportEncoder.state !== 'inactive') {
-      audio.pause();
-      liveExportEncoder.stop();
-    }
+    return exportCommandCoordinator.finish({
+      offlineRendering: state.offlineExporting,
+      resumed: () => exportController.setPaused(false),
+      offlineFinishing: () => exportController.renderOfflineState('ending'),
+      liveCaptureActive: () => Boolean(liveExportCapture && liveExportCapture.state !== 'inactive'),
+      pauseAudio: () => audio.pause(),
+      stopLiveCapture: () => liveExportCapture?.stop()
+    });
   }
 
-  function cancelExport() {
-    if (!state.exporting || !exportSessionEngine.session) return;
-    if (!window.confirm('Cancel this export and permanently discard its temporary output?')) return;
-    exportController.setNote('Cancelling the export and discarding its temporary output.');
-    $('#exportLabel').textContent = 'CANCELLING…';
-    $('#exportButton').disabled = true;
-    setExportActionButtons(false, false);
-    if (exportSessionEngine.mode === 'offline') {
-      resumeOfflineExportClock();
-      exportSessionEngine.requestCancel();
-      if (!state.offlineExporting) window.quarticDesktop.abortOfflineExport(exportSessionEngine.session.id).catch(() => {});
-      return;
-    }
-    exportSessionEngine.requestCancel();
-    audio.pause();
-    if (liveExportEncoder && liveExportEncoder.state !== 'inactive') liveExportEncoder.stop();
+  async function cancelExport() {
+    return exportCommandCoordinator.cancel({
+      exporting: state.exporting,
+      offlineRendering: state.offlineExporting,
+      confirm: () => window.confirm('Cancel this export and permanently discard its temporary output?'),
+      cancelling: ({ mode }) => {
+        if (mode !== 'offline') exportController.setNote('Cancelling the export and discarding its temporary output.');
+      },
+      offlineCancelling: () => exportController.renderOfflineState('cancelling'),
+      resumed: () => exportController.setPaused(false),
+      abortOffline: (id) => window.quarticDesktop.abortOfflineExport(id),
+      liveCaptureActive: () => Boolean(liveExportCapture && liveExportCapture.state !== 'inactive'),
+      pauseAudio: () => audio.pause(),
+      stopLiveCapture: () => liveExportCapture?.stop()
+    });
   }
 
   function stopExport() {
@@ -8076,53 +8399,7 @@
   }
 
   async function finishLiveExport() {
-    const session = exportSessionEngine.session;
-    $('#exportLabel').textContent = 'FINALIZING…';
-    $('#exportButton').disabled = true;
-    setExportActionButtons(false, false);
-    try {
-      await liveExportEncoder?.drain();
-      if (exportSessionEngine.cancelRequested) {
-        await window.quarticDesktop.abortExport(session.id).catch(() => {});
-        showToast('Live export cancelled and temporary files discarded');
-        return;
-      }
-      setExportProgress(.80, 'Recording complete | finalizing and saving | overall 80%', 'Recording complete | finalizing 0% | overall 80%');
-      const result = await window.quarticDesktop.finishExport(session.id);
-      state.exportedPath = result.outputPath;
-      exportSessionEngine.markCompleted();
-      recordExportResult(result, { mode: 'live', width: state.exportWidth, height: state.exportHeight, fps: Number($('#fps').value), duration: audio.currentTime });
-      completeExportProgress(result.outputPath);
-      $('#revealButton').hidden = false;
-      showToast(result.warning || `Export complete: ${result.outputPath}`, Boolean(result.warning));
-    } catch (error) {
-      showToast(error.message || 'Video export failed.', true);
-    } finally {
-      state.exporting = false;
-      audio.loop = state.loopBeforeExport;
-      $('#loopPlayback').disabled = false;
-      document.body.classList.remove('exporting', 'hide-export-preview');
-      exportSessionEngine.clear();
-      liveExportEncoder = null;
-      $('#exportButton').classList.remove('recording');
-      updateTrackControls();
-      renderPlaylist();
-      $('#exportLabel').textContent = 'EXPORT VIDEO';
-      $('#exportIcon').textContent = '●';
-      $('#resolution').disabled = false;
-      $('#fps').disabled = false;
-      $('#videoFormat').disabled = false;
-      $('#exportDetail').disabled = false;
-      $('#exportMode').disabled = false;
-      $('#unleashedMode').disabled = false;
-      $('#performanceMode').disabled = false;
-      updateUnleashedMode(state.unleashedMode);
-      if (!exportSessionEngine.completed) exportController.hide();
-      exportSessionEngine.resetRequests();
-      audioController.renderLiveStatus('IDLE');
-      setCanvasSize();
-      setPlayState();
-    }
+    return exportLiveLifecycle.finish().catch(() => {});
   }
 
   $('#loadButton').addEventListener('click', () => $('#audioInput').click());
@@ -8133,6 +8410,12 @@
   });
   $('#audioSourceSelect').addEventListener('change', () => {
     if (state.audioMode !== 'live') setAudioSourceStatus('READY', false);
+  });
+  $('#deckOutputSelect').addEventListener('change', (event) => {
+    applyDeckOutput(event.target.value).catch((error) => {
+      event.target.value = deckOutputDeviceId;
+      showToast(`Playback output: ${error.message}`, true);
+    });
   });
   $('#audioInput').addEventListener('change', async (event) => {
     await loadAudio(event.target.files[0]);
@@ -8153,7 +8436,7 @@
   $('#playlistNextButton').addEventListener('click', () => changePlaylistTrack(1).catch((error) => showToast(error.message, true)));
   $('#playlistMoveUpButton').addEventListener('click', () => movePlaylistItem(-1));
   $('#playlistMoveDownButton').addEventListener('click', () => movePlaylistItem(1));
-  $('#playlistRemoveButton').addEventListener('click', () => removeCurrentPlaylistItem().catch((error) => showToast(error.message, true)));
+  $('#playlistRemoveButton').addEventListener('click', removeCurrentPlaylistItem);
   $('#playlistClearButton').addEventListener('click', clearPlaylist);
   audioController.bind();
   $('#frequencyColor').addEventListener('change', (event) => { state.frequencyColorEnabled = event.target.checked; });
@@ -8201,10 +8484,11 @@
   audio.addEventListener('ended', () => {
     setPlayState();
     if (state.exporting) stopExport();
-    else if (state.playlistIndex < state.playlist.length - 1) changePlaylistTrack(1, true).catch((error) => showToast(error.message, true));
+    else if (currentPlaylistIndex() < state.playlist.length - 1) changePlaylistTrack(1, true).catch((error) => showToast(error.message, true));
   });
   audio.addEventListener('loadedmetadata', () => {
     updateUiMeters();
+    coordinateExportSettingsChange('audio');
   });
   audio.addEventListener('error', () => {
     showToast('The local audio file could not be decoded.', true);
@@ -8213,16 +8497,13 @@
   $('#iterations').addEventListener('input', (event) => {
     state.iterations = Number(event.target.value);
     $('#iterationsValue').value = state.iterations;
-  });
-  $('#exportIterations').addEventListener('input', (event) => {
-    state.exportIterations = Number(event.target.value);
-    $('#exportIterationsValue').value = state.exportIterations;
-    updateExportPerformanceNote();
+    coordinateExportSettingsChange('visual');
   });
   $('#visualStyle').addEventListener('change', (event) => {
     state.visualStyle = Number(event.target.value);
     document.body.dataset.visualStyle = String(state.visualStyle);
     updateVisualStyleOptions();
+    coordinateExportSettingsChange('visual');
     showToast(`${visualCatalog.get(state.visualStyle).name} selected`);
   });
   $('#experiencePresetGrid').addEventListener('click', (event) => {
@@ -8366,19 +8647,12 @@
   $('#exportCompleteSound').addEventListener('change', (event) => {
     localStorage.setItem('quarticPulseExportCompleteSound', String(event.target.checked));
   });
-  $('#resolution').addEventListener('change', updateExportPerformanceNote);
-  $('#fps').addEventListener('change', updateExportPerformanceNote);
-  $('#exportMode').addEventListener('change', updateExportPerformanceNote);
-  $('#exportDetail').addEventListener('change', updateExportPerformanceNote);
+  state.exportSupersampling = $('#exportSupersampling').checked;
   function updateExportHdrAvailability() {
-    const available = $('#videoFormat').value === 'youtube_hdr';
-    $('#exportHdrOutput').disabled = !available;
-    $('#exportHdrOutput').closest('.toggle-row')?.classList.toggle('disabled', !available);
-    updateExportPerformanceNote();
+    const available = exportController.readSettings().format === 'youtube_hdr';
+    exportController.setHdrAvailability(available);
+    return available;
   }
-  $('#videoFormat').addEventListener('change', updateExportHdrAvailability);
-  $('#exportHdrOutput').addEventListener('change', updateExportPerformanceNote);
-  updateExportHdrAvailability();
   $('#obsOutputButton').addEventListener('click', () => toggleObsOutput().catch((error) => showToast(`OBS output: ${error.message}`, true)));
   $('#obsResolution').addEventListener('change', () => applyObsWindowOptions().catch((error) => showToast(error.message, true)));
   $('#obsFps').addEventListener('change', () => applyObsWindowOptions().catch((error) => showToast(error.message, true)));
@@ -8611,36 +8885,11 @@
     else startExport().catch((error) => showToast(error.message, true));
   });
   exportController.bind();
-  $('#clearExportHistoryButton').addEventListener('click', () => {
-    if (!exportHistory.length || !window.confirm('Clear the recent export history? Exported video files will not be deleted.')) return;
-    exportHistory = [];
-    localStorage.removeItem(exportHistoryStorageKey);
-    renderExportHistory();
-  });
-  $('#exportHistoryList').addEventListener('click', (event) => {
-    const button = event.target.closest('[data-export-action]');
-    if (!button) return;
-    const entry = exportHistory.find((item) => item.id === button.dataset.exportId);
-    if (!entry) return;
-    const operation = button.dataset.exportAction === 'open'
-      ? window.quarticDesktop.openExport(entry.outputPath)
-      : window.quarticDesktop.revealExport(entry.outputPath);
-    operation.catch((error) => showToast(error.message, true));
-  });
-  $('#exportRecoveryList').addEventListener('click', (event) => {
-    const button = event.target.closest('[data-recovery-action]');
-    if (!button || state.exporting) return;
-    const id = button.dataset.recoveryId;
-    if (button.dataset.recoveryAction === 'recover') {
-      recoverInterruptedExport(id).catch((error) => showToast(`Recovery failed: ${error.message}`, true));
-    } else if (window.confirm('Discard this interrupted export and its temporary master?')) {
-      window.quarticDesktop.discardRecoverableExport(id)
-        .then(refreshRecoverableExports)
-        .catch((error) => showToast(error.message, true));
-    }
-  });
   $('#revealButton').addEventListener('click', () => {
-    if (state.exportedPath) window.quarticDesktop.revealExport(state.exportedPath);
+    exportResultWorkflowEngine.reveal({
+      reveal: (outputPath) => window.quarticDesktop.revealExport(outputPath),
+      failed: ({ error }) => showToast(error?.message || String(error), true)
+    }).catch(() => {});
   });
 
   window.addEventListener('keydown', (event) => {
@@ -8711,6 +8960,7 @@
   navigator.mediaDevices?.addEventListener?.('devicechange', () => {
     refreshAudioInputs({ requestPermission: false, silent: true }).catch(() => {});
     refreshWindowsOutputs({ silent: true }).catch(() => {});
+    refreshDeckOutputs({ silent: true }).catch(() => {});
   });
 
   bindCustomPalette();
@@ -8746,8 +8996,7 @@
     const outputId = id === 'equationMod' ? 'equationValue' : `${id}Value`;
     $(`#${outputId}`).value = normalizedPercent(id, state[stateKey]);
   });
-  updateExportPerformanceNote();
-  if (!isObsOutput) refreshExportEncoderStatus();
+  coordinateExportSettingsChange('initialize', { refreshEncoder: !isObsOutput });
   updateObsChromaUi();
   updateObsOutputUi(false);
   initializePanelResizer();
@@ -8768,6 +9017,7 @@
     initializeSessionAutosave();
     refreshAudioInputs({ requestPermission: false, silent: true }).catch(() => {});
     refreshWindowsOutputs({ silent: true }).catch(() => {});
+    refreshDeckOutputs({ silent: true }).catch(() => {});
     window.quarticDesktop.onObsOutputStatus(updateObsOutputUi);
     window.quarticDesktop.getObsOutputStatus().then(updateObsOutputUi).catch(() => {});
     initializeVisualSafety();

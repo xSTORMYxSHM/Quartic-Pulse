@@ -246,6 +246,16 @@
             </div>
             <small class="audio-source-help" id="audioSourceHelp">WASAPI captures each Windows playback endpoint directly, including SteelSeries Sonar Gaming, Chat, Media, Stream, and Aux. Inputs and microphones remain available below them.</small>
 
+            <div class="music-divider source-divider"></div>
+            <div class="section-heading source-heading"><span>DECK PLAYBACK OUTPUT</span><small id="deckOutputStatus">WINDOWS DEFAULT</small></div>
+            <label class="select-control audio-source-select">OUTPUT
+              <select id="deckOutputSelect" aria-describedby="deckOutputHelp">
+                <option value="">Windows default output</option>
+                <optgroup id="deckOutputOptions" label="DIRECT PLAYBACK DEVICES"></optgroup>
+              </select>
+            </label>
+            <small class="audio-source-help" id="deckOutputHelp">Routes loaded songs directly to a playback device. Select a SteelSeries Sonar virtual output here when Sonar does not list the development app.</small>
+
             <div class="slider-group compact">
               <label><span>MONITOR VOLUME</span><output id="volumeValue">82%</output></label>
               <input id="volume" type="range" min="0" max="1" value="0.82" step="0.01" />
@@ -341,7 +351,7 @@
             <div class="song-director-card" id="songDirectorCard">
               <div class="song-director-lead">
                 <strong>LET THE SONG SHAPE THE SHOW</strong>
-                <p>Uses Song Map sections to smoothly direct camera motion, equation pressure, color travel, depth, and folding. Your underlying visual preset is never rewritten.</p>
+                <p>Uses Song Map sections, recurring visual motifs, and smoothed phrase contours to direct camera motion, equation pressure, color travel, depth, and folding. Your underlying visual preset is never rewritten.</p>
               </div>
               <label class="toggle-row song-director-toggle">
                 <span><strong>Enable Song Director</strong><small>Uses the same deterministic cue plan live and during offline export · starts in standby after launch or import</small></span>
@@ -371,14 +381,29 @@
                   <option value="ambient">Ambient / Classical</option>
                 </select>
               </label>
+              <label class="select-control song-director-transition-control">
+                <span>TRANSITION FEEL <small id="songDirectorTransitionResolved">AUTO · MUSICAL</small></span>
+                <select id="songDirectorTransition">
+                  <option value="auto" selected>Auto · Follow Musical Behavior</option>
+                  <option value="gentle">Gentle · Long Blends</option>
+                  <option value="balanced">Balanced · Even Pacing</option>
+                  <option value="theatrical">Theatrical · Focused Changes</option>
+                </select>
+              </label>
               <div class="slider-group song-director-intensity">
                 <label><span>DIRECTOR INTENSITY (%)</span><output id="songDirectorIntensityValue">55%</output></label>
                 <input id="songDirectorIntensity" type="range" min="0" max="1" value="0.55" step="0.01" />
               </div>
               <div class="song-director-now" id="songDirectorNow" aria-live="polite">
-                <span><small>CURRENT CUE</small><strong>WAITING FOR SONG MAP</strong></span>
-                <div class="song-director-meters" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+                <span><small>CURRENT PHRASE</small><strong>WAITING FOR SONG MAP</strong></span>
+                <div class="song-director-meters" role="img" aria-label="Visual dynamics monitor">
+                  <span><i></i><small>CAM</small></span>
+                  <span><i></i><small>MATH</small></span>
+                  <span><i></i><small>COLOR</small></span>
+                  <span><i></i><small>DEPTH</small></span>
+                </div>
               </div>
+              <div class="song-director-dynamics-lead" id="songDirectorDynamicsLead">WAITING FOR AUDIO DIRECTION</div>
               <div class="song-director-plan" id="songDirectorPlan"></div>
               <div class="song-director-cue-editor" id="songDirectorCueEditor" hidden>
                 <div class="song-director-editor-heading">
@@ -480,7 +505,7 @@
             </button>
             <button class="visual-style-card" type="button" data-visual-style="6" role="radio" aria-checked="false">
               <span class="visual-style-preview preview-mainframe" aria-hidden="true"></span>
-              <span class="visual-style-copy"><strong>MAINFRAME ROOM</strong><small>Reactive data chamber and storm reactor</small></span>
+              <span class="visual-style-copy"><strong>DATA HORIZON</strong><small>Neon terrain with streaming signals</small></span>
             </button>
           </div>
           <select id="visualStyle" aria-label="Visual style" hidden>
@@ -490,7 +515,7 @@
             <option value="3">Conventional · Pulse Rings</option>
             <option value="4">Conventional · Waveform Field</option>
             <option value="5">3D Fractal · Power-4 Mandelbulb</option>
-            <option value="6">Scene · Tempest Mainframe Room</option>
+            <option value="6">Scene · Data Horizon</option>
           </select>
 
           <div class="basic-experience-card basic-ui-only" aria-label="Visual intensity presets">
@@ -742,8 +767,8 @@
           </div>
 
           <div class="visual-options visual-info-card mainframe-room-options" data-visual-options="6" hidden>
-            <strong>TEMPEST MAINFRAME ROOM</strong>
-            <small>Pseudo-3D chamber with frequency-routed floor conduits, server-wall packets, reactor illumination, expanding beat waves, storm flashes, and slow depth parallax. Use Flow, Motion, Reactivity, and the active color system to shape the scene.</small>
+            <strong>TEMPEST DATA HORIZON</strong>
+            <small>Procedural 3D terrain with frequency-routed signal roads, forward-scrolling data, distant spectrum towers, beat waves, peak beacons, star fields, and diagnostic overlays. Use Flow, Motion, Reactivity, and the active color system to shape the landscape.</small>
           </div>
 
           <label class="control-label" for="palette">COLOR SYSTEM</label>
@@ -1020,7 +1045,7 @@
             <p class="modulation-lead">Route bass, mids, highs, beats, or overall level directly into visual and equation parameters without changing their base settings.</p>
 
             <label class="toggle-row modulation-master-toggle">
-              <span><strong>Enable modulation matrix</strong><small>Temporarily bypass every route without deleting it</small></span>
+              <span><strong>Enable modulation matrix</strong><small>Enabled routes replace the built-in fractal response; turn off to hear the automatic response</small></span>
               <input id="modulationEnabled" type="checkbox" checked /><i></i>
             </label>
 
@@ -1373,8 +1398,8 @@
         <section class="export-section">
           <div class="section-heading"><span>VIDEO EXPORT</span><small>QUALITY-FIRST OFFLINE</small></div>
           <div class="slider-group export-iterations advanced-ui-only">
-            <label><span>MINIMUM EXPORT ITERATIONS</span><output id="exportIterationsValue">480</output></label>
-            <input id="exportIterations" type="range" min="240" max="1200" value="480" step="20" />
+            <label><span>EXPORT ITERATIONS</span><output id="exportIterationsValue">600</output></label>
+            <input id="exportIterations" type="range" min="240" max="1200" value="600" step="20" />
           </div>
           <div class="slider-group live-iterations-config" hidden>
             <label><span>LIVE ITERATIONS</span><output id="iterationsValue">220</output></label>
@@ -1405,7 +1430,13 @@
             </label>
             <label class="export-quality-profile">QUALITY PROFILE
               <select id="videoFormat">
-                <option value="youtube_hdr" selected>YouTube Master · HEVC Main 10 / MP4</option>
+                <option value="gpu_auto" selected>Automatic GPU Master · AV1 / HEVC / MP4</option>
+                <option value="youtube_hdr">YouTube Fractal Master · HEVC Main 10 / MP4</option>
+                <option value="mp4_compatible">Compatible MP4 · H.264 / AAC</option>
+                <option value="webm_quality">Open Quality · VP9 / Opus / WebM</option>
+                <option class="advanced-ui-only" value="av1_quality">Advanced AV1 Master · 10-bit / Opus / WebM</option>
+                <option value="prores_422_hq">Editing Master · ProRes 422 HQ / MOV</option>
+                <option value="png_sequence">Recoverable Master · PNG Sequence + WAV / Folder</option>
                 <option value="utvideo">Playback Lossless · Ut Video RGB / FLAC / MKV</option>
                 <option value="ffv1">Archive Lossless · FFV1 RGB / FLAC / MKV</option>
               </select>
@@ -1419,10 +1450,46 @@
               </select>
             </label>
           </div>
+          <div class="export-profile-summary" id="exportProfileSummary">
+            <strong>MP4 · AUTOMATIC AV1 OR HEVC MAIN 10</strong>
+            <span>10-bit · 4:2:0 · AAC 320 kb/s</span>
+            <small>Estimated bitrate and file size update with resolution, frame rate, and song length.</small>
+          </div>
           <p class="export-performance-note advanced-ui-only" id="exportPerformanceNote">Offline SDR · 1080p at 60 FPS · compatibility master</p>
           <div class="export-encoder-status advanced-ui-only" id="exportEncoderStatus">
             <i></i><span><strong>QUALITY PIPELINE CHECK PENDING</strong><small>Quartic Pulse prefers NVIDIA Main 10 and safely falls back to CPU HEVC</small></span>
           </div>
+          <details class="export-encoder-capabilities advanced-ui-only" id="exportEncoderCapabilities">
+            <summary><span>ENCODER COMPATIBILITY</span><small>See what this PC can accelerate</small></summary>
+            <div class="export-encoder-capability-body">
+              <p id="exportEncoderDecision">Run a scan to verify AV1, HEVC, and H.264 support on this PC.</p>
+              <div class="export-encoder-device-list" id="exportEncoderDevices"></div>
+              <div class="export-encoder-capability-list" id="exportEncoderCapabilityList"></div>
+              <button id="scanExportEncodersButton" type="button">SCAN THIS PC</button>
+            </div>
+          </details>
+          <details class="export-readiness-benchmark advanced-ui-only" id="exportReadinessBenchmark">
+            <summary><span>EXPORT READINESS</span><small>Estimate speed for these settings</small></summary>
+            <div class="export-readiness-body">
+              <p id="exportReadinessSummary">Benchmark the selected resolution, frame rate, and quality profile without creating a video.</p>
+              <div class="export-readiness-grid">
+                <div><span>ENCODER</span><strong id="benchmarkEncoderFps">—</strong></div>
+                <div><span>RENDER EST.</span><strong id="benchmarkRenderFps">—</strong></div>
+                <div><span>BOTTLENECK</span><strong id="benchmarkBottleneck">—</strong></div>
+                <div><span>1 MINUTE SONG</span><strong id="benchmarkMinuteTime">—</strong></div>
+              </div>
+              <small id="exportReadinessNote">This is a planning estimate; complex motion and other running programs can change final export time.</small>
+              <div class="export-advisor" id="exportAdvisor" hidden>
+                <div><strong>SETTING ADVISOR</strong><small>Choose a time/quality target</small></div>
+                <div class="export-advisor-list" id="exportAdvisorList"></div>
+              </div>
+              <button id="benchmarkExportButton" type="button">BENCHMARK SELECTED SETTINGS</button>
+            </div>
+          </details>
+          <label class="toggle-row export-supersampling-toggle">
+            <span><strong>Supersampling</strong><small>Renders four subpixel samples per frame for cleaner fine fractal detail. About 4× slower.</small></span>
+            <input id="exportSupersampling" type="checkbox" /><i></i>
+          </label>
           <label class="toggle-row export-hdr-toggle">
             <span><strong>HDR output</strong><small>Rec.2020 HLG for HDR displays and YouTube. Off uses standard SDR color.</small></span>
             <input id="exportHdrOutput" type="checkbox" /><i></i>
@@ -1500,7 +1567,7 @@
             <div class="about-title">
               <div class="eyebrow">TEMPEST MAINFRAME PRESENTS</div>
               <h2>QUARTIC PULSE</h2>
-              <span>Version 0.30.1 Development Preview</span>
+              <span id="appVersionText">Version</span>
             </div>
 
             <p class="about-lead">A Windows 11 music visualizer and music-to-video renderer powered by a family of audio-modulated fractal equations.</p>
@@ -1523,7 +1590,7 @@
             <div class="about-card about-release-card">
               <strong>VERSION 0.28 HIGHLIGHTS</strong>
               <ul>
-                <li>20 named 2D fractal equations, the true GPU ray-marched power-4 3D Mandelbulb, and the audio-reactive Tempest Mainframe Room</li>
+                <li>20 named 2D fractal equations, the true GPU ray-marched power-4 3D Mandelbulb, and the procedural audio-reactive Tempest Data Horizon</li>
                 <li>Calmer equation modulation with dedicated music-envelope smoothing</li>
                 <li>Preset-led Basic mode with larger controls and a full Advanced workspace</li>
                 <li>Low-flash visual preset and first-run photosensitivity guidance</li>
@@ -1594,7 +1661,10 @@
         <div class="export-preflight-grid">
           <div><span>VIDEO</span><strong id="preflightVideo">—</strong></div>
           <div><span>ENGINE</span><strong id="preflightEncoder">—</strong></div>
-          <div><span>EST. OUTPUT</span><strong id="preflightOutput">—</strong></div>
+          <div><span>CONTAINER / CODEC</span><strong id="preflightFormat">—</strong></div>
+          <div><span>COLOR</span><strong id="preflightColor">—</strong></div>
+          <div><span>EST. BITRATE</span><strong id="preflightBitrate">—</strong></div>
+          <div><span>EST. OUTPUT RANGE</span><strong id="preflightOutput">—</strong></div>
           <div><span>PEAK SPACE</span><strong id="preflightSpace">—</strong></div>
           <div><span>FREE SPACE</span><strong id="preflightFree">—</strong></div>
           <div><span>DURATION</span><strong id="preflightDuration">—</strong></div>
@@ -1609,6 +1679,8 @@
     </div>
     <audio id="audio" preload="metadata" crossorigin="anonymous"></audio>
     <audio id="exportCompleteStinger" preload="auto" src="../../assets/audio/export-complete-stinger.wav"></audio>
+    <script src="../shared/app-metadata.js"></script>
+    <script src="../shared/export-profiles.js"></script>
     <script src="modules/workspace-shell.js"></script>
     <script src="modules/visual-catalog.js"></script>
     <script src="modules/audio-controller.js"></script>
@@ -1620,10 +1692,37 @@
     <script src="modules/profile-manager-controller.js"></script>
     <script src="modules/song-map-data-engine.js"></script>
     <script src="modules/song-director-engine.js"></script>
+    <script src="modules/song-director-controller.js"></script>
     <script src="modules/performance-package-engine.js"></script>
     <script src="modules/export-controller.js"></script>
     <script src="modules/export-session-engine.js"></script>
+    <script src="modules/export-progress-workflow-engine.js"></script>
+    <script src="modules/export-progress-coordinator.js"></script>
+    <script src="modules/export-command-coordinator.js"></script>
+    <script src="modules/export-job-coordinator.js"></script>
+    <script src="modules/export-result-workflow-engine.js"></script>
     <script src="modules/export-encoder-engine.js"></script>
+    <script src="modules/export-live-capture-engine.js"></script>
+    <script src="modules/export-quick-clip-workflow-engine.js"></script>
+    <script src="modules/export-sampling-engine.js"></script>
+    <script src="modules/export-settings-snapshot-engine.js"></script>
+    <script src="modules/export-preparation-engine.js"></script>
+    <script src="modules/export-frame-capture-engine.js"></script>
+    <script src="modules/export-planning-engine.js"></script>
+    <script src="modules/export-presentation-engine.js"></script>
+    <script src="modules/export-preflight-engine.js"></script>
+    <script src="modules/export-advisor-engine.js"></script>
+    <script src="modules/export-settings-coordinator-engine.js"></script>
+    <script src="modules/export-runtime-state-coordinator.js"></script>
+    <script src="modules/export-encoder-scan-engine.js"></script>
+    <script src="modules/export-benchmark-engine.js"></script>
+    <script src="modules/export-history-engine.js"></script>
+    <script src="modules/export-history-action-engine.js"></script>
+    <script src="modules/export-recovery-engine.js"></script>
+    <script src="modules/export-render-coordinator.js"></script>
+    <script src="modules/export-workflow-engine.js"></script>
+    <script src="modules/export-offline-lifecycle.js"></script>
+    <script src="modules/export-live-lifecycle.js"></script>
     <script src="app.js"></script>
   </body>
 </html>

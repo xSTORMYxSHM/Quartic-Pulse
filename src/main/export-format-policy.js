@@ -1,15 +1,12 @@
 'use strict';
 
 const path = require('path');
+const exportProfileCatalog = require('../shared/export-profiles');
 
-const videoFormats = Object.freeze({
-  youtube_hdr: Object.freeze({ name: 'YouTube quality master (HEVC Main 10)', extension: 'mp4' }),
-  utvideo: Object.freeze({ name: 'Lossless playback master (Ut Video RGB)', extension: 'mkv' }),
-  ffv1: Object.freeze({ name: 'Lossless archive master (FFV1 RGB)', extension: 'mkv' })
-});
+const videoFormats = exportProfileCatalog.profiles;
 
 function normalizeRequestedFormat(value) {
-  return videoFormats[value] ? value : 'youtube_hdr';
+  return exportProfileCatalog.normalizeProfileId(value);
 }
 
 function orderedFormatIds(requestedValue) {

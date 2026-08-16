@@ -1,6 +1,10 @@
 node_modules/
 .pnpm-store/
-release/
+release/*
+!release/RELEASE_NOTES-*.md
+!release/RELEASE_CHECKLIST-*.md
+!release/RELEASE_MANIFEST-*.json
+!release/SHA256SUMS-*.txt
 dist/
 /*.exe
 *.tgz

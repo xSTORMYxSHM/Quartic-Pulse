@@ -1,6 +1,6 @@
 {
   "name": "quartic-pulse",
-  "version": "0.30.5",
+  "version": "0.40.0",
   "description": "A Windows 11 audio-reactive fractal visualizer and music-to-video exporter.",
   "main": "src/main/main.js",
   "author": "Tempest Mainframe",
@@ -8,11 +8,13 @@
   "scripts": {
     "start": "electron .",
     "dev": "electron . --dev",
+    "test": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/release-gate.ps1 -Quick",
+    "test:release": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/release-gate.ps1",
     "test:controllers": "set ELECTRON_RUN_AS_NODE=1&& electron tools/controller-smoke.js",
     "icon": "electron tools/render-icon.js",
     "bundle:ffmpeg": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/prepare-ffmpeg.ps1",
-    "pack": "npm run bundle:ffmpeg && electron-builder --dir",
-    "dist": "npm run bundle:ffmpeg && electron-builder --win nsis portable"
+    "pack": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/build-release.ps1 -DirectoryOnly",
+    "dist": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/build-release.ps1"
   },
   "devDependencies": {
     "electron": "^37.2.6",

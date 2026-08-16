@@ -8,7 +8,7 @@
     Object.freeze({ id: 3, key: 'pulse-rings', name: 'Pulse Rings', category: 'CONVENTIONAL', description: 'Beat-triggered expanding waves' }),
     Object.freeze({ id: 4, key: 'waveform-field', name: 'Waveform Field', category: 'CONVENTIONAL', description: 'Flowing oscilloscope lines' }),
     Object.freeze({ id: 5, key: 'mandelbulb', name: '3D Mandelbulb', category: '3D FRACTAL', description: 'True power-4 ray-marched fractal', formulaLabel: 'POWER-4 · 3D DE' }),
-    Object.freeze({ id: 6, key: 'mainframe-room', name: 'Mainframe Room', category: 'SCENE', description: 'Reactive data chamber and storm reactor' })
+    Object.freeze({ id: 6, key: 'data-horizon', name: 'Data Horizon', category: 'SCENE', description: 'Neon terrain with streaming signals' })
   ]);
 
   const byId = new Map(styles.map((style) => [style.id, style]));

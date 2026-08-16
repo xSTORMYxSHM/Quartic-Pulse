@@ -2,6 +2,93 @@
 
 All notable Quartic Pulse changes are documented here. Quartic Pulse follows semantic versioning where practical.
 
+## Unreleased
+
+_No unreleased changes._
+
+## 0.40.0 - 2026-08-15
+
+### Added
+
+- Added optional 2×2 offline supersampling. Each exported frame can now average four stable subpixel renders before encoding, reducing fine-boundary grain, shimmer, and stair-stepping without changing codec bitrate.
+- Added visible resolution-based iteration recommendations: 320 at 480p, 400 at 720p, 600 at 1080p, 800 at 1440p, and 1000 at 4K.
+- Added phrase-aware Mathematical Song Director motion. The Director now reads multi-second energy and frequency contours inside each Song Map section, producing deterministic slow equation, camera, color, depth, and fold evolution that matches live playback and offline export without beat-level strobing.
+- Added deterministic visual motif memory to the Mathematical Song Director. Similar recurring sections of the same musical type now reuse a recognizable equation and camera motion signature while their current phrase energy continues to shape its strength.
+- Added visible Motif A/B/C labels to the Director timeline and current-phrase display without adding another control or configuration step.
+- Added a compact Mathematical Song Director dynamics monitor with labeled Camera, Math, Color, and Depth meters plus a live bass/mids/highs/energy-to-visual readout.
+- Added bounded Song Director Transition Feel profiles: Auto, Gentle, Balanced, and Theatrical. They reshape deterministic section crossfades without introducing hard cuts or beat-level jumps.
+- Preserved Transition Feel through saved profiles, automatic session restore, OBS synchronization, and portable Performance Packages while retaining Director standby safety.
+
+### Changed
+
+- Added a tested Export Job Coordinator that admits and launches offline and live jobs through their dedicated lifecycle engines, prevents overlapping launch preparation, validates renderer adapters, and preserves the original request through adapter construction. Offline and live start commands in `app.js` now delegate to one job boundary while WebGL, audio, and desktop operations remain explicit renderer adapters.
+- Added a tested Export Progress Coordinator that binds and disposes the native FFmpeg progress listener and owns the presentation bridge for progress start, frame/live updates, native finalizing/saving events, completion actions, delayed hiding, and the completion stinger. `app.js` now sends progress facts through one coordinator instead of maintaining separate rendering, native-event, and completion helpers.
+- Added a tested Export Command Coordinator that owns Pause/Resume, End & Finish, and confirmed Cancel routing across offline and live exports. Export command decisions now preserve pause timing, shortened-finalization requests, native aborts, audio pausing, and recorder stopping without directly editing UI from `app.js`; the Export Controller owns the visible ending and cancelling states.
+- Added a tested Quick Clip Workflow Engine that owns 5/10/15-second duration limits, timed recorder stop, progress cadence, native session finalization/abort, cancellation requests, completion/failure dispatch, and guaranteed capture cleanup. Creative Tools now supplies only the visible Quick Clip state and authorized audio/desktop operations.
+- Added a tested Live Capture Engine that owns canvas/audio stream assembly, resolution-aware recording bitrate, recorder creation, serialized draining, stop waiting, and idempotent cleanup. Live Export and Quick Clip now share the same capture path, and temporary canvas video tracks are reliably stopped without interrupting the shared audio graph.
+- Added a tested Export Preparation Engine that validates local tracks and settings, decodes injected audio data, applies five-second/full-duration limits, calculates deterministic frame counts, and constructs native live/offline session requests with the selected format, pixel type, HDR mode, storage estimate, and encoder. `app.js` now provides audio/desktop operations instead of assembling export contexts and IPC payloads itself.
+- Added a tested Export Runtime State Coordinator that snapshots and restores renderer dimensions, detail, mathematical depth, visual time, dimensional rotation phase, adaptive-reactivity gain, sampling offsets, HDR/10-bit flags, offline timing, playback-loop state, and active-export flags across live and offline activation, finalization, cancellation, and failure. Live export now restores the same pre-export visual timeline that offline export already preserved.
+- Fixed offline supersampling activation reading outside its prepared export context, which could stop a supersampled render as its frame-capture session began.
+- Added a tested Export Settings Coordinator that sequences resolution-based iteration recommendations, numeric/state synchronization, HDR availability, performance-summary refresh, benchmark invalidation, encoder refresh, initialization, audio/visual changes, and Setting Advisor application. Advisor presets now apply atomically without triggering three redundant control-change refresh cycles.
+- Added a tested Export Settings Snapshot Engine and controller-owned settings reader. Resolution, dimensions, FPS, format/profile, detail, requested/effective iterations, HDR/10-bit state, supersampling, preview state, Unleashed state, and audio duration now enter estimates, preflight, benchmarking, offline export, live export, and result metadata through one immutable validated snapshot.
+- Added a tested Export Result Workflow Engine that validates completed output paths, records normalized recent-history entries, owns the current revealable result, resets stale results when a new export or recovery begins, dispatches progress completion, and creates consistent offline, live, recovered, shortened, and warning notifications.
+- Added a tested Export Progress Workflow Engine that owns elapsed/remaining-time presentation, pause timing, native finalizing/saving progress translation, completion state, delayed progress dismissal, and completion-stinger decisions. `app.js` now supplies controller rendering, current export state, and the authorized media playback callback.
+- Added a tested Export History Action Engine that coordinates recent-history clear confirmation, Open/Folder desktop routing, missing entries, recoverable-export refresh, normalization, and failures. Export-history persistence remains isolated in the existing History Engine, while `app.js` now supplies only user confirmation, authorized desktop operations, and presentation callbacks.
+- Added a tested Export Recovery Engine that owns interrupted-master recovery and discard sequencing, validates recovered results, and guarantees session cleanup and restoration after success or failure. Recovery preparation, progress, completion, failure, control locking, output reveal, and restoration now use controller-owned presentation states instead of direct DOM changes in `app.js`.
+- Added a tested Export Advisor Engine that validates recommended resolution, frame rate, and iteration values against the options available in the current build before applying them. The Export Controller now decodes advisor clicks and updates the three export fields, so `app.js` receives plain settings instead of UI buttons.
+- Added a tested Export Preflight Engine that owns resolution parsing, iteration limiting, duration and master-bitrate calculation, desktop request construction, result normalization, and encoder-status refresh failures. Format changes now show an explicit quality-pipeline checking state while the renderer supplies only current settings and the authorized desktop operation.
+- Added a tested Export Encoder Scan Engine that owns compatibility-scan execution, report validation, failure handling, and guaranteed restoration. The Export Controller now owns running, completed, failed, and restored scan states, and `app.js` no longer manipulates encoder-capability UI fields directly.
+- Added a tested Export Benchmark Engine that owns Export Readiness preparation, encoder measurement, modeled render throughput, skipped and failed paths, and guaranteed restoration. Benchmark running, completed, skipped, failed, and restored UI states now belong to the Export Controller, while the Export Presentation Engine supplies their user-facing values and explanations.
+- Added a tested Export Presentation Engine that builds performance summaries, preflight fields and storage warnings, encoder status/capability rows, Setting Advisor cards, recent-export rows, and recovery descriptions. `app.js` now supplies current settings and domain results instead of constructing Export workspace text and view objects itself.
+- Added a tested Export Workflow Engine that owns Back, five-second test, full-render, and failure dispatch while keeping preflight calculations and offline frame rendering injectable. The Export Controller now owns the preflight modal’s button lifecycle and prevents stale handlers from surviving between export attempts.
+- Added an independently tested Live Export Lifecycle that keeps a live session active across recorder startup and its asynchronous stop event, then owns finish, cancel, abort, failure, and guaranteed cleanup sequencing.
+- Moved live-export presentation transitions into the Export Controller. Preparing, recording, Stop & Save, cancelling, finalizing, completed, failed, settings-lock, preview, and restoration states now use the same tested presentation boundary as offline export.
+- Moved offline-export presentation transitions into the Export Controller. Preparing, rendering, finalizing, completed, cancelled/failed, and restored states now consistently control button labels, action availability, settings locks, preview composition, progress visibility, and output reveal behavior through one tested interface.
+- Extracted WebGL export readback into an independently tested Export Frame Capture Engine. It now owns RGBA/RGB10 pixel-type selection, frame-buffer allocation, visual-frame synchronization, four-pass supersample accumulation/resolution, output-byte access, and sample-offset cleanup.
+- Added an independently tested Offline Export Lifecycle that sequences audio preparation, desktop session creation, renderer activation, finalization, cancellation, abort, and global state/UI restoration around the frame coordinator. Preparation failures and cancelled save dialogs now use the same deterministic cleanup path as interrupted renders.
+- Extracted deterministic offline frame scheduling into an independently tested Export Render Coordinator. It now owns frame timing, supersample passes, pause/resume polling, progress cadence, end-and-finish boundaries, cancellation checks, and per-frame cleanup while WebGL drawing and desktop encoding remain injected pipeline operations.
+- Added an independently tested Export History Engine that validates, limits, deduplicates, records, reloads, and clears recent-export metadata while safely surviving invalid or unavailable local storage.
+- Moved interrupted-export card rendering and recovery/discard event routing into the Export Controller. The main renderer now retains only the authorized desktop recovery operations and export lifecycle transitions.
+- Extracted export profile estimates, bitrate/file-size formatting, render-throughput modeling, benchmark interpretation, bottleneck classification, and three-goal Setting Advisor selection into an independently tested Export Planning Engine.
+- Expanded the dedicated Export Controller to own Export workspace settings events plus performance-summary, preflight, encoder-status/capability, setting-advisor, and recent-history presentation. Export calculations, persistence, benchmark modeling, and render orchestration remain isolated in the main application layer.
+- Extracted resolution recommendations, iteration ceilings, frame-buffer allocation, subpixel offsets, and RGBA/RGB10 averaging from `app.js` into a dedicated deterministic Export Sampling Engine with independent tests.
+- Export Iterations is now the exact user-controlled mathematical depth. Selecting a resolution visibly loads its recommended starting value, but manual changes are no longer silently raised by a hidden resolution floor.
+- Export estimates and preflight summaries now identify 4× supersampling and include its four-render-per-frame performance cost.
+- Extracted Mathematical Song Director panel rendering, dynamics display, cue selection, cue editing, and control binding from the main renderer into a dedicated controller module. Mathematical evaluation and shared render state remain in the main orchestration layer, preserving identical live, OBS, and offline behavior while making future work safer.
+
+## 0.30.6 - 2026-08-14
+
+### Added
+
+- Added Automatic GPU Master as the recommended 10-bit MP4 profile. It probes hardware AV1 first, then hardware HEVC Main 10, and uses CPU HEVC only when no compatible GPU encoder can initialize.
+- Added NVIDIA, Intel, and AMD HEVC Main 10 hardware profiles plus a quality-first x265 fallback for Automatic GPU Master.
+- Added an Advanced Encoder Compatibility panel that scans the current PC, lists working and unavailable AV1, HEVC, and H.264 paths, distinguishes GPU and CPU encoders, and explains the Automatic selection.
+- Added an Advanced Export Readiness benchmark that measures the selected FFmpeg encoder at the chosen resolution and frame rate, models current fractal-render throughput, identifies the likely bottleneck, and estimates export time per minute of music.
+- Added a safety rule that skips CPU AV1 stress testing and directs users to Automatic GPU Master instead of accidentally launching an extremely slow high-resolution benchmark.
+- Added a post-benchmark Setting Advisor with Faster Turnaround, Balanced Master, and Maximum Detail recommendations. Each option shows resolution, FPS, minimum iterations, and estimated time per minute before applying it.
+- Added an Advanced-only 10-bit AV1/Opus 256 kb/s WebM upload master with automatic NVIDIA NVENC, Intel Quick Sync, AMD AMF, and CPU libaom encoder selection.
+- Added an explicit preflight warning when AV1 must use its exceptionally slow software fallback.
+- Added Compatible MP4 (H.264/AAC), Open Quality WebM (VP9 Profile 1/Opus), and ProRes 422 HQ MOV editing-master profiles to the deterministic offline exporter.
+- Added one shared export-profile catalog so the renderer, save dialog, destination extension, codec policy, color/chroma description, and storage estimates use the same definitions.
+- Added visible export-profile details and expanded preflight reporting for container, video codec, color depth, chroma format, audio codec, estimated bitrate range, and estimated file-size range.
+- Added a recoverable PNG image-sequence master that writes each lossless frame independently, then creates matching 24-bit WAV audio and a portable JSON sequence manifest.
+- Added image-sequence crash recovery based on the PNG files actually present, allowing an interrupted sequence to be completed as a shortened usable master without repacking its frames.
+- Added a persistent Music Deck playback-output selector that routes loaded songs directly to Windows and SteelSeries Sonar virtual devices without relying on Sonar app-tile discovery.
+
+### Changed
+
+- Automatic export never selects CPU AV1: systems without AV1 encoding hardware move to HEVC so high-quality full-song exports remain practical on GPUs such as the RTX 3080.
+- Changing the export quality profile now refreshes its encoder status immediately instead of retaining the previous profile's encoder label.
+- Export benchmark results mark themselves stale when resolution, FPS, quality profile, HDR mode, visual type, or live/export iteration settings change.
+- Applying an advisor recommendation changes only resolution, FPS, and minimum export iterations; the chosen codec/profile and all visual settings remain untouched.
+- Audio Modulation Matrix amounts now use target-aware ranges. Strength-only targets use a clear 0–100% scale, while targets with a meaningful reverse direction retain −100% to +100%.
+- Switching a modulation route target immediately updates its allowed amount range; older negative values on strength-only targets migrate safely to 0%.
+- Assigned Quartic Pulse its explicit Windows AppUserModelID at startup so installed builds expose a stable application identity to Windows integration services.
+
+### Fixed
+
+- Playlist selection is now independent from the track loaded in the Music Deck. Single-clicking, reordering, or removing another playlist row no longer interrupts or starts playback; double-click remains the explicit load-and-play action, and removing the loaded track stops cleanly without auto-starting its replacement.
+
 ## 0.30.5 - 2026-08-11
 
 ### Added

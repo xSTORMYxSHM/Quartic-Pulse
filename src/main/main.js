@@ -6,12 +6,16 @@ const { execFile, spawn } = require('child_process');
 const crypto = require('crypto');
 const dgram = require('dgram');
 const { pipeline } = require('stream/promises');
+const exportProfileCatalog = require('../shared/export-profiles');
 const {
   videoFormats,
   normalizeRequestedFormat,
   saveDialogFilters,
   resolveOutputSelection
 } = require('./export-format-policy');
+
+const quarticPulseAppUserModelId = 'com.tempestmainframe.quarticpulse';
+if (process.platform === 'win32') app.setAppUserModelId(quarticPulseAppUserModelId);
 
 const exportSessions = new Map();
 const outputCaptureProcesses = new Map();
@@ -21,6 +25,7 @@ let obsOutputWindow = null;
 let oscSocket = null;
 let oscOwnerId = null;
 let cachedExportEncoder = null;
+const cachedFixedExportEncoders = new Map();
 let lastReportSubmitTime = 0;
 const reportProjectUrl = 'https://github.com/xSTORMYxSHM/Quartic-Pulse';
 const reportIncidentLimit = 20;
@@ -415,9 +420,12 @@ function createWindow() {
             const windowsAudioReady = document.querySelector('#audioSourceSelect')?.options.length >= 2
               && document.querySelector('#audioSourceSelect')?.value === 'deck'
               && document.querySelector('#audioOutputOptions')?.children.length > 0
+              && Boolean(document.querySelector('#deckOutputSelect'))
+              && Boolean(document.querySelector('#deckOutputOptions'))
               && Boolean(document.querySelector('#useAudioSourceButton'))
               && Boolean(document.querySelector('#refreshAudioSourcesButton'));
             const windowsOutputCount = document.querySelector('#audioOutputOptions')?.children.length || 0;
+            const deckOutputRoutingReady = typeof AudioContext?.prototype?.setSinkId === 'function';
             const appearanceNavigationReady = document.querySelectorAll('.appearance-subtab').length === 5
               && Boolean(document.querySelector('[data-tab-panel="dimensional"]'))
               && Boolean(document.querySelector('[data-tab-panel="folding"]'))
@@ -479,10 +487,17 @@ function createWindow() {
               && !document.querySelector('#songDirectorEnabled')?.checked;
             const offlineExportReady = Boolean(document.querySelector('#exportMode option[value="offline"]'))
               && !document.querySelector('#exportMode option[value="live"]')
+              && Boolean(document.querySelector('#videoFormat option[value="gpu_auto"]'))
               && Boolean(document.querySelector('#videoFormat option[value="youtube_hdr"]'))
+              && Boolean(document.querySelector('#videoFormat option[value="mp4_compatible"]'))
+              && Boolean(document.querySelector('#videoFormat option[value="webm_quality"]'))
+              && Boolean(document.querySelector('#videoFormat option[value="av1_quality"]'))
+              && Boolean(document.querySelector('#videoFormat option[value="prores_422_hq"]'))
+              && Boolean(document.querySelector('#videoFormat option[value="png_sequence"]'))
               && Boolean(document.querySelector('#videoFormat option[value="utvideo"]'))
               && Boolean(document.querySelector('#videoFormat option[value="ffv1"]'))
               && Boolean(document.querySelector('#exportHdrOutput'))
+              && Boolean(document.querySelector('#exportSupersampling'))
               && window.__quarticHdrExportReady === true
               && Boolean(document.querySelector('#unleashedExportDetail'))
               && typeof window.quarticDesktop?.getPathForFile === 'function'
@@ -499,8 +514,32 @@ function createWindow() {
               && Boolean(document.querySelector('#cancelExportButton'))
               && Boolean(document.querySelector('#pauseExportButton'))
               && Boolean(document.querySelector('#exportPreflightDialog'))
+              && Boolean(document.querySelector('#preflightFormat'))
+              && Boolean(document.querySelector('#preflightColor'))
+              && Boolean(document.querySelector('#preflightBitrate'))
               && Boolean(document.querySelector('#preflightTestButton'))
-              && Boolean(document.querySelector('#exportEncoderStatus'));
+              && Boolean(document.querySelector('#exportEncoderStatus'))
+              && Boolean(document.querySelector('#exportEncoderCapabilities'))
+              && Boolean(document.querySelector('#scanExportEncodersButton'))
+              && typeof window.quarticDesktop?.getExportEncoderCapabilities === 'function'
+              && Boolean(document.querySelector('#exportReadinessBenchmark'))
+              && Boolean(document.querySelector('#benchmarkExportButton'))
+              && Boolean(document.querySelector('#exportAdvisor'))
+              && Boolean(document.querySelector('#exportAdvisorList'))
+              && typeof window.quarticDesktop?.benchmarkExportEncoder === 'function';
+            const exportSamplingReady = document.querySelector('#exportIterations')?.defaultValue === '600'
+              && document.querySelector('#exportIterations')?.min === '240'
+              && document.querySelector('#exportIterations')?.max === '1200'
+              && document.querySelector('#exportSupersampling')?.defaultChecked === false
+              && typeof window.__quarticRecommendedExportIterations === 'function'
+              && window.__quarticRecommendedExportIterations(854, 480) === 320
+              && window.__quarticRecommendedExportIterations(1280, 720) === 400
+              && window.__quarticRecommendedExportIterations(1920, 1080) === 600
+              && window.__quarticRecommendedExportIterations(2560, 1440) === 800
+              && window.__quarticRecommendedExportIterations(3840, 2160) === 1000
+              && typeof window.__quarticEffectiveExportIterations === 'function'
+              && window.__quarticEffectiveExportIterations(3840, 2160, 740) === 740
+              && window.__quarticTestExportSampling?.() === true;
             const exportQolReady = Boolean(document.querySelector('#exportHistoryList'))
               && Boolean(document.querySelector('#exportRecoveryList'))
               && Boolean(document.querySelector('#stageRenderMeta'))
@@ -718,6 +757,105 @@ function createWindow() {
             if (${smokeAdvanced}) document.querySelector('.tab-panel.active details')?.setAttribute('open', '');
             if (${process.argv.includes('--smoke-basic')}) document.querySelector('.interface-mode-switch [data-interface-mode="basic"]')?.click();
             if (${process.argv.includes('--smoke-interface-advanced')}) document.querySelector('.interface-mode-switch [data-interface-mode="advanced"]')?.click();
+            let av1PreflightReady = !${process.argv.includes('--smoke-av1')};
+            let av1Encoder = null;
+            if (${process.argv.includes('--smoke-av1')}) {
+              const formatSelect = document.querySelector('#videoFormat');
+              const av1Option = formatSelect?.querySelector('option[value="av1_quality"]');
+              if (formatSelect && av1Option && !av1Option.hidden) {
+                formatSelect.value = 'av1_quality';
+                formatSelect.dispatchEvent(new Event('change', { bubbles: true }));
+                const av1Preflight = await window.quarticDesktop.getExportPreflight({
+                  format: 'av1_quality', width: 320, height: 240, fps: 30, duration: 1, refreshEncoder: true
+                });
+                av1Encoder = av1Preflight?.encoder || null;
+                av1PreflightReady = av1Preflight?.profile?.id === 'av1_quality'
+                  && ['av1_nvenc', 'av1_qsv', 'av1_amf', 'libaom_av1'].includes(av1Encoder?.id)
+                  && (av1Encoder?.hardware || Boolean(av1Encoder?.warning));
+              }
+            }
+            let automaticGpuPreflightReady = !${process.argv.includes('--smoke-auto-gpu')};
+            let automaticGpuEncoder = null;
+            if (${process.argv.includes('--smoke-auto-gpu')}) {
+              const formatSelect = document.querySelector('#videoFormat');
+              const automaticOption = formatSelect?.querySelector('option[value="gpu_auto"]');
+              if (formatSelect && automaticOption && !automaticOption.hidden) {
+                formatSelect.value = 'gpu_auto';
+                formatSelect.dispatchEvent(new Event('change', { bubbles: true }));
+                const automaticPreflight = await window.quarticDesktop.getExportPreflight({
+                  format: 'gpu_auto', width: 320, height: 240, fps: 30, duration: 1, refreshEncoder: true
+                });
+                automaticGpuEncoder = automaticPreflight?.encoder || null;
+                automaticGpuPreflightReady = automaticPreflight?.profile?.id === 'gpu_auto'
+                  && ['av1_nvenc', 'av1_qsv', 'av1_amf', 'hevc_nvenc_auto', 'hevc_qsv_auto', 'hevc_amf_auto', 'libx265_auto'].includes(automaticGpuEncoder?.id)
+                  && automaticGpuEncoder?.id !== 'libaom_av1'
+                  && (automaticGpuEncoder?.hardware || Boolean(automaticGpuEncoder?.warning));
+              }
+            }
+            let encoderCapabilityScanReady = !${process.argv.includes('--smoke-encoder-scan')};
+            let encoderCapabilityRowCount = 0;
+            if (${process.argv.includes('--smoke-encoder-scan')}) {
+              const capabilityCard = document.querySelector('#exportEncoderCapabilities');
+              capabilityCard?.setAttribute('open', '');
+              document.querySelector('#scanExportEncodersButton')?.click();
+              for (let attempt = 0; attempt < 200; attempt++) {
+                encoderCapabilityRowCount = document.querySelectorAll('.export-encoder-capability-row').length;
+                if (encoderCapabilityRowCount > 0 && !document.querySelector('#scanExportEncodersButton')?.disabled) break;
+                await new Promise((resolve) => setTimeout(resolve, 100));
+              }
+              encoderCapabilityScanReady = encoderCapabilityRowCount >= 3
+                && Boolean(document.querySelector('.export-encoder-capability-row.selected'))
+                && document.querySelector('#exportEncoderDecision')?.textContent.includes('Automatic selected');
+            }
+            let exportBenchmarkReady = !${process.argv.includes('--smoke-export-benchmark')};
+            let exportBenchmarkSnapshot = null;
+            if (${process.argv.includes('--smoke-export-benchmark')}) {
+              const formatSelect = document.querySelector('#videoFormat');
+              if (formatSelect?.querySelector('option[value="gpu_auto"]')) {
+                formatSelect.value = 'gpu_auto';
+                formatSelect.dispatchEvent(new Event('change', { bubbles: true }));
+              }
+              document.querySelector('#exportReadinessBenchmark')?.setAttribute('open', '');
+              document.querySelector('#benchmarkExportButton')?.click();
+              for (let attempt = 0; attempt < 350; attempt++) {
+                if (document.querySelector('#exportReadinessSummary')?.dataset.complete === 'true'
+                  && !document.querySelector('#benchmarkExportButton')?.disabled) break;
+                await new Promise((resolve) => setTimeout(resolve, 100));
+              }
+              exportBenchmarkSnapshot = {
+                summary: document.querySelector('#exportReadinessSummary')?.textContent || '',
+                encoderFps: document.querySelector('#benchmarkEncoderFps')?.textContent || '',
+                renderFps: document.querySelector('#benchmarkRenderFps')?.textContent || '',
+                bottleneck: document.querySelector('#benchmarkBottleneck')?.textContent || '',
+                minuteTime: document.querySelector('#benchmarkMinuteTime')?.textContent || ''
+              };
+              exportBenchmarkReady = document.querySelector('#exportReadinessSummary')?.dataset.complete === 'true'
+                && /FPS/.test(exportBenchmarkSnapshot.encoderFps)
+                && /FPS/.test(exportBenchmarkSnapshot.renderFps)
+                && exportBenchmarkSnapshot.minuteTime !== '—';
+            }
+            let exportAdvisorReady = !${process.argv.includes('--smoke-export-advisor')};
+            let exportAdvisorOptionCount = 0;
+            if (${process.argv.includes('--smoke-export-advisor')}) {
+              const advisorOptions = Array.from(document.querySelectorAll('.export-advisor-option'));
+              exportAdvisorOptionCount = advisorOptions.length;
+              const balanced = advisorOptions.find((button) => button.textContent.includes('BALANCED MASTER'));
+              const expected = balanced ? {
+                resolution: balanced.dataset.resolution,
+                fps: balanced.dataset.fps,
+                iterations: balanced.dataset.iterations
+              } : null;
+              balanced?.click();
+              exportAdvisorReady = exportAdvisorOptionCount === 3
+                && Boolean(expected)
+                && document.querySelector('#resolution')?.value === expected.resolution
+                && document.querySelector('#fps')?.value === expected.fps
+                && document.querySelector('#exportIterations')?.value === expected.iterations
+                && document.querySelector('#exportReadinessSummary')?.textContent.includes('Settings changed');
+            }
+            if (${process.argv.includes('--smoke-scroll-export-advisor')}) {
+              document.querySelector('#exportAdvisor')?.scrollIntoView({ block: 'center' });
+            }
             if (${process.argv.includes('--smoke-hide-safety')}) document.querySelector('#visualSafetyDialog')?.setAttribute('hidden', '');
             if (${smokePanelMax}) document.querySelector('#panelResizer')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
             if (${smokeScrollQuickControls}) document.querySelector('.quick-controls-card')?.scrollIntoView({ block: 'center' });
@@ -805,16 +943,36 @@ function createWindow() {
               && window.QuarticVisualCatalog.validate()
               && window.QuarticVisualCatalog.get(5)?.key === 'mandelbulb'
             );
+            const exportOfflinePresentationReady = Boolean(
+              window.__quarticControllers?.export?.diagnostics?.offlineStateReady
+              && typeof window.__quarticControllers.export.renderOfflineState === 'function'
+            );
+            const exportLivePresentationReady = Boolean(
+              window.__quarticControllers?.export?.diagnostics?.liveStateReady
+              && typeof window.__quarticControllers.export.renderLiveState === 'function'
+            );
             const controllerModulesReady = Boolean(
               window.QuarticAudioController
               && window.QuarticPerformanceController
               && window.QuarticExportController
+              && window.QuarticSongDirectorController
               && window.__quarticControllers?.audio?.diagnostics?.ready
               && window.__quarticControllers.audio.diagnostics.bound
               && window.__quarticControllers?.performance?.diagnostics?.ready
               && window.__quarticControllers.performance.diagnostics.bound
               && window.__quarticControllers?.export?.diagnostics?.ready
+              && window.__quarticControllers.export.diagnostics.presentationReady
+              && window.__quarticControllers.export.diagnostics.preflightChoiceReady
+              && window.__quarticControllers.export.diagnostics.benchmarkStateReady
+              && window.__quarticControllers.export.diagnostics.encoderScanStateReady
+              && window.__quarticControllers.export.diagnostics.advisorApplicationReady
+              && window.__quarticControllers.export.diagnostics.recoveryStateReady
+              && exportOfflinePresentationReady
+              && exportLivePresentationReady
               && window.__quarticControllers.export.diagnostics.bound
+              && window.__quarticControllers?.songDirector?.diagnostics?.ready
+              && window.__quarticControllers.songDirector.diagnostics.bound
+              && window.__quarticControllers.songDirector.diagnostics.initialized
             );
             const showComposerControllerReady = Boolean(
               window.QuarticPerformanceShowComposerController
@@ -844,6 +1002,187 @@ function createWindow() {
               && typeof window.__quarticEngines.exportSession.begin === 'function'
               && typeof window.__quarticEngines.exportSession.updateProgress === 'function'
               && typeof window.__quarticEngines.exportSession.requestCancel === 'function'
+            );
+            const exportProgressWorkflowEngineReady = Boolean(
+              window.QuarticExportProgressWorkflowEngine
+              && window.__quarticEngines?.exportProgressWorkflow?.diagnostics?.ready
+              && typeof window.__quarticEngines.exportProgressWorkflow.begin === 'function'
+              && typeof window.__quarticEngines.exportProgressWorkflow.update === 'function'
+              && typeof window.__quarticEngines.exportProgressWorkflow.handleNative === 'function'
+              && typeof window.__quarticEngines.exportProgressWorkflow.complete === 'function'
+              && await window.__quarticEngines.exportProgressWorkflow.selfTest()
+            );
+            const exportProgressCoordinatorReady = Boolean(
+              window.QuarticExportProgressCoordinator
+              && window.__quarticEngines?.exportProgressCoordinator?.diagnostics?.ready
+              && window.__quarticEngines.exportProgressCoordinator.diagnostics.nativeListenerBound
+              && typeof window.__quarticEngines.exportProgressCoordinator.begin === 'function'
+              && typeof window.__quarticEngines.exportProgressCoordinator.update === 'function'
+              && typeof window.__quarticEngines.exportProgressCoordinator.handleNative === 'function'
+              && typeof window.__quarticEngines.exportProgressCoordinator.complete === 'function'
+              && typeof window.__quarticEngines.exportProgressCoordinator.unbindNative === 'function'
+              && await window.__quarticEngines.exportProgressCoordinator.selfTest()
+            );
+            const exportCommandCoordinatorReady = Boolean(
+              window.QuarticExportCommandCoordinator
+              && window.__quarticEngines?.exportCommandCoordinator?.diagnostics?.ready
+              && typeof window.__quarticEngines.exportCommandCoordinator.togglePause === 'function'
+              && typeof window.__quarticEngines.exportCommandCoordinator.finish === 'function'
+              && typeof window.__quarticEngines.exportCommandCoordinator.cancel === 'function'
+              && await window.__quarticEngines.exportCommandCoordinator.selfTest()
+            );
+            const exportJobCoordinatorReady = Boolean(
+              window.QuarticExportJobCoordinator
+              && window.__quarticEngines?.exportJobCoordinator?.diagnostics?.ready
+              && typeof window.__quarticEngines.exportJobCoordinator.startOffline === 'function'
+              && typeof window.__quarticEngines.exportJobCoordinator.startLive === 'function'
+              && await window.__quarticEngines.exportJobCoordinator.selfTest()
+            );
+            const exportResultWorkflowEngineReady = Boolean(
+              window.QuarticExportResultWorkflowEngine
+              && window.__quarticEngines?.exportResultWorkflow?.diagnostics?.ready
+              && typeof window.__quarticEngines.exportResultWorkflow.complete === 'function'
+              && typeof window.__quarticEngines.exportResultWorkflow.reset === 'function'
+              && typeof window.__quarticEngines.exportResultWorkflow.reveal === 'function'
+              && await window.__quarticEngines.exportResultWorkflow.selfTest()
+            );
+            const exportSamplingEngineReady = Boolean(
+              window.QuarticExportSamplingEngine
+              && window.__quarticEngines?.exportSampling?.diagnostics?.ready
+              && window.__quarticEngines.exportSampling.diagnostics.sampleCount === 4
+              && typeof window.__quarticEngines.exportSampling.recommendedIterations === 'function'
+              && typeof window.__quarticEngines.exportSampling.createFrameBuffers === 'function'
+              && typeof window.__quarticEngines.exportSampling.resolve === 'function'
+              && window.__quarticEngines.exportSampling.selfTest()
+            );
+            const exportSettingsSnapshotEngineReady = Boolean(
+              window.QuarticExportSettingsSnapshotEngine
+              && window.__quarticEngines?.exportSettingsSnapshot?.diagnostics?.ready
+              && typeof window.__quarticEngines.exportSettingsSnapshot.capture === 'function'
+              && typeof window.__quarticEngines.exportSettingsSnapshot.preflight === 'function'
+              && typeof window.__quarticControllers?.export?.readSettings === 'function'
+              && window.__quarticEngines.exportSettingsSnapshot.selfTest()
+            );
+            const exportPreparationEngineReady = Boolean(
+              window.QuarticExportPreparationEngine
+              && window.__quarticEngines?.exportPreparation?.diagnostics?.ready
+              && typeof window.__quarticEngines.exportPreparation.prepareOffline === 'function'
+              && typeof window.__quarticEngines.exportPreparation.prepareLive === 'function'
+              && await window.__quarticEngines.exportPreparation.selfTest()
+            );
+            const exportFrameCaptureEngineReady = Boolean(
+              window.QuarticExportFrameCaptureEngine
+              && window.__quarticEngines?.exportFrameCapture?.diagnostics?.ready
+              && typeof window.__quarticEngines.exportFrameCapture.createCapture === 'function'
+              && await window.__quarticEngines.exportFrameCapture.selfTest()
+            );
+            const exportPlanningEngineReady = Boolean(
+              window.QuarticExportPlanningEngine
+              && window.__quarticEngines?.exportPlanning?.diagnostics?.ready
+              && typeof window.__quarticEngines.exportPlanning.profileEstimate === 'function'
+              && typeof window.__quarticEngines.exportPlanning.modeledRenderFps === 'function'
+              && typeof window.__quarticEngines.exportPlanning.interpretBenchmark === 'function'
+              && typeof window.__quarticEngines.exportPlanning.advisorRecommendations === 'function'
+              && window.__quarticEngines.exportPlanning.selfTest()
+            );
+            const exportPresentationEngineReady = Boolean(
+              window.QuarticExportPresentationEngine
+              && window.__quarticEngines?.exportPresentation?.diagnostics?.ready
+              && typeof window.__quarticEngines.exportPresentation.performanceView === 'function'
+              && typeof window.__quarticEngines.exportPresentation.preflightView === 'function'
+              && typeof window.__quarticEngines.exportPresentation.historyView === 'function'
+              && window.__quarticEngines.exportPresentation.selfTest()
+            );
+            const exportPreflightEngineReady = Boolean(
+              window.QuarticExportPreflightEngine
+              && window.__quarticEngines?.exportPreflight?.diagnostics?.ready
+              && typeof window.__quarticEngines.exportPreflight.build === 'function'
+              && typeof window.__quarticEngines.exportPreflight.load === 'function'
+              && typeof window.__quarticEngines.exportPreflight.refresh === 'function'
+              && await window.__quarticEngines.exportPreflight.selfTest()
+            );
+            const exportAdvisorEngineReady = Boolean(
+              window.QuarticExportAdvisorEngine
+              && window.__quarticEngines?.exportAdvisor?.diagnostics?.ready
+              && typeof window.__quarticEngines.exportAdvisor.normalize === 'function'
+              && typeof window.__quarticEngines.exportAdvisor.apply === 'function'
+              && await window.__quarticEngines.exportAdvisor.selfTest()
+            );
+            const exportSettingsCoordinatorEngineReady = Boolean(
+              window.QuarticExportSettingsCoordinatorEngine
+              && window.__quarticEngines?.exportSettingsCoordinator?.diagnostics?.ready
+              && typeof window.__quarticEngines.exportSettingsCoordinator.change === 'function'
+              && typeof window.__quarticEngines.exportSettingsCoordinator.applyAdvisor === 'function'
+              && typeof window.__quarticControllers?.export?.readSettingChoices === 'function'
+              && await window.__quarticEngines.exportSettingsCoordinator.selfTest()
+            );
+            const exportRuntimeStateCoordinatorReady = Boolean(
+              window.QuarticExportRuntimeStateCoordinator
+              && window.__quarticEngines?.exportRuntimeState?.diagnostics?.ready
+              && typeof window.__quarticEngines.exportRuntimeState.activate === 'function'
+              && typeof window.__quarticEngines.exportRuntimeState.markFinalizing === 'function'
+              && typeof window.__quarticEngines.exportRuntimeState.restore === 'function'
+              && await window.__quarticEngines.exportRuntimeState.selfTest()
+            );
+            const exportEncoderScanEngineReady = Boolean(
+              window.QuarticExportEncoderScanEngine
+              && window.__quarticEngines?.exportEncoderScan?.diagnostics?.ready
+              && typeof window.__quarticEngines.exportEncoderScan.run === 'function'
+              && await window.__quarticEngines.exportEncoderScan.selfTest()
+            );
+            const exportBenchmarkEngineReady = Boolean(
+              window.QuarticExportBenchmarkEngine
+              && window.__quarticEngines?.exportBenchmark?.diagnostics?.ready
+              && typeof window.__quarticEngines.exportBenchmark.run === 'function'
+              && await window.__quarticEngines.exportBenchmark.selfTest()
+            );
+            const exportHistoryEngineReady = Boolean(
+              window.QuarticExportHistoryEngine
+              && window.__quarticEngines?.exportHistory?.diagnostics?.ready
+              && typeof window.__quarticEngines.exportHistory.load === 'function'
+              && typeof window.__quarticEngines.exportHistory.record === 'function'
+              && typeof window.__quarticEngines.exportHistory.normalizeRecoveries === 'function'
+              && window.__quarticEngines.exportHistory.selfTest()
+            );
+            const exportHistoryActionEngineReady = Boolean(
+              window.QuarticExportHistoryActionEngine
+              && window.__quarticEngines?.exportHistoryAction?.diagnostics?.ready
+              && typeof window.__quarticEngines.exportHistoryAction.clear === 'function'
+              && typeof window.__quarticEngines.exportHistoryAction.perform === 'function'
+              && typeof window.__quarticEngines.exportHistoryAction.refreshRecoveries === 'function'
+              && await window.__quarticEngines.exportHistoryAction.selfTest()
+            );
+            const exportRecoveryEngineReady = Boolean(
+              window.QuarticExportRecoveryEngine
+              && window.__quarticEngines?.exportRecovery?.diagnostics?.ready
+              && typeof window.__quarticEngines.exportRecovery.recover === 'function'
+              && typeof window.__quarticEngines.exportRecovery.discard === 'function'
+              && await window.__quarticEngines.exportRecovery.selfTest()
+            );
+            const exportRenderCoordinatorReady = Boolean(
+              window.QuarticExportRenderCoordinator
+              && window.__quarticEngines?.exportRenderCoordinator?.diagnostics?.ready
+              && typeof window.__quarticEngines.exportRenderCoordinator.renderFrames === 'function'
+              && await window.__quarticEngines.exportRenderCoordinator.selfTest()
+            );
+            const exportWorkflowEngineReady = Boolean(
+              window.QuarticExportWorkflowEngine
+              && window.__quarticEngines?.exportWorkflow?.diagnostics?.ready
+              && typeof window.__quarticEngines.exportWorkflow.run === 'function'
+              && await window.__quarticEngines.exportWorkflow.selfTest()
+            );
+            const exportOfflineLifecycleReady = Boolean(
+              window.QuarticExportOfflineLifecycle
+              && window.__quarticEngines?.exportOfflineLifecycle?.diagnostics?.ready
+              && typeof window.__quarticEngines.exportOfflineLifecycle.run === 'function'
+              && await window.__quarticEngines.exportOfflineLifecycle.selfTest()
+            );
+            const exportLiveLifecycleReady = Boolean(
+              window.QuarticExportLiveLifecycle
+              && window.__quarticEngines?.exportLiveLifecycle?.diagnostics?.ready
+              && typeof window.__quarticEngines.exportLiveLifecycle.start === 'function'
+              && typeof window.__quarticEngines.exportLiveLifecycle.finish === 'function'
+              && await window.__quarticEngines.exportLiveLifecycle.selfTest()
             );
             const performanceSequencerEngineReady = Boolean(
               window.QuarticPerformanceSequencerEngine
@@ -889,6 +1228,20 @@ function createWindow() {
               && typeof window.__quarticEngines.exportEncoder.createOffline === 'function'
               && typeof window.__quarticEngines.exportEncoder.chooseOfflineConfig === 'function'
             );
+            const exportLiveCaptureEngineReady = Boolean(
+              window.QuarticExportLiveCaptureEngine
+              && window.__quarticEngines?.exportLiveCapture?.diagnostics?.ready
+              && typeof window.__quarticEngines.exportLiveCapture.createCapture === 'function'
+              && typeof window.__quarticEngines.exportLiveCapture.videoBitrate === 'function'
+              && await window.__quarticEngines.exportLiveCapture.selfTest()
+            );
+            const exportQuickClipWorkflowEngineReady = Boolean(
+              window.QuarticExportQuickClipWorkflowEngine
+              && window.__quarticEngines?.exportQuickClipWorkflow?.diagnostics?.ready
+              && typeof window.__quarticEngines.exportQuickClipWorkflow.run === 'function'
+              && typeof window.__quarticEngines.exportQuickClipWorkflow.requestCancel === 'function'
+              && await window.__quarticEngines.exportQuickClipWorkflow.selfTest()
+            );
             const workflowButtons = [...document.querySelectorAll('[data-workflow-tab]')];
             const workflowWorkspace = document.body.dataset.workspace;
             const workflowDisplay = getComputedStyle(document.querySelector('.basic-workflow-nav')).display;
@@ -920,7 +1273,8 @@ function createWindow() {
             const aboutContentReady = activeSystemTab !== 'about' || Boolean(
               document.querySelector('.about-feature-grid')
               && document.querySelector('.about-release-card')
-              && document.querySelector('.about-title > span')?.textContent.includes('0.30.1')
+              && window.QuarticAppMetadata?.version === ${JSON.stringify(app.getVersion())}
+              && document.querySelector('#appVersionText')?.textContent.includes(${JSON.stringify(app.getVersion())})
             );
             const musicPersonalityButtons = [...document.querySelectorAll('[data-music-personality]')];
             const musicPersonalityReady = musicPersonalityButtons.length === 7
@@ -937,6 +1291,8 @@ function createWindow() {
               && document.querySelector('#songDirectorIntensity')
               && document.querySelector('#songDirectorBehavior')
               && document.querySelector('#songDirectorBehaviorResolved')
+              && document.querySelector('#songDirectorTransition')
+              && document.querySelector('#songDirectorTransitionResolved')
               && document.querySelector('#songDirectorCueEditor')
               && document.querySelector('#songDirectorCueStrength')
               && document.querySelector('#songDirectorCueEmphasis')
@@ -958,6 +1314,7 @@ function createWindow() {
               && performancePackagePreview?.schemaVersion === 1
               && /^QP-[A-F0-9]{8}$/.test(performancePackagePreview?.fingerprint || '')
               && performancePackagePreview?.performance?.currentVisual?.kind === 'settings'
+              && performancePackagePreview?.performance?.director?.transition === 'auto'
               && Array.isArray(performancePackagePreview?.performance?.show?.entries)
               && !JSON.stringify(performancePackagePreview).includes('filePath')
             );
@@ -1007,6 +1364,7 @@ function createWindow() {
               obsOutputReady,
               profilesReady,
               windowsAudioReady,
+              deckOutputRoutingReady,
               windowsOutputCount,
               outputCaptureReady,
               audioHudReady,
@@ -1025,6 +1383,8 @@ function createWindow() {
               workspaceShellReady,
               visualCatalogReady,
               controllerModulesReady,
+              exportOfflinePresentationReady,
+              exportLivePresentationReady,
               showComposerControllerReady,
               profileManagerControllerReady,
               audioAnalysisEngineReady,
@@ -1034,7 +1394,33 @@ function createWindow() {
               songDirectorEngineReady,
               performancePackageEngineReady,
               exportSessionEngineReady,
+              exportProgressWorkflowEngineReady,
+              exportProgressCoordinatorReady,
+              exportCommandCoordinatorReady,
+              exportJobCoordinatorReady,
+              exportResultWorkflowEngineReady,
+              exportSamplingEngineReady,
+              exportSettingsSnapshotEngineReady,
+              exportPreparationEngineReady,
+              exportFrameCaptureEngineReady,
+              exportPlanningEngineReady,
+              exportPresentationEngineReady,
+              exportPreflightEngineReady,
+              exportAdvisorEngineReady,
+              exportSettingsCoordinatorEngineReady,
+              exportRuntimeStateCoordinatorReady,
+              exportEncoderScanEngineReady,
+              exportBenchmarkEngineReady,
+              exportHistoryEngineReady,
+              exportHistoryActionEngineReady,
+              exportRecoveryEngineReady,
+              exportRenderCoordinatorReady,
+              exportWorkflowEngineReady,
+              exportOfflineLifecycleReady,
+              exportLiveLifecycleReady,
               exportEncoderEngineReady,
+              exportLiveCaptureEngineReady,
+              exportQuickClipWorkflowEngineReady,
               basicWorkflowReady,
               advancedWorkflowReady,
               unleashedLayoutReady,
@@ -1075,6 +1461,17 @@ function createWindow() {
                 scalePercent: Number(document.querySelector('#performanceScaleValue')?.textContent || 0)
               },
               offlineExportReady,
+              exportSamplingReady,
+              av1PreflightReady,
+              av1Encoder,
+              automaticGpuPreflightReady,
+              automaticGpuEncoder,
+              encoderCapabilityScanReady,
+              encoderCapabilityRowCount,
+              exportBenchmarkReady,
+              exportBenchmarkSnapshot,
+              exportAdvisorReady,
+              exportAdvisorOptionCount,
               exportQolReady,
               obsAutomationReady,
               coreEquationReady,
@@ -1169,6 +1566,7 @@ function createWindow() {
               && result.songMapAnalysis.stats === 4
               && result.songMapAnalysis.canvasWidth > 0;
             result.songDirectorAnalysis = await window.webContents.executeJavaScript(`(() => {
+              document.querySelector('.music-subtab[data-music-tab="analysis"]')?.click();
               const enabled = document.querySelector('#songDirectorEnabled');
               enabled?.click();
               const behavior = document.querySelector('#songDirectorBehavior');
@@ -1177,6 +1575,12 @@ function createWindow() {
               const explicitBehavior = document.querySelector('#songDirectorBehaviorResolved')?.textContent || '';
               behavior.value = 'auto';
               behavior.dispatchEvent(new Event('change', { bubbles: true }));
+              const transition = document.querySelector('#songDirectorTransition');
+              transition.value = 'gentle';
+              transition.dispatchEvent(new Event('change', { bubbles: true }));
+              const explicitTransition = document.querySelector('#songDirectorTransitionResolved')?.textContent || '';
+              transition.value = 'auto';
+              transition.dispatchEvent(new Event('change', { bubbles: true }));
               const firstCue = document.querySelector('.song-director-cue');
               firstCue?.click();
               const cueStrength = document.querySelector('#songDirectorCueStrength');
@@ -1191,13 +1595,39 @@ function createWindow() {
               document.querySelector('#resetSongDirectorCue')?.click();
               const cueResetReady = !firstCue?.classList.contains('edited')
                 && document.querySelector('#songDirectorCueState')?.textContent === 'AUTO';
+              const dynamicsMeter = document.querySelector('.song-director-meters');
+              const dynamicsRect = dynamicsMeter?.getBoundingClientRect();
+              const dynamicsLayoutReady = Boolean(dynamicsRect?.width)
+                && dynamicsMeter.scrollWidth <= dynamicsMeter.clientWidth + 1
+                && [...document.querySelectorAll('.song-director-meters small')].every((node) => {
+                  const rect = node.getBoundingClientRect();
+                  return rect.left >= dynamicsRect.left - 1 && rect.right <= dynamicsRect.right + 1;
+                });
+              const dynamicsMetrics = {
+                clientWidth: dynamicsMeter?.clientWidth || 0,
+                scrollWidth: dynamicsMeter?.scrollWidth || 0,
+                rect: dynamicsRect ? [dynamicsRect.left, dynamicsRect.right, dynamicsRect.width] : [0, 0, 0],
+                labels: [...document.querySelectorAll('.song-director-meters small')].map((node) => {
+                  const rect = node.getBoundingClientRect();
+                  return [node.textContent, rect.left, rect.right, rect.width];
+                })
+              };
               return {
                 planCues: document.querySelectorAll('.song-director-cue').length,
                 enabled: Boolean(enabled?.checked),
                 status: document.querySelector('#songDirectorStatus')?.textContent || '',
                 currentCue: document.querySelector('#songDirectorNow strong')?.textContent || '',
+                currentMotif: document.querySelector('#songDirectorNow small')?.textContent || '',
+                timelineMotif: document.querySelector('.song-director-cue small')?.textContent || '',
+                dynamicsLead: document.querySelector('#songDirectorDynamicsLead')?.textContent || '',
+                dynamicsLabels: [...document.querySelectorAll('.song-director-meters small')].map((label) => label.textContent),
+                dynamicsAccessible: document.querySelector('.song-director-meters')?.getAttribute('aria-label') || '',
+                dynamicsLayoutReady,
+                dynamicsMetrics,
                 explicitBehavior,
                 automaticBehavior: document.querySelector('#songDirectorBehaviorResolved')?.textContent || '',
+                explicitTransition,
+                automaticTransition: document.querySelector('#songDirectorTransitionResolved')?.textContent || '',
                 cueOverrideReady,
                 cueResetReady
               };
@@ -1205,8 +1635,16 @@ function createWindow() {
             result.songDirectorAnalysisReady = result.songDirectorAnalysis.enabled
               && result.songDirectorAnalysis.planCues === result.songMapAnalysis.sections
               && result.songDirectorAnalysis.status === 'ACTIVE'
+              && result.songDirectorAnalysis.currentMotif.includes('MOTIF')
+              && result.songDirectorAnalysis.timelineMotif.includes('MOTIF')
+              && result.songDirectorAnalysis.dynamicsLead.includes('→')
+              && result.songDirectorAnalysis.dynamicsLabels.join('|') === 'CAM|MATH|COLOR|DEPTH'
+              && result.songDirectorAnalysis.dynamicsAccessible.includes('Camera')
+              && result.songDirectorAnalysis.dynamicsLayoutReady
               && result.songDirectorAnalysis.explicitBehavior.includes('ELECTRONIC')
               && result.songDirectorAnalysis.automaticBehavior.startsWith('AUTO')
+              && result.songDirectorAnalysis.explicitTransition === 'GENTLE'
+              && result.songDirectorAnalysis.automaticTransition.startsWith('AUTO')
               && result.songDirectorAnalysis.cueOverrideReady
               && result.songDirectorAnalysis.cueResetReady;
           } else {
@@ -1336,7 +1774,27 @@ function createWindow() {
           }
           console.log(`SMOKE_TEST ${JSON.stringify(result)}`);
           fs.writeFileSync(path.join(os.tmpdir(), 'quartic-pulse-smoke-result.json'), JSON.stringify(result, null, 2));
-          process.exitCode = result.ready && result.webgl2 && result.frequencyBands && result.visualStyles && result.playlistReady && result.obsOutputReady && result.profilesReady && result.windowsAudioReady && result.outputCaptureReady && result.audioHudReady && result.hudTransportReady && result.stageGeometryReady && result.exportStatusReady && result.sidebarLayoutReady && result.quickControlsLayoutReady && result.mainTabsFit && result.workspaceShellReady && result.visualCatalogReady && result.controllerModulesReady && result.showComposerControllerReady && result.profileManagerControllerReady && result.audioAnalysisEngineReady && result.performanceSequencerEngineReady && result.performanceShowDataEngineReady && result.songMapDataEngineReady && result.songDirectorEngineReady && result.performancePackageEngineReady && result.exportSessionEngineReady && result.exportEncoderEngineReady && result.basicWorkflowReady && result.advancedWorkflowReady && result.unleashedLayoutReady && result.aboutContentReady && result.musicPersonalityReady && result.songMapReady && result.songMapAnalysisReady && result.songDirectorReady && result.songDirectorAnalysisReady && result.appearanceNavigationReady && result.modulationMatrixReady && result.showSequencerReady && result.showComposerReady && result.showComposerWorkspaceReady && result.showComposerGenerationReady && result.liveControlsReady && result.creativeToolsReady && result.performanceAssistantReady && result.reportCenterReady && result.reportGenerationReady && result.performanceAutomationStandbyReady && result.offlineExportReady && result.exportQolReady && result.nativeExportEncoderReady && result.obsAutomationReady && result.coreEquationReady && result.coreEquationInputReady && result.percentageScalesReady && result.pulseControls && result.customColorRolesReady && result.beatDetectorControls && result.bulbControls && result.pulsePresetsReady && result.visualEffectControls && result.effectPresetsReady && result.visualOptionsReady && result.syntheticPulseReady && result.adaptiveBeatReady && result.obsWindowMovable && result.obsDragStripReady && result.obsChromaSafe && result.rotationVelocityReady && result.activeTab === requestedSmokeTab && result.activeVisualStyle === String(requestedSmokeStyle) && result.canvasWidth > 0 ? 0 : 1;
+          process.exitCode = result.ready && result.webgl2 && result.frequencyBands && result.visualStyles && result.playlistReady && result.obsOutputReady && result.profilesReady && result.windowsAudioReady && result.deckOutputRoutingReady && result.outputCaptureReady && result.audioHudReady && result.hudTransportReady && result.stageGeometryReady && result.exportStatusReady && result.sidebarLayoutReady && result.quickControlsLayoutReady && result.mainTabsFit && result.workspaceShellReady && result.visualCatalogReady && result.controllerModulesReady && result.exportOfflinePresentationReady && result.exportLivePresentationReady && result.showComposerControllerReady && result.profileManagerControllerReady && result.audioAnalysisEngineReady && result.performanceSequencerEngineReady && result.performanceShowDataEngineReady && result.songMapDataEngineReady && result.performancePackageEngineReady && result.exportSessionEngineReady && result.exportSamplingEngineReady && result.exportFrameCaptureEngineReady && result.exportPlanningEngineReady && result.exportPresentationEngineReady && result.exportPreflightEngineReady && result.exportEncoderScanEngineReady && result.exportBenchmarkEngineReady && result.exportHistoryEngineReady && result.exportRenderCoordinatorReady && result.exportWorkflowEngineReady && result.exportOfflineLifecycleReady && result.exportLiveLifecycleReady && result.exportEncoderEngineReady && result.basicWorkflowReady && result.advancedWorkflowReady && result.unleashedLayoutReady && result.aboutContentReady && result.musicPersonalityReady && result.songMapReady && result.songMapAnalysisReady && result.songDirectorReady && result.songDirectorAnalysisReady && result.appearanceNavigationReady && result.modulationMatrixReady && result.showSequencerReady && result.showComposerReady && result.showComposerWorkspaceReady && result.showComposerGenerationReady && result.liveControlsReady && result.creativeToolsReady && result.performanceAssistantReady && result.reportCenterReady && result.reportGenerationReady && result.performanceAutomationStandbyReady && result.offlineExportReady && result.exportSamplingReady && result.exportQolReady && result.nativeExportEncoderReady && result.obsAutomationReady && result.coreEquationReady && result.coreEquationInputReady && result.percentageScalesReady && result.pulseControls && result.customColorRolesReady && result.beatDetectorControls && result.bulbControls && result.pulsePresetsReady && result.visualEffectControls && result.effectPresetsReady && result.visualOptionsReady && result.syntheticPulseReady && result.adaptiveBeatReady && result.obsWindowMovable && result.obsDragStripReady && result.obsChromaSafe && result.rotationVelocityReady && result.activeTab === requestedSmokeTab && result.activeVisualStyle === String(requestedSmokeStyle) && result.canvasWidth > 0 ? 0 : 1;
+          if (!result.songDirectorEngineReady) process.exitCode = 1;
+          if (!result.exportAdvisorEngineReady) process.exitCode = 1;
+          if (!result.exportSettingsCoordinatorEngineReady) process.exitCode = 1;
+          if (!result.exportRuntimeStateCoordinatorReady) process.exitCode = 1;
+          if (!result.exportPreparationEngineReady) process.exitCode = 1;
+          if (!result.exportLiveCaptureEngineReady) process.exitCode = 1;
+          if (!result.exportQuickClipWorkflowEngineReady) process.exitCode = 1;
+          if (!result.exportHistoryActionEngineReady) process.exitCode = 1;
+          if (!result.exportProgressWorkflowEngineReady) process.exitCode = 1;
+          if (!result.exportProgressCoordinatorReady) process.exitCode = 1;
+          if (!result.exportCommandCoordinatorReady) process.exitCode = 1;
+          if (!result.exportJobCoordinatorReady) process.exitCode = 1;
+          if (!result.exportResultWorkflowEngineReady) process.exitCode = 1;
+          if (!result.exportSettingsSnapshotEngineReady) process.exitCode = 1;
+          if (!result.exportRecoveryEngineReady) process.exitCode = 1;
+          if (!result.av1PreflightReady) process.exitCode = 1;
+          if (!result.automaticGpuPreflightReady) process.exitCode = 1;
+          if (!result.encoderCapabilityScanReady) process.exitCode = 1;
+          if (!result.exportBenchmarkReady) process.exitCode = 1;
+          if (!result.exportAdvisorReady) process.exitCode = 1;
         } catch (error) {
           console.error('SMOKE_TEST_FAILED', error);
           try {
@@ -1378,18 +1836,86 @@ function verifyFfmpeg() {
 const exportEncoderProfiles = {
   ffv1: {
     id: 'ffv1', label: 'FFV1 Lossless · RGB 4:4:4 + FLAC', hardware: false,
+    probePixelFormat: 'bgr0',
     args: ['-c:v', 'ffv1', '-level', '3', '-coder', '1', '-context', '1', '-slicecrc', '1']
   },
   utvideo: {
     id: 'utvideo', label: 'Ut Video Lossless - RGB 4:4:4 + FLAC', hardware: false,
+    probePixelFormat: 'gbrp',
     args: ['-c:v', 'utvideo', '-pix_fmt', 'gbrp']
   },
+  libvpx_vp9: {
+    id: 'libvpx_vp9', label: 'CPU Software · VP9 Profile 1 RGB-detail', hardware: false,
+    probePixelFormat: 'yuv444p',
+    args: ['-c:v', 'libvpx-vp9', '-profile:v', '1', '-deadline', 'good', '-cpu-used', '1', '-crf', '10', '-b:v', '0', '-row-mt', '1']
+  },
+  av1_nvenc: {
+    id: 'av1_nvenc', label: 'NVIDIA NVENC · AV1 Main 10 Ultra Quality', hardware: true,
+    probePixelFormat: 'p010le',
+    args: ['-c:v', 'av1_nvenc', '-profile:v', 'main', '-preset', 'p7', '-tune', 'uhq', '-rc', 'vbr', '-cq', '10', '-b:v', '0', '-multipass', 'fullres', '-spatial-aq', '1', '-temporal-aq', '1', '-aq-strength', '10', '-rc-lookahead', '32', '-highbitdepth', '1']
+  },
+  av1_qsv: {
+    id: 'av1_qsv', label: 'Intel Quick Sync · AV1 Main 10 Quality', hardware: true,
+    probePixelFormat: 'p010le',
+    args: ['-c:v', 'av1_qsv', '-profile:v', 'main', '-preset', 'veryslow', '-global_quality', '15']
+  },
+  av1_amf: {
+    id: 'av1_amf', label: 'AMD AMF · AV1 Main 10 High Quality', hardware: true,
+    probePixelFormat: 'p010le',
+    args: ['-c:v', 'av1_amf', '-profile:v', 'main', '-usage', 'high_quality', '-quality', 'high_quality', '-rc', 'qvbr', '-qvbr_quality_level', '15', '-bitdepth', '10', '-preanalysis', '1', '-aq_mode', 'caq']
+  },
+  libaom_av1: {
+    id: 'libaom_av1', label: 'CPU Software · AV1 Main 10 Quality (Very Slow)', hardware: false,
+    probePixelFormat: 'yuv420p10le',
+    args: ['-c:v', 'libaom-av1', '-cpu-used', '4', '-crf', '12', '-b:v', '0', '-row-mt', '1', '-tiles', '2x2', '-lag-in-frames', '25']
+  },
+  hevc_nvenc_auto: {
+    id: 'hevc_nvenc_auto', label: 'NVIDIA NVENC · HEVC Main 10 Ultra Quality', hardware: true,
+    probePixelFormat: 'p010le',
+    args: [
+      '-c:v', 'hevc_nvenc', '-profile:v', 'main10', '-preset', 'p7', '-tune', 'uhq',
+      '-rc', 'vbr', '-cq', '4', '-b:v', '180M', '-maxrate', '300M', '-bufsize', '600M',
+      '-multipass', 'fullres', '-spatial_aq', '1', '-temporal_aq', '1', '-aq-strength', '10',
+      '-rc-lookahead', '32', '-bf', '4'
+    ]
+  },
+  hevc_qsv_auto: {
+    id: 'hevc_qsv_auto', label: 'Intel Quick Sync · HEVC Main 10 Quality', hardware: true,
+    probePixelFormat: 'p010le',
+    args: ['-c:v', 'hevc_qsv', '-profile:v', 'main10', '-preset', 'veryslow', '-global_quality', '10']
+  },
+  hevc_amf_auto: {
+    id: 'hevc_amf_auto', label: 'AMD AMF · HEVC Main 10 High Quality', hardware: true,
+    probePixelFormat: 'p010le',
+    args: [
+      '-c:v', 'hevc_amf', '-profile:v', 'main10', '-usage', 'high_quality', '-quality', 'quality',
+      '-rc', 'qvbr', '-qvbr_quality_level', '10', '-bitdepth', '10', '-preanalysis', '1'
+    ]
+  },
+  libx265_auto: {
+    id: 'libx265_auto', label: 'CPU Software · HEVC Main 10 Quality (Slow)', hardware: false,
+    probePixelFormat: 'p010le',
+    args: [
+      '-c:v', 'libx265', '-profile:v', 'main10', '-preset', 'slow',
+      '-x265-params', 'crf=6:vbv-maxrate=300000:vbv-bufsize=600000:aq-mode=3'
+    ]
+  },
+  prores_ks: {
+    id: 'prores_ks', label: 'CPU Software · ProRes 422 HQ 10-bit', hardware: false,
+    probePixelFormat: 'yuv422p10le',
+    args: ['-c:v', 'prores_ks', '-profile:v', '3', '-vendor', 'apl0', '-bits_per_mb', '8000']
+  },
+  png_sequence: {
+    id: 'png_sequence', label: 'FFmpeg PNG Lossless · RGBA frames + PCM WAV', hardware: false,
+    probePixelFormat: 'rgba',
+    args: ['-c:v', 'png', '-compression_level', '4']
+  },
   hevc_nvenc_hdr: {
-    id: 'hevc_nvenc_hdr', label: 'NVIDIA NVENC - HEVC Main 10 HLG', hardware: true,
+    id: 'hevc_nvenc_hdr', label: 'NVIDIA NVENC - HEVC Main 10', hardware: true,
     args: ['-c:v', 'hevc_nvenc', '-profile:v', 'main10', '-preset', 'p7', '-tune', 'hq']
   },
   libx265_hdr: {
-    id: 'libx265_hdr', label: 'CPU Software - HEVC Main 10 HLG', hardware: false,
+    id: 'libx265_hdr', label: 'CPU Software - HEVC Main 10', hardware: false,
     args: ['-c:v', 'libx265', '-preset', 'slow']
   },
   h264_nvenc: {
@@ -1415,7 +1941,7 @@ function probeExportEncoder(profile) {
     const args = [
       '-hide_banner', '-loglevel', 'error',
       '-f', 'lavfi', '-i', 'color=c=black:s=256x256:d=0.1:r=30',
-      '-frames:v', '1', ...profile.args, '-pix_fmt', 'yuv420p', '-f', 'null', '-'
+      '-frames:v', '1', ...profile.args, '-pix_fmt', profile.probePixelFormat || 'yuv420p', '-f', 'null', '-'
     ];
     execFile(ffmpegExecutable(), args, { windowsHide: true, timeout: 8000 }, (error) => resolve(!error));
   });
@@ -1443,11 +1969,188 @@ async function recommendedExportEncoder({ refresh = false } = {}) {
   return cachedExportEncoder;
 }
 
+async function encoderForExportFormat(format, { refresh = false } = {}) {
+  if (format === 'gpu_auto') return recommendedAutomaticGpuEncoder({ refresh });
+  if (format === 'youtube_hdr') {
+    if (refresh) cachedHdrEncoder = null;
+    return recommendedHdrExportEncoder();
+  }
+  if (format === 'mp4_compatible') return recommendedExportEncoder({ refresh });
+  if (format === 'av1_quality') return recommendedAv1ExportEncoder({ refresh });
+  const fixedEncoderId = format === 'webm_quality'
+    ? 'libvpx_vp9'
+    : format === 'prores_422_hq' ? 'prores_ks' : format;
+  const profile = exportEncoderProfiles[fixedEncoderId];
+  if (!profile) throw new Error(`The ${videoFormats[format]?.name || 'selected export profile'} is not configured.`);
+  if (!refresh && cachedFixedExportEncoders.has(fixedEncoderId)) return cachedFixedExportEncoders.get(fixedEncoderId);
+  if (!await probeExportEncoder(profile)) {
+    throw new Error(`FFmpeg could not initialize ${profile.label}. Check the bundled FFmpeg installation and try again.`);
+  }
+  const validated = { ...profile, available: true };
+  cachedFixedExportEncoders.set(fixedEncoderId, validated);
+  return validated;
+}
+
 function validatedEncoderProfile(id) {
   return exportEncoderProfiles[id] || exportEncoderProfiles.libx264;
 }
 
 let cachedHdrEncoder = null;
+let cachedAv1Encoder = null;
+let cachedAutomaticGpuEncoder = null;
+
+function automaticGpuCandidateIds(gpuText) {
+  const text = String(gpuText || '').toLowerCase();
+  const candidates = [];
+  if (/nvidia|geforce|quadro/.test(text)) candidates.push('av1_nvenc');
+  if (/intel|arc|iris|uhd/.test(text)) candidates.push('av1_qsv');
+  if (/amd|radeon|advanced micro/.test(text)) candidates.push('av1_amf');
+  if (/nvidia|geforce|quadro/.test(text)) candidates.push('hevc_nvenc_auto');
+  if (/intel|arc|iris|uhd/.test(text)) candidates.push('hevc_qsv_auto');
+  if (/amd|radeon|advanced micro/.test(text)) candidates.push('hevc_amf_auto');
+  return candidates.length
+    ? candidates
+    : ['av1_nvenc', 'av1_qsv', 'av1_amf', 'hevc_nvenc_auto', 'hevc_qsv_auto', 'hevc_amf_auto'];
+}
+
+async function recommendedAutomaticGpuEncoder({ refresh = false } = {}) {
+  if (cachedAutomaticGpuEncoder && !refresh) return cachedAutomaticGpuEncoder;
+  await verifyFfmpeg();
+  const hardware = await detectHardware();
+  const gpuText = hardware.gpuDevices.map((device) => `${device.vendorString} ${device.deviceString} ${device.driverVendor}`).join(' ').toLowerCase();
+  const candidates = automaticGpuCandidateIds(gpuText);
+  for (const id of candidates) {
+    const profile = exportEncoderProfiles[id];
+    if (await probeExportEncoder(profile)) {
+      cachedAutomaticGpuEncoder = { ...profile, available: true };
+      return cachedAutomaticGpuEncoder;
+    }
+  }
+  const software = exportEncoderProfiles.libx265_auto;
+  cachedAutomaticGpuEncoder = { ...software, available: await probeExportEncoder(software) };
+  if (!cachedAutomaticGpuEncoder.available) {
+    throw new Error('FFmpeg could not initialize a compatible 10-bit AV1 or HEVC encoder.');
+  }
+  return cachedAutomaticGpuEncoder;
+}
+
+function encoderCodecName(id) {
+  if (String(id).startsWith('av1_') || id === 'libaom_av1') return 'AV1 10-bit';
+  if (String(id).startsWith('hevc_') || String(id).startsWith('libx265')) return 'HEVC Main 10';
+  return 'H.264';
+}
+
+async function scanExportEncoderCapabilities() {
+  await verifyFfmpeg();
+  const hardware = await detectHardware();
+  const gpuText = hardware.gpuDevices.map((device) => `${device.vendorString} ${device.deviceString} ${device.driverVendor}`).join(' ').toLowerCase();
+  const automaticCandidates = automaticGpuCandidateIds(gpuText);
+  const scanIds = [...new Set([
+    ...automaticCandidates,
+    ...(automaticCandidates.includes('av1_nvenc') ? ['h264_nvenc'] : []),
+    ...(automaticCandidates.includes('av1_qsv') ? ['h264_qsv'] : []),
+    ...(automaticCandidates.includes('av1_amf') ? ['h264_amf'] : []),
+    'libx265_auto', 'libaom_av1', 'libx264'
+  ])];
+  const encoders = [];
+  for (const id of scanIds) {
+    const profile = exportEncoderProfiles[id];
+    const started = performance.now();
+    const available = await probeExportEncoder(profile);
+    encoders.push({
+      id,
+      label: profile.label,
+      codec: encoderCodecName(id),
+      hardware: profile.hardware,
+      available,
+      probeMilliseconds: Math.round(performance.now() - started)
+    });
+  }
+  const selected = automaticCandidates
+    .map((id) => encoders.find((entry) => entry.id === id && entry.available))
+    .find(Boolean)
+    || encoders.find((entry) => entry.id === 'libx265_auto' && entry.available);
+  if (!selected) throw new Error('No compatible Automatic GPU Master encoder passed the compatibility scan.');
+  cachedAutomaticGpuEncoder = { ...exportEncoderProfiles[selected.id], available: true };
+  return {
+    scannedAt: new Date().toISOString(),
+    selected,
+    decision: selected.hardware
+      ? `${selected.codec} hardware encoding is the first supported quality path in Automatic priority order.`
+      : 'No compatible hardware AV1 or HEVC Main 10 encoder initialized, so Automatic selected CPU HEVC.',
+    gpuDevices: hardware.gpuDevices.filter((device) => !/microsoft basic render/i.test(device.deviceString)).map((device) => ({
+      name: device.deviceString || device.vendorString || 'Unknown GPU',
+      vendor: device.vendorString || device.driverVendor || '',
+      active: device.active,
+      driverVersion: device.driverVersion || ''
+    })),
+    encoders
+  };
+}
+
+async function benchmarkExportEncoder(options = {}) {
+  await verifyFfmpeg();
+  const format = normalizeRequestedFormat(options.format);
+  const width = Math.max(320, Math.min(7680, Math.round(Number(options.width) || 1920)));
+  const height = Math.max(240, Math.min(4320, Math.round(Number(options.height) || 1080)));
+  const fps = Math.max(1, Math.min(120, Math.round(Number(options.fps) || 60)));
+  const encoder = await encoderForExportFormat(format, { refresh: options.refreshEncoder === true });
+  if (encoder.id === 'libaom_av1') {
+    return {
+      format, width, height, fps,
+      encoder: { id: encoder.id, label: encoder.label, hardware: false },
+      skipped: true,
+      warning: 'CPU AV1 is intentionally not stress-tested because even a short 4K benchmark can take a long time. Use Automatic GPU Master for a practical fallback.'
+    };
+  }
+  const frameCount = encoder.hardware ? Math.max(30, Math.min(120, Math.round(fps * 1.25))) : Math.max(12, Math.min(30, Math.round(fps * .3)));
+  const pixelFormat = encoder.probePixelFormat || 'yuv420p';
+  const args = [
+    '-y', '-hide_banner', '-loglevel', 'error',
+    '-f', 'lavfi', '-i', `testsrc2=s=${width}x${height}:r=${fps}`,
+    '-frames:v', String(frameCount), '-vf', `format=${pixelFormat}`,
+    ...encoder.args, '-pix_fmt', pixelFormat, '-an', '-f', 'null', '-'
+  ];
+  const started = performance.now();
+  await new Promise((resolve, reject) => {
+    execFile(ffmpegExecutable(), args, { windowsHide: true, timeout: 30000, maxBuffer: 4 * 1024 * 1024 }, (error, _stdout, stderr) => {
+      if (!error) return resolve();
+      const detail = String(stderr || error.message || '').trim().split(/\r?\n/).slice(-3).join(' ');
+      reject(new Error(`Encoder benchmark failed for ${encoder.label}.${detail ? ` ${detail}` : ''}`));
+    });
+  });
+  const elapsedMilliseconds = Math.max(1, performance.now() - started);
+  return {
+    format, width, height, fps, frameCount, elapsedMilliseconds: Math.round(elapsedMilliseconds),
+    encodedFps: Number((frameCount / (elapsedMilliseconds / 1000)).toFixed(2)),
+    encoder: { id: encoder.id, label: encoder.label, hardware: encoder.hardware },
+    skipped: false,
+    warning: ''
+  };
+}
+
+async function recommendedAv1ExportEncoder({ refresh = false } = {}) {
+  if (cachedAv1Encoder && !refresh) return cachedAv1Encoder;
+  await verifyFfmpeg();
+  const hardware = await detectHardware();
+  const gpuText = hardware.gpuDevices.map((device) => `${device.vendorString} ${device.deviceString} ${device.driverVendor}`).join(' ').toLowerCase();
+  const preferred = [];
+  if (/nvidia|geforce|quadro/.test(gpuText)) preferred.push('av1_nvenc');
+  if (/intel|arc|iris|uhd/.test(gpuText)) preferred.push('av1_qsv');
+  if (/amd|radeon|advanced micro/.test(gpuText)) preferred.push('av1_amf');
+  const candidates = preferred.length ? preferred : ['av1_nvenc', 'av1_qsv', 'av1_amf'];
+  for (const id of candidates) {
+    const profile = exportEncoderProfiles[id];
+    if (await probeExportEncoder(profile)) {
+      cachedAv1Encoder = { ...profile, available: true };
+      return cachedAv1Encoder;
+    }
+  }
+  const software = exportEncoderProfiles.libaom_av1;
+  cachedAv1Encoder = { ...software, available: await probeExportEncoder(software) };
+  if (!cachedAv1Encoder.available) throw new Error('FFmpeg could not initialize a compatible AV1 encoder.');
+  return cachedAv1Encoder;
+}
 
 function probeHdrExportEncoder(profile) {
   return new Promise((resolve) => {
@@ -1500,6 +2203,60 @@ function recoveryManifestPath(id) {
   return path.join(recoveryDirectory(), `${id}.json`);
 }
 
+async function pathSizeBytes(targetPath) {
+  const stat = await fs.promises.stat(targetPath).catch(() => null);
+  if (!stat) return 0;
+  if (stat.isFile()) return stat.size;
+  if (!stat.isDirectory()) return 0;
+  let total = 0;
+  const entries = await fs.promises.readdir(targetPath, { withFileTypes: true }).catch(() => []);
+  for (const entry of entries) {
+    if (entry.isSymbolicLink()) continue;
+    const entryPath = path.join(targetPath, entry.name);
+    if (entry.isFile()) total += (await fs.promises.stat(entryPath).catch(() => null))?.size || 0;
+    else if (entry.isDirectory()) total += await pathSizeBytes(entryPath);
+  }
+  return total;
+}
+
+async function countPngSequenceFrames(directory) {
+  const entries = await fs.promises.readdir(directory, { withFileTypes: true }).catch(() => []);
+  return entries.filter((entry) => entry.isFile() && /^frame-\d{8}\.png$/i.test(entry.name)).length;
+}
+
+async function uniqueSequenceDirectory(parentDirectory, suggestedName) {
+  const parent = path.resolve(parentDirectory);
+  const parentStat = await fs.promises.stat(parent).catch(() => null);
+  if (!parentStat?.isDirectory()) throw new Error('The selected image-sequence destination is not an available folder.');
+  const baseName = `${String(suggestedName || 'quartic-pulse').trim() || 'quartic-pulse'} - PNG Sequence`;
+  for (let suffix = 1; suffix <= 1000; suffix++) {
+    const folderName = suffix === 1 ? baseName : `${baseName} (${suffix})`;
+    const candidate = path.resolve(parent, folderName);
+    if (path.dirname(candidate).toLowerCase() !== parent.toLowerCase()) throw new Error('The image-sequence folder name was invalid.');
+    try {
+      await fs.promises.mkdir(candidate, { recursive: false });
+      return candidate;
+    } catch (error) {
+      if (error.code !== 'EEXIST') throw error;
+    }
+  }
+  throw new Error('Could not create a unique image-sequence folder in the selected location.');
+}
+
+async function removeGeneratedSequenceFiles(session) {
+  const directory = path.resolve(String(session?.outputPath || ''));
+  if (!directory || path.resolve(String(session?.tempPath || '')) !== directory) return;
+  const stat = await fs.promises.stat(directory).catch(() => null);
+  if (!stat?.isDirectory()) return;
+  const entries = await fs.promises.readdir(directory, { withFileTypes: true }).catch(() => []);
+  for (const entry of entries) {
+    if (!entry.isFile()) continue;
+    if (!/^frame-\d{8}\.png$/i.test(entry.name) && !['audio.wav', 'sequence-manifest.json'].includes(entry.name)) continue;
+    await fs.promises.unlink(path.join(directory, entry.name)).catch(() => {});
+  }
+  await fs.promises.rmdir(directory).catch(() => {});
+}
+
 async function writeRecoveryManifest(session, extra = {}) {
   await fs.promises.mkdir(recoveryDirectory(), { recursive: true });
   const manifest = {
@@ -1517,6 +2274,8 @@ async function writeRecoveryManifest(session, extra = {}) {
     encodedFrames: session.frameIndex,
     codec: session.codec,
     finalEncoder: session.finalEncoder,
+    framePattern: session.framePattern,
+    sequenceAudioPath: session.sequenceAudioPath,
     ...extra
   };
   await fs.promises.writeFile(recoveryManifestPath(session.id), JSON.stringify(manifest, null, 2), 'utf8');
@@ -1538,8 +2297,20 @@ async function readRecoveryManifests() {
       const manifest = JSON.parse(await fs.promises.readFile(manifestPath, 'utf8'));
       const tempStat = await fs.promises.stat(manifest.tempPath).catch(() => null);
       const audioStat = await fs.promises.stat(manifest.audioPath).catch(() => null);
-      if (!tempStat?.isFile() || tempStat.size <= 32 || !audioStat?.isFile()) continue;
-      results.push({ ...manifest, tempBytes: tempStat.size });
+      if (!audioStat?.isFile()) continue;
+      if (manifest.format === 'png_sequence') {
+        if (!tempStat?.isDirectory()) continue;
+        const sequenceFrames = await countPngSequenceFrames(manifest.tempPath);
+        if (!sequenceFrames) continue;
+        results.push({
+          ...manifest,
+          encodedFrames: Math.max(sequenceFrames, Number(manifest.encodedFrames) || 0),
+          tempBytes: await pathSizeBytes(manifest.tempPath)
+        });
+      } else {
+        if (!tempStat?.isFile() || tempStat.size <= 32) continue;
+        results.push({ ...manifest, tempBytes: tempStat.size });
+      }
     } catch (_) { /* Ignore malformed recovery metadata. */ }
   }
   return results.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
@@ -1572,10 +2343,9 @@ async function inspectAndRepairIvf(filePath) {
 }
 
 async function completedExportDetails(outputPath, encoderId, extra = {}) {
-  const stat = await fs.promises.stat(outputPath).catch(() => null);
   return {
     outputPath,
-    sizeBytes: stat?.size || 0,
+    sizeBytes: await pathSizeBytes(outputPath),
     encoderId,
     encoderLabel: validatedEncoderProfile(encoderId).label,
     ...extra
@@ -1597,6 +2367,17 @@ function losslessPartialPath(outputPath, id) {
 }
 
 function rawProfileEncoderArguments(session) {
+  if (session.format === 'png_sequence') {
+    return [
+      '-y', '-hide_banner',
+      '-f', 'rawvideo', '-pixel_format', session.pixelFormat,
+      '-video_size', `${session.width}x${session.height}`,
+      '-framerate', String(session.fps), '-i', 'pipe:0',
+      '-map', '0:v:0', '-vf', 'vflip',
+      '-c:v', 'png', '-compression_level', '4', '-pix_fmt', 'rgba',
+      '-start_number', '0', '-f', 'image2', session.framePattern
+    ];
+  }
   const commonInput = [
     '-y', '-hide_banner',
     '-f', 'rawvideo', '-pixel_format', session.pixelFormat,
@@ -1613,6 +2394,21 @@ function rawProfileEncoderArguments(session) {
       '-c:a', 'flac', '-shortest',
       '-metadata', 'encoding_tool=Quartic Pulse Ut Video Lossless Playback Master',
       '-f', 'matroska', session.tempPath
+    ];
+  }
+  if (session.format === 'gpu_auto') {
+    const encoder = validatedEncoderProfile(session.finalEncoder);
+    const av1Output = encoder.id.startsWith('av1_');
+    return [
+      ...commonInput,
+      '-vf', 'vflip,zscale=primariesin=bt709:transferin=bt709:matrixin=gbr:rangein=full:primaries=bt709:transfer=bt709:matrix=bt709:range=limited,format=p010le',
+      ...encoder.args,
+      '-pix_fmt', 'p010le',
+      '-color_primaries', 'bt709', '-color_trc', 'bt709', '-colorspace', 'bt709', '-color_range', 'tv',
+      '-c:a', 'aac', '-b:a', '320k', '-ar', '48000', '-shortest',
+      '-tag:v', av1Output ? 'av01' : 'hvc1', '-movflags', '+faststart',
+      '-metadata', `encoding_tool=Quartic Pulse Automatic ${av1Output ? 'AV1' : 'HEVC'} GPU Master`,
+      '-f', 'mp4', session.tempPath
     ];
   }
   if (session.format === 'youtube_hdr') {
@@ -1641,6 +2437,57 @@ function rawProfileEncoderArguments(session) {
       '-tag:v', 'hvc1', '-movflags', '+faststart',
       '-metadata', `encoding_tool=Quartic Pulse YouTube ${session.hdrOutput ? 'HDR' : 'SDR'} Master`,
       '-f', 'mp4', session.tempPath
+    ];
+  }
+  if (session.format === 'mp4_compatible') {
+    const encoder = validatedEncoderProfile(session.finalEncoder);
+    return [
+      ...commonInput,
+      '-vf', 'vflip,zscale=primariesin=bt709:transferin=bt709:matrixin=gbr:rangein=full:primaries=bt709:transfer=bt709:matrix=bt709:range=limited,format=yuv420p',
+      ...encoder.args,
+      '-profile:v', 'high', '-level:v', '5.2',
+      '-color_primaries', 'bt709', '-color_trc', 'bt709', '-colorspace', 'bt709', '-color_range', 'tv',
+      '-c:a', 'aac', '-b:a', '320k', '-ar', '48000', '-shortest',
+      '-movflags', '+faststart',
+      '-metadata', 'encoding_tool=Quartic Pulse Compatible MP4 Master',
+      '-f', 'mp4', session.tempPath
+    ];
+  }
+  if (session.format === 'webm_quality') {
+    return [
+      ...commonInput,
+      '-vf', 'vflip,zscale=primariesin=bt709:transferin=bt709:matrixin=gbr:rangein=full:primaries=bt709:transfer=bt709:matrix=bt709:range=limited,format=yuv444p',
+      ...exportEncoderProfiles.libvpx_vp9.args,
+      '-pix_fmt', 'yuv444p', '-threads', '0',
+      '-color_primaries', 'bt709', '-color_trc', 'bt709', '-colorspace', 'bt709', '-color_range', 'tv',
+      '-c:a', 'libopus', '-b:a', '256k', '-ar', '48000', '-shortest',
+      '-metadata', 'encoding_tool=Quartic Pulse Open Quality VP9 Master',
+      '-f', 'webm', session.tempPath
+    ];
+  }
+  if (session.format === 'av1_quality') {
+    const encoder = validatedEncoderProfile(session.finalEncoder);
+    return [
+      ...commonInput,
+      '-vf', 'vflip,zscale=primariesin=bt709:transferin=bt709:matrixin=gbr:rangein=full:primaries=bt709:transfer=bt709:matrix=bt709:range=limited,format=yuv420p10le',
+      ...encoder.args,
+      '-pix_fmt', 'yuv420p10le',
+      '-color_primaries', 'bt709', '-color_trc', 'bt709', '-colorspace', 'bt709', '-color_range', 'tv',
+      '-c:a', 'libopus', '-b:a', '256k', '-ar', '48000', '-shortest',
+      '-metadata', `encoding_tool=Quartic Pulse AV1 ${encoder.hardware ? 'Hardware' : 'CPU'} Master`,
+      '-f', 'webm', session.tempPath
+    ];
+  }
+  if (session.format === 'prores_422_hq') {
+    return [
+      ...commonInput,
+      '-vf', 'vflip,zscale=primariesin=bt709:transferin=bt709:matrixin=gbr:rangein=full:primaries=bt709:transfer=bt709:matrix=bt709:range=limited,format=yuv422p10le',
+      ...exportEncoderProfiles.prores_ks.args,
+      '-pix_fmt', 'yuv422p10le', '-threads', '0',
+      '-color_primaries', 'bt709', '-color_trc', 'bt709', '-colorspace', 'bt709', '-color_range', 'tv',
+      '-c:a', 'pcm_s24le', '-ar', '48000', '-shortest',
+      '-metadata', 'encoding_tool=Quartic Pulse ProRes 422 HQ Editing Master',
+      '-f', 'mov', session.tempPath
     ];
   }
   return [
@@ -1717,6 +2564,56 @@ async function finishRawProfileEncoder(session) {
     const detail = result?.error?.message || session.encoderErrorText || `FFmpeg exited with code ${result?.code}.`;
     throw new Error(`The ${videoFormats[session.format]?.name || 'offline master'} could not be finalized.\n${detail}`);
   }
+}
+
+function writePcmSequenceAudio(session, renderedFrameCount) {
+  return new Promise((resolve, reject) => {
+    const duration = Math.max(.001, Number(renderedFrameCount) / Math.max(1, Number(session.fps) || 60));
+    const args = [
+      '-y', '-hide_banner', '-i', session.audioPath,
+      '-map', '0:a:0', '-vn', '-t', duration.toFixed(6),
+      '-c:a', 'pcm_s24le', '-ar', '48000', '-ac', '2',
+      session.sequenceAudioPath
+    ];
+    const child = spawn(ffmpegExecutable(), args, { windowsHide: true, stdio: ['ignore', 'ignore', 'pipe'] });
+    session.child = child;
+    let errorText = '';
+    child.stderr.on('data', (chunk) => { errorText = (errorText + chunk.toString()).slice(-12000); });
+    child.once('error', reject);
+    child.once('close', (code) => {
+      session.child = null;
+      if (code === 0) resolve();
+      else reject(new Error(`The matching 24-bit WAV could not be created.\n${errorText || `FFmpeg exited with code ${code}.`}`));
+    });
+  });
+}
+
+async function finalizePngSequence(session, renderedFrameCount) {
+  const frameCount = Math.max(1, Math.round(Number(renderedFrameCount) || 1));
+  session.sequenceAudioPath ||= path.join(session.outputPath, 'audio.wav');
+  session.framePattern ||= path.join(session.outputPath, 'frame-%08d.png');
+  await writePcmSequenceAudio(session, frameCount);
+  const manifest = {
+    schema: 'quartic-pulse-image-sequence/v1',
+    createdAt: session.createdAt || new Date().toISOString(),
+    width: session.width,
+    height: session.height,
+    framesPerSecond: session.fps,
+    frameCount,
+    durationSeconds: frameCount / Math.max(1, Number(session.fps) || 60),
+    firstFrame: 'frame-00000000.png',
+    framePattern: 'frame-%08d.png',
+    audioFile: path.basename(session.sequenceAudioPath),
+    audioFormat: 'PCM signed 24-bit little-endian, 48 kHz, stereo',
+    color: '8-bit RGBA, full-resolution RGB 4:4:4',
+    sourceAudio: path.basename(session.audioPath),
+    application: 'Quartic Pulse'
+  };
+  const manifestPath = path.join(session.outputPath, 'sequence-manifest.json');
+  const temporaryPath = `${manifestPath}.${process.pid}.tmp`;
+  await fs.promises.writeFile(temporaryPath, JSON.stringify(manifest, null, 2), 'utf8');
+  await fs.promises.rename(temporaryPath, manifestPath);
+  return manifest;
 }
 
 function recoverLosslessFfv1Master(session, onProgress = () => {}) {
@@ -2067,26 +2964,36 @@ app.whenReady().then(() => {
   ipcMain.handle('obs:get-output-status', async () => Boolean(obsOutputWindow && !obsOutputWindow.isDestroyed()));
   ipcMain.handle('output:get-capabilities', async () => advancedOutputCapabilities());
   ipcMain.handle('performance:get-hardware', async () => detectHardware());
+  ipcMain.handle('export:encoder-capabilities', async () => scanExportEncoderCapabilities());
+  ipcMain.handle('export:benchmark-encoder', async (_event, options) => benchmarkExportEncoder(options));
   ipcMain.handle('export:preflight', async (_event, options) => {
     const format = normalizeRequestedFormat(options?.format);
-    if (options?.refreshEncoder === true) cachedHdrEncoder = null;
-    const encoder = format === 'youtube_hdr'
-      ? await recommendedHdrExportEncoder()
-      : exportEncoderProfiles[format];
+    const encoder = await encoderForExportFormat(format, { refresh: options?.refreshEncoder === true });
     const duration = Math.max(0, Number(options?.duration) || 0);
-    const masterBitrate = Math.max(1000000, Number(options?.masterBitrate) || 12000000);
     const width = Math.max(320, Math.min(7680, Math.round(Number(options?.width) || 1920)));
     const height = Math.max(240, Math.min(4320, Math.round(Number(options?.height) || 1080)));
     const fps = Math.max(1, Math.min(120, Math.round(Number(options?.fps) || 60)));
     const rawBytes = duration * width * height * fps * 4;
-    const estimatedOutputBytes = format === 'youtube_hdr'
-      ? duration * Math.max(180000000, masterBitrate) / 8
-      : rawBytes * (format === 'utvideo' ? 0.62 : 0.58) + duration * 300000;
-    const requiredBytes = Math.ceil(estimatedOutputBytes * 1.2 + 536870912);
+    const bitrate = exportProfileCatalog.bitrateRange(format, width, height, fps);
+    const estimatedSize = exportProfileCatalog.estimatedSizeRange(format, width, height, fps, duration);
+    const estimatedOutputBytes = estimatedSize.center;
+    const requiredBytes = Math.ceil(estimatedSize.maximum * 1.15 + 536870912);
     const defaultDestination = app.getPath('videos');
     const freeBytes = await availableDiskBytes(defaultDestination).catch(() => 0);
     return {
-      encoder: { id: encoder.id, label: encoder.label, hardware: encoder.hardware },
+      encoder: {
+        id: encoder.id,
+        label: encoder.label,
+        hardware: encoder.hardware,
+        warning: format === 'gpu_auto' && !encoder.hardware
+          ? 'No compatible hardware AV1 or HEVC Main 10 encoder was found. CPU HEVC will preserve quality but export more slowly.'
+          : format === 'av1_quality' && !encoder.hardware
+            ? 'No compatible hardware AV1 encoder was found. CPU AV1 preserves quality but can take many times longer than the song duration, especially at 4K.'
+            : ''
+      },
+      profile: videoFormats[format],
+      estimatedBitrate: bitrate,
+      estimatedSize,
       masterBytes: Math.ceil(rawBytes),
       estimatedOutputBytes: Math.ceil(estimatedOutputBytes),
       requiredBytes,
@@ -2104,7 +3011,9 @@ app.whenReady().then(() => {
       height: item.height,
       fps: item.fps,
       encodedFrames: item.encodedFrames,
+      format: item.format,
       pipeline: item.pipeline,
+      recoverable: item.pipeline !== 'raw-profile' || ['ffv1', 'utvideo', 'png_sequence'].includes(item.format),
       tempBytes: item.tempBytes
     }));
   });
@@ -2119,10 +3028,55 @@ app.whenReady().then(() => {
     const manifests = await readRecoveryManifests();
     const manifest = manifests.find((item) => item.id === String(id));
     if (!manifest) throw new Error('The interrupted export is no longer available.');
+    if (manifest.format === 'png_sequence') {
+      const frames = await countPngSequenceFrames(manifest.tempPath);
+      if (!frames) throw new Error('No complete PNG frames were found in the interrupted sequence.');
+      const session = {
+        ...manifest,
+        type: 'offline',
+        outputPath: manifest.outputPath,
+        tempPath: manifest.tempPath,
+        framePattern: manifest.framePattern || path.join(manifest.outputPath, 'frame-%08d.png'),
+        sequenceAudioPath: manifest.sequenceAudioPath || path.join(manifest.outputPath, 'audio.wav'),
+        frameCount: frames,
+        frameIndex: frames,
+        finalEncoder: 'png_sequence',
+        child: null,
+        cancelled: false,
+        finishing: true,
+        completed: false
+      };
+      if (!event.sender.isDestroyed()) {
+        event.sender.send('export:progress', {
+          id: session.id,
+          stage: 'finalize',
+          progress: .7,
+          message: `Completing ${frames} recovered PNG frames with matching audio...`
+        });
+      }
+      await ensureExportDiskSpace(session.outputPath, Math.max(268435456, Number(manifest.tempBytes) || 0));
+      try {
+        await finalizePngSequence(session, frames);
+        session.completed = true;
+        if (!event.sender.isDestroyed()) {
+          event.sender.send('export:progress', { id: session.id, stage: 'saving', progress: 1, message: 'Recovered sequence folder saved' });
+        }
+        const result = await completedExportDetails(session.outputPath, session.finalEncoder, {
+          format: session.format,
+          recovered: true,
+          partial: frames < Math.max(frames, Number(manifest.frameCount) || 0)
+        });
+        await removeRecoveryFiles(session, { removeVideo: false });
+        return result;
+      } catch (error) {
+        await writeRecoveryManifest(session, { status: 'interrupted', encodedFrames: frames }).catch(() => {});
+        throw error;
+      }
+    }
     const rawProfile = manifest.pipeline === 'raw-profile';
     const recoverableRawMaster = rawProfile && ['ffv1', 'utvideo'].includes(manifest.format);
-    if (rawProfile && manifest.format === 'youtube_hdr') {
-      throw new Error('This interrupted YouTube HDR MP4 was stopped before FFmpeg could write its final MP4 index. It cannot be safely recovered; discard it and run the export again.');
+    if (rawProfile && !recoverableRawMaster) {
+      throw new Error(`This interrupted ${videoFormats[manifest.format]?.name || 'compressed master'} stopped before FFmpeg could close its container. It cannot be safely recovered; discard it and run the export again.`);
     }
     const lossless = manifest.pipeline === 'ffv1-raw' || manifest.format === 'ffv1' || recoverableRawMaster;
     const frames = lossless
@@ -2330,29 +3284,42 @@ app.whenReady().then(() => {
     if (!audioStat?.isFile()) throw new Error('The selected local audio file could not be opened for offline export.');
     const suggested = String(options?.suggestedName || 'quartic-pulse').replace(/[<>:"/\\|?*]/g, '-').slice(0, 100);
     const requestedFormat = normalizeRequestedFormat(options?.format);
-    const result = await dialog.showSaveDialog({
-      title: 'Export offline music visualizer',
-      defaultPath: `${suggested}.${videoFormats[requestedFormat].extension}`,
-      filters: saveDialogFilters(requestedFormat)
-    });
-    if (result.canceled || !result.filePath) return null;
-    const { format, outputPath } = resolveOutputSelection(result.filePath, requestedFormat);
+    const format = requestedFormat;
+    let outputPath;
+    if (videoFormats[format].directory) {
+      const result = await dialog.showOpenDialog({
+        title: 'Choose where to create the recoverable PNG sequence folder',
+        defaultPath: app.getPath('videos'),
+        properties: ['openDirectory', 'createDirectory']
+      });
+      if (result.canceled || !result.filePaths?.[0]) return null;
+      outputPath = await uniqueSequenceDirectory(result.filePaths[0], suggested);
+    } else {
+      const result = await dialog.showSaveDialog({
+        title: 'Export offline music visualizer',
+        defaultPath: `${suggested}.${videoFormats[format].extension}`,
+        filters: saveDialogFilters(format)
+      });
+      if (result.canceled || !result.filePath) return null;
+      outputPath = resolveOutputSelection(result.filePath, format).outputPath;
+    }
     const id = crypto.randomUUID();
-    const tempPath = losslessPartialPath(outputPath, id);
+    const tempPath = format === 'png_sequence' ? outputPath : losslessPartialPath(outputPath, id);
     await ensureExportDiskSpace(outputPath, options?.requiredBytes);
-    const finalEncoder = format === 'youtube_hdr'
-      ? (await recommendedHdrExportEncoder()).id
-      : format;
+    const finalEncoder = (await encoderForExportFormat(format)).id;
     const hdrOutput = format === 'youtube_hdr' && options?.hdrOutput === true;
-    const pixelFormat = hdrOutput && options?.pixelFormat === 'x2bgr10le'
+    const tenBitOutput = hdrOutput || format === 'gpu_auto' || format === 'av1_quality';
+    const pixelFormat = tenBitOutput && options?.pixelFormat === 'x2bgr10le'
       ? 'x2bgr10le'
       : 'rgba';
-    if (hdrOutput && pixelFormat !== 'x2bgr10le') {
-      throw new Error('The YouTube HDR profile requires the 10-bit WebGL export framebuffer.');
+    if (tenBitOutput && pixelFormat !== 'x2bgr10le') {
+      throw new Error('The selected 10-bit profile requires the RGB10 WebGL export framebuffer.');
     }
     const session = {
       id, type: 'offline', pipeline: 'raw-profile',
       outputPath, format, tempPath, audioPath, width, height, fps, frameCount, pixelFormat, hdrOutput,
+      framePattern: format === 'png_sequence' ? path.join(outputPath, 'frame-%08d.png') : null,
+      sequenceAudioPath: format === 'png_sequence' ? path.join(outputPath, 'audio.wav') : null,
       frameIndex: 0, stream: null, child: null, finishing: false, cancelled: false,
       completed: false, finalEncoder, createdAt: new Date().toISOString()
     };
@@ -2398,20 +3365,29 @@ app.whenReady().then(() => {
       notify('finalize', 0, `Closing ${videoFormats[session.format].name} and its audio...`);
       await finishRawProfileEncoder(session);
       if (session.cancelled) throw new Error('Offline export cancelled.');
-      await fs.promises.unlink(session.outputPath).catch((error) => {
-        if (error.code !== 'ENOENT') throw error;
-      });
-      await fs.promises.rename(session.tempPath, session.outputPath);
-      notify('saving', 1, `Final file saved to ${destinationName}`);
+      if (session.format === 'png_sequence') {
+        notify('finalize', .7, 'Creating the matching 24-bit WAV and sequence manifest...');
+        await finalizePngSequence(session, session.frameCount);
+        notify('saving', 1, `Sequence folder saved to ${destinationName}`);
+      } else {
+        await fs.promises.unlink(session.outputPath).catch((error) => {
+          if (error.code !== 'ENOENT') throw error;
+        });
+        await fs.promises.rename(session.tempPath, session.outputPath);
+        notify('saving', 1, `Final file saved to ${destinationName}`);
+      }
       session.completed = true;
       return completedExportDetails(session.outputPath, session.finalEncoder, {
         format: session.format,
         partial: session.frameCount < expectedFrameCount
       });
     } finally {
-      if (session.cancelled) await fs.promises.unlink(session.outputPath).catch(() => {});
+      if (session.cancelled) {
+        if (session.format === 'png_sequence') await removeGeneratedSequenceFiles(session);
+        else await fs.promises.unlink(session.outputPath).catch(() => {});
+      }
       exportSessions.delete(id);
-      if (session.completed || session.cancelled) await removeRecoveryFiles(session);
+      if (session.completed || session.cancelled) await removeRecoveryFiles(session, { removeVideo: session.format !== 'png_sequence' });
       else await writeRecoveryManifest(session, { status: 'interrupted' }).catch(() => {});
     }
   });
@@ -2426,7 +3402,8 @@ app.whenReady().then(() => {
     if (session.pipeline === 'raw-profile') await session.encoderDone?.catch(() => {});
     session.stream?.destroy();
     exportSessions.delete(id);
-    await removeRecoveryFiles(session);
+    if (session.format === 'png_sequence') await removeGeneratedSequenceFiles(session);
+    await removeRecoveryFiles(session, { removeVideo: session.format !== 'png_sequence' });
     return true;
   });
 
@@ -2436,7 +3413,7 @@ app.whenReady().then(() => {
   ipcMain.handle('export:open', async (_event, filePath) => {
     const resolved = path.resolve(String(filePath || ''));
     const stat = await fs.promises.stat(resolved).catch(() => null);
-    if (!stat?.isFile()) throw new Error('The exported file could not be found.');
+    if (!stat || (!stat.isFile() && !stat.isDirectory())) throw new Error('The exported file or sequence folder could not be found.');
     const error = await shell.openPath(resolved);
     if (error) throw new Error(error);
     return true;
