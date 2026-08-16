@@ -81,7 +81,7 @@
         warnings.push('The default Videos drive may not have enough space. Choose another destination when prompted.');
       }
       return Object.freeze({
-        video: `${preflight.width}×${preflight.height} · ${preflight.fps} FPS · ${preflight.iterations} math iterations${preflight.supersampling ? ' · 4× supersampling' : ''} · ${profile.label}`,
+        video: `${preflight.width}×${preflight.height} · ${preflight.fps} FPS · ${preflight.iterations} math iterations${preflight.matchLive ? ' · live parity' : ' · alternate depth'}${preflight.supersampling ? ' · 4× supersampling' : ''} · ${profile.label}`,
         encoder: preflight.encoder?.label || 'Encoder unavailable',
         format: `${profile.container} · ${profile.videoCodec}`,
         color: hdrOutput ? '10-bit · 4:2:0 · Rec.2020 HLG' : `${profile.colorDepth} · ${profile.chroma} · BT.709`,

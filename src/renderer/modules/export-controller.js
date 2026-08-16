@@ -6,7 +6,7 @@
     const root = options.root || document.body;
     const offlineControlSelectors = Object.freeze([
       '#resolution', '#fps', '#videoFormat', '#exportIterations', '#exportDetail',
-      '#exportSupersampling', '#exportHdrOutput', '#exportMode', '#unleashedMode', '#performanceMode'
+      '#exportMatchLive', '#exportSupersampling', '#exportHdrOutput', '#exportMode', '#unleashedMode', '#performanceMode'
     ]);
     const liveControlSelectors = Object.freeze([
       '#resolution', '#fps', '#videoFormat', '#exportDetail',
@@ -33,6 +33,7 @@
       listen('#fps', 'change', (event) => options.onFpsChange?.(event));
       listen('#exportMode', 'change', (event) => options.onModeChange?.(event));
       listen('#exportDetail', 'change', (event) => options.onDetailChange?.(event));
+      listen('#exportMatchLive', 'change', (event) => options.onMatchLiveChange?.(event));
       listen('#exportSupersampling', 'change', (event) => options.onSupersamplingChange?.(event));
       listen('#videoFormat', 'change', (event) => options.onFormatChange?.(event));
       listen('#exportHdrOutput', 'change', (event) => options.onHdrChange?.(event));
@@ -66,6 +67,7 @@
         format: query('#videoFormat')?.value || '',
         requestedIterations: query('#exportIterations')?.value || '',
         detail: query('#exportDetail')?.value || '',
+        matchLive: Boolean(query('#exportMatchLive')?.checked),
         supersampling: Boolean(query('#exportSupersampling')?.checked),
         hdrOutput: Boolean(query('#exportHdrOutput')?.checked),
         showPreview: Boolean(query('#showExportPreview')?.checked)

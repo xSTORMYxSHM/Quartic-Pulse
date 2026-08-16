@@ -22,8 +22,11 @@
         throw new RangeError('Export preflight requires a valid resolution, frame rate, and detail level.');
       }
       const duration = Math.max(.1, Number(settings.durationOverride) || Number(settings.audioDuration) || 0);
-      const iterations = sampling.effectiveIterations(settings.requestedIterations, {
-        unleashed: Boolean(settings.unleashed)
+      const matchLive = Boolean(settings.matchLive);
+      const iterationSource = matchLive ? settings.effectiveIterations : settings.requestedIterations;
+      const iterations = sampling.effectiveIterations(iterationSource, {
+        unleashed: Boolean(settings.unleashed),
+        minimum: matchLive ? 1 : 240
       });
       const masterBitrate = encoder.offlineVideoBitrate(width, height, fps, detail);
       const context = Object.freeze({
@@ -38,6 +41,7 @@
         format: String(settings.format || ''),
         hdrOutput: Boolean(settings.hdrOutput),
         supersampling: Boolean(settings.supersampling),
+        matchLive,
         refreshEncoder: Boolean(settings.refreshEncoder)
       });
       const request = Object.freeze({
@@ -51,6 +55,7 @@
         format: context.format,
         hdrOutput: context.hdrOutput,
         supersampling: context.supersampling,
+        matchLive: context.matchLive,
         refreshEncoder: context.refreshEncoder
       });
       return Object.freeze({ context, request });

@@ -30,6 +30,8 @@
       const fps = positiveNumber(raw.fps, 'Export frame rate');
       const detail = positiveNumber(raw.detail, 'Export detail');
       const requestedIterations = Math.round(positiveNumber(raw.requestedIterations, 'Export iterations'));
+      const matchLive = Boolean(raw.matchLive);
+      const liveIterations = Math.round(positiveNumber(context.liveIterations || requestedIterations, 'Live iterations'));
       const format = profiles.normalizeProfileId(raw.format);
       if (!profiles.profiles[format]) throw new RangeError(`Unsupported export format: ${raw.format || 'unknown'}`);
       const unleashed = Boolean(context.unleashed);
@@ -44,7 +46,12 @@
         profile: profiles.profiles[format],
         detail,
         requestedIterations,
-        effectiveIterations: sampling.effectiveIterations(requestedIterations, { unleashed }),
+        effectiveIterations: sampling.effectiveIterations(matchLive ? liveIterations : requestedIterations, {
+          unleashed,
+          minimum: matchLive ? 1 : 240
+        }),
+        matchLive,
+        liveIterations,
         supersampling: Boolean(raw.supersampling),
         hdrOutput,
         hdrProfile,
@@ -69,6 +76,8 @@
         format: snapshot.format,
         hdrOutput: snapshot.hdrOutput,
         supersampling: snapshot.supersampling,
+        matchLive: snapshot.matchLive,
+        effectiveIterations: snapshot.effectiveIterations,
         refreshEncoder: Boolean(options.refreshEncoder)
       });
     }

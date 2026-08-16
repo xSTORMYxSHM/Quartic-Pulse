@@ -1598,6 +1598,7 @@
     exportDetail: 1.6,
     exportIterations: 600,
     exportIterationTarget: 0,
+    exportMatchLive: true,
     exportSupersampling: false,
     offlineSamplePass: 0,
     exportSampleOffsetX: 0,
@@ -1956,7 +1957,7 @@
     beatSensitivity: { defaultRange: .65, min: 0, max: 100, step: 1, decimals: 0, fromRange: (value) => value * 100, toRange: (value) => value / 100, tip: 'Controls the independent adaptive onset detector. Higher values recognize quieter and less bass-heavy beats without changing visual or equation smoothing.' },
     beatCooldown: { defaultRange: 150, min: 80, max: 300, step: 5, decimals: 0, tip: 'Minimum time between detected beats. Raise it if a single drum hit triggers twice; lower it for very fast music.' },
     iterations: { defaultRange: 220, min: 80, max: 500, step: 10, decimals: 0, tip: 'Higher iteration counts reveal finer boundaries but require more GPU work.' },
-    exportIterations: { defaultRange: 600, min: 240, max: 1200, step: 20, decimals: 0, tip: 'Directly controls mathematical depth for offline export. Selecting a resolution suggests 320 at 480p, 400 at 720p, 600 at 1080p, 800 at 1440p, or 1000 at 4K; you can then choose any value.' },
+    exportIterations: { defaultRange: 600, min: 240, max: 1200, step: 20, decimals: 0, tip: 'Alternate-look mathematical depth for offline export. It applies only when Match Live Mathematics is off; higher values change the fractal set rather than simply sharpening it.' },
     obsChromaThreshold: { defaultRange: .08, min: 0, max: 100, step: 1, decimals: 0, fromRange: (value) => value / .5 * 100, toRange: (value) => value / 100 * .5, tip: 'Higher values replace more dark pixels with pure key green. Chroma-safe mode automatically shifts green subject colors away from the OBS key.' }
     ,beatBpm: { defaultRange: 120, min: 60, max: 200, step: .1, decimals: 1, tip: 'Manual tempo used when Automatic BPM is off or has not found a reliable beat.' }
     ,beatOffset: { defaultRange: 0, min: -500, max: 500, step: 5, decimals: 0, tip: 'Moves the beat grid earlier or later in milliseconds so visual changes land on the music.' }
@@ -1995,6 +1996,7 @@
     autoDrift: true,
     fractalDimensional: false,
     equationFolding: false,
+    exportMatchLive: true,
     exportSupersampling: false,
     exportHdrOutput: false,
     showExportPreview: false,
@@ -2056,6 +2058,7 @@
     onFpsChange: () => coordinateExportSettingsChange('fps'),
     onModeChange: () => coordinateExportSettingsChange('mode'),
     onDetailChange: () => coordinateExportSettingsChange('detail'),
+    onMatchLiveChange: (event) => coordinateExportSettingsChange('parity', { checked: event.target.checked }),
     onSupersamplingChange: (event) => coordinateExportSettingsChange('supersampling', { checked: event.target.checked }),
     onFormatChange: () => coordinateExportSettingsChange('format'),
     onHdrChange: () => coordinateExportSettingsChange('hdr'),
@@ -2522,6 +2525,20 @@
     state.pulseAcceptedTotal = 0;
     resetEquationAudioEnvelope();
     resetBeatDetector();
+  }
+
+  function resetExportAudioVisualState() {
+    state.bass = 0;
+    state.mids = 0;
+    state.highs = 0;
+    state.rms = 0;
+    state.beat = 0;
+    state.frequencyHue = 0;
+    state.dominantBand = 'silence';
+    state.autoReactivityGain = 1;
+    state.spectrumData.fill(0);
+    state.waveformData.fill(0);
+    resetPulseEvents();
   }
 
   function resetEquationAudioEnvelope() {
@@ -3297,9 +3314,14 @@
     if (!isObsOutput && !state.offlineExporting) updateAudioAnalysis(delta);
     if (!secondaryOfflineSample) updateEquationAudioEnvelope(delta);
 
-    if (!state.offlineExporting) state.visualTime = state.exporting
-      ? audio.currentTime
-      : state.visualTime + delta * ((isObsOutput ? obsRemoteAudioActive : audioIsActive()) ? 1 : .18);
+    if (!state.offlineExporting) {
+      const deckTimeAvailable = state.audioMode === 'deck'
+        && Boolean(currentPlaylistItem())
+        && Number.isFinite(audio.currentTime);
+      state.visualTime = deckTimeAvailable
+        ? audio.currentTime
+        : state.visualTime + delta * ((isObsOutput ? obsRemoteAudioActive : audioIsActive()) ? 1 : .18);
+    }
     const baseModulation = secondaryOfflineSample && state.offlineBaseModulation
       ? state.offlineBaseModulation
       : updateAudioModulation(delta);
@@ -3811,14 +3833,17 @@
     const recommendation = recommendedExportIterations(width, height);
     state.exportIterations = recommendation;
     $('#exportIterations').value = String(recommendation);
-    $('#exportIterationsValue').value = recommendation;
-    if (announce) showToast(`${width}×${height} selected · ${recommendation} export iterations recommended`);
+    renderExportMathParity();
+    if (announce) showToast(state.exportMatchLive
+      ? `${width}×${height} selected · matching ${state.iterations} live iterations`
+      : `${width}×${height} selected · ${recommendation} alternate-look iterations recommended`);
     return recommendation;
   }
 
   function currentExportSettings(audioDuration = Number(audio.duration) || 0) {
     return exportSettingsSnapshotEngine.capture(exportController.readSettings(), {
       unleashed: state.unleashedMode,
+      liveIterations: state.iterations,
       audioDuration
     });
   }
@@ -3985,7 +4010,22 @@
 
   function syncExportIterations(value) {
     state.exportIterations = Number(value);
-    $('#exportIterationsValue').value = state.exportIterations;
+    renderExportMathParity();
+  }
+
+  function renderExportMathParity() {
+    const matchLive = Boolean(state.exportMatchLive);
+    const group = $('#exportIterations')?.closest('.slider-group');
+    group?.classList.toggle('control-disabled', matchLive);
+    $('#exportIterations')?.setAttribute('aria-disabled', String(matchLive));
+    if ($('#exportIterationsValue')) {
+      $('#exportIterationsValue').value = matchLive ? `${state.iterations} · LIVE` : state.exportIterations;
+    }
+  }
+
+  function syncExportMatchLive(checked) {
+    state.exportMatchLive = Boolean(checked);
+    renderExportMathParity();
   }
 
   function syncExportSupersampling(checked) {
@@ -3996,6 +4036,7 @@
     return exportSettingsCoordinatorEngine.change(kind, payload, {
       recommendIterations: applyResolutionIterationRecommendation,
       syncIterations: syncExportIterations,
+      syncParity: syncExportMatchLive,
       syncSupersampling: syncExportSupersampling,
       updateHdrAvailability: updateExportHdrAvailability,
       refreshPerformance: updateExportPerformanceNote,
@@ -5962,7 +6003,7 @@
     'bulbPower', 'bulbDetail', 'bulbAudio', 'bulbOrbit', 'bulbFold', 'bulbGlow', 'bulbCamera',
     'zoom', 'flow', 'autoReactivity', 'reactivity', 'motion', 'spin', 'equationSmoothing', 'equationMod',
     'adaptiveQuality', 'beatPulse', 'autoDrift',
-    'iterations', 'resolution', 'exportIterations', 'fps', 'videoFormat', 'exportDetail', 'exportSupersampling', 'exportHdrOutput', 'showExportPreview', 'exportCompleteSound',
+    'iterations', 'resolution', 'exportIterations', 'fps', 'videoFormat', 'exportDetail', 'exportMatchLive', 'exportSupersampling', 'exportHdrOutput', 'showExportPreview', 'exportCompleteSound',
     'obsResolution', 'obsFps', 'obsAlwaysOnTop', 'obsChromaKey', 'obsChromaThreshold',
     'musicPersonality', 'songDirectorStyle', 'songDirectorBehavior', 'songDirectorTransition', 'songDirectorIntensity'
   ];
@@ -8155,14 +8196,13 @@
           width,
           height,
           tenBit: tenBitProfile,
+          hdr: hdrProfile,
           supersampling
         });
         exportRuntimeStateCoordinator.activate('offline', {
           width, height, fps, hdrProfile, tenBitProfile, exportDetail, exportIterations
         }, { loopPlayback: audio.loop });
-        resetPulseEvents();
-        state.spectrumData.fill(0);
-        state.waveformData.fill(0);
+        resetExportAudioVisualState();
         renderPlaylist();
         exportResultWorkflowEngine.reset();
         exportController.renderOfflineState('rendering', { hidePreview: !context.showPreview });
@@ -8234,9 +8274,10 @@
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
         if (context?.tenBitProfile) releaseHdrExportTarget();
         exportRuntimeStateCoordinator.restore('offline');
-        resetPulseEvents();
+        resetExportAudioVisualState();
         exportController.renderOfflineState('restored', { completed });
         updateUnleashedMode(state.unleashedMode);
+        renderExportMathParity();
         audioController.renderLiveStatus('IDLE');
         updateTrackControls();
         renderPlaylist();
@@ -8285,7 +8326,7 @@
       beginSession: (context) => window.quarticDesktop.beginExport(context.sessionRequest),
       activate: async ({ context }) => {
         exportRuntimeStateCoordinator.activate('live', context, { loopPlayback: audio.loop });
-        resetPulseEvents();
+        resetExportAudioVisualState();
         renderPlaylist();
         audio.loop = false;
         exportResultWorkflowEngine.reset();
@@ -8497,6 +8538,7 @@
   $('#iterations').addEventListener('input', (event) => {
     state.iterations = Number(event.target.value);
     $('#iterationsValue').value = state.iterations;
+    if (state.exportMatchLive) renderExportMathParity();
     coordinateExportSettingsChange('visual');
   });
   $('#visualStyle').addEventListener('change', (event) => {
@@ -8648,6 +8690,8 @@
     localStorage.setItem('quarticPulseExportCompleteSound', String(event.target.checked));
   });
   state.exportSupersampling = $('#exportSupersampling').checked;
+  state.exportMatchLive = $('#exportMatchLive').checked;
+  renderExportMathParity();
   function updateExportHdrAvailability() {
     const available = exportController.readSettings().format === 'youtube_hdr';
     exportController.setHdrAvailability(available);

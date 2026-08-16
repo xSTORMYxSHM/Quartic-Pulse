@@ -15,7 +15,7 @@
     async function change(kind, payload = {}, config = {}) {
       const normalizedKind = String(kind || '');
       const validKinds = new Set([
-        'resolution', 'iterations', 'fps', 'mode', 'detail', 'supersampling',
+        'resolution', 'iterations', 'fps', 'mode', 'detail', 'parity', 'supersampling',
         'format', 'hdr', 'audio', 'visual', 'unleashed', 'initialize'
       ]);
       if (!validKinds.has(normalizedKind)) throw new RangeError(`Unknown export settings change: ${normalizedKind || 'empty'}`);
@@ -31,6 +31,8 @@
           await run('recommend', config.recommendIterations, { announce: Boolean(payload.announce) });
         } else if (normalizedKind === 'iterations') {
           await run('sync-iterations', config.syncIterations, payload.value);
+        } else if (normalizedKind === 'parity') {
+          await run('sync-parity', config.syncParity, Boolean(payload.checked));
         } else if (normalizedKind === 'supersampling') {
           await run('sync-supersampling', config.syncSupersampling, Boolean(payload.checked));
         }
@@ -43,7 +45,7 @@
           await run('performance', config.refreshPerformance);
         }
 
-        if (['resolution', 'iterations', 'fps', 'supersampling', 'format', 'hdr', 'visual'].includes(normalizedKind)) {
+        if (['resolution', 'iterations', 'fps', 'parity', 'supersampling', 'format', 'hdr', 'visual'].includes(normalizedKind)) {
           await run('invalidate-benchmark', config.invalidateBenchmark);
         }
 

@@ -1486,8 +1486,12 @@
               <button id="benchmarkExportButton" type="button">BENCHMARK SELECTED SETTINGS</button>
             </div>
           </details>
+          <label class="toggle-row export-parity-toggle">
+            <span><strong>Match live mathematics</strong><small>Keeps the same fractal structure and framing as the live visualizer. Resolution and sampling add quality without changing the set.</small></span>
+            <input id="exportMatchLive" type="checkbox" checked /><i></i>
+          </label>
           <label class="toggle-row export-supersampling-toggle">
-            <span><strong>Supersampling</strong><small>Renders four subpixel samples per frame for cleaner fine fractal detail. About 4× slower.</small></span>
+            <span><strong>Supersampling</strong><small>Renders four linear-light subpixel samples per frame for cleaner bright fractal detail. About 4× slower.</small></span>
             <input id="exportSupersampling" type="checkbox" /><i></i>
           </label>
           <label class="toggle-row export-hdr-toggle">

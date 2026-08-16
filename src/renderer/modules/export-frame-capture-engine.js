@@ -24,6 +24,7 @@
       const width = Math.max(1, Math.floor(Number(settings.width) || 1));
       const height = Math.max(1, Math.floor(Number(settings.height) || 1));
       const tenBit = Boolean(settings.tenBit);
+      const hlg = Boolean(settings.hdr);
       const supersampling = Boolean(settings.supersampling);
       const buffers = samplingEngine.createFrameBuffers(width, height, { tenBit, supersampling });
       const sampleCount = supersampling ? samplingEngine.offsets.length : 1;
@@ -50,13 +51,13 @@
           tenBit ? gl.UNSIGNED_INT_2_10_10_10_REV : gl.UNSIGNED_BYTE,
           supersampling ? buffers.sample : buffers.output
         );
-        if (supersampling) samplingEngine.accumulate(buffers.sample, buffers.accumulator, tenBit);
+        if (supersampling) samplingEngine.accumulate(buffers.sample, buffers.accumulator, tenBit, hlg);
       }
 
       function resolveFrame() {
         if (!frameOpen) throw new Error('Export frame capture must begin before resolving a frame.');
         try {
-          if (supersampling) samplingEngine.resolve(buffers.accumulator, buffers.output, tenBit, sampleCount);
+          if (supersampling) samplingEngine.resolve(buffers.accumulator, buffers.output, tenBit, sampleCount, hlg);
           return buffers.outputBytes;
         } finally {
           resetSampleState();
@@ -75,7 +76,7 @@
         cleanup,
         get output() { return buffers.output; },
         get outputBytes() { return buffers.outputBytes; },
-        diagnostics: Object.freeze({ width, height, tenBit, supersampling, sampleCount })
+        diagnostics: Object.freeze({ width, height, tenBit, hlg, supersampling, sampleCount })
       });
     }
 
@@ -124,7 +125,7 @@
       tenBit.cleanup();
 
       return standard.output[0] === 77
-        && supersampled.output[0] === 25
+        && supersampled.output[0] > 25 && supersampled.output[0] < 30
         && tenBit.output[0] === packed
         && reads.join(',') === '5121,5121,5121,5121,5121,33640'
         && sampleStates.filter((entry) => entry.startsWith('sample')).length === 6

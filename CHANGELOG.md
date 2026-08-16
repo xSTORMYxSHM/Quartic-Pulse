@@ -6,6 +6,24 @@ All notable Quartic Pulse changes are documented here. Quartic Pulse follows sem
 
 _No unreleased changes._
 
+## 0.40.1 - 2026-08-16
+
+### Added
+
+- Added Match Live Mathematics to offline export and enabled it by default. Export resolution and sampling can now increase image quality without silently changing the live fractal set.
+
+### Changed
+
+- Synchronized deck visuals to the audio timeline so live playback and deterministic offline frames use the same animation time and framing.
+- Replaced the original box-grid supersampling resolve with a rotated four-sample pattern averaged in linear light, including transfer-correct 10-bit Rec.2020 HLG handling.
+- Reframed Export Iterations as an explicit alternate mathematical-depth control used only when Match Live Mathematics is disabled.
+
+### Fixed
+
+- Fixed offline exports using the 1080p recommendation of 600 iterations when the live visualizer was using a lower iteration count, which changed the fractal structure and made exports appear denser or muddier instead of sharper.
+- Fixed supersampling averaging display-encoded pixels directly, which darkened and softened thin cyan, purple, and blue details.
+- Fixed export frame zero inheriting bass, mids, highs, RMS, beat, hue, and analyzer history from the live frame present when Export was clicked.
+
 ## 0.40.0 - 2026-08-15
 
 ### Added

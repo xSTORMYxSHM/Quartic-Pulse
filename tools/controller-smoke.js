@@ -81,7 +81,7 @@ const ids = [
   'performanceDockProgress', 'exportProgress', 'exportProgressFill', 'exportProgressText', 'stageRenderFill',
   'stageRenderText', 'stageRenderMeta', 'stageRenderMode', 'stageRenderNote', 'pauseExportButton',
   'endExportButton', 'cancelExportButton', 'resolution', 'exportIterations', 'fps', 'exportMode',
-  'exportDetail', 'exportSupersampling', 'videoFormat', 'exportHdrOutput', 'scanExportEncodersButton',
+  'exportDetail', 'exportMatchLive', 'exportSupersampling', 'videoFormat', 'exportHdrOutput', 'scanExportEncodersButton',
   'exportButton', 'exportLabel', 'exportIcon', 'revealButton', 'showExportPreview', 'unleashedMode', 'performanceMode',
   'benchmarkExportButton', 'clearExportHistoryButton', 'exportAdvisor', 'exportAdvisorList',
   'exportPerformanceNote', 'exportProfileSummary', 'exportEncoderStatus', 'exportEncoderDecision',
@@ -538,6 +538,7 @@ const exportController = window.QuarticExportController.create({
   onPause: () => { exportActions += 1; },
   onResolutionChange: () => { exportSettingsActions += 1; },
   onIterationsInput: () => { exportSettingsActions += 1; },
+  onMatchLiveChange: () => { exportSettingsActions += 1; },
   onSupersamplingChange: () => { exportSettingsActions += 1; },
   onAdvisorApply: (selection) => { advisorSelection = selection; }
 });
@@ -545,6 +546,7 @@ exportController.bind();
 ['#endExportButton', '#cancelExportButton', '#pauseExportButton'].forEach((selector) => elements.get(selector).dispatch('click'));
 elements.get('#resolution').dispatch('change');
 elements.get('#exportIterations').dispatch('input');
+elements.get('#exportMatchLive').dispatch('change');
 elements.get('#exportSupersampling').dispatch('change');
 exportController.begin();
 exportController.setMode('offline');
@@ -554,7 +556,7 @@ exportController.renderPreflight({ video: '1920×1080 · 60 FPS', encoder: 'NVEN
 exportController.renderHistory([{ id: 'history-1', name: 'smoke.mp4', meta: 'OFFLINE · 1080p' }]);
 exportController.renderRecoveries([{ id: 'recovery-1', name: 'interrupted.mkv', meta: '120 saved frames', recoverable: true }]);
 assert(exportActions === 3, 'Export controller callbacks were not bound.');
-assert(exportSettingsActions === 3, 'Export settings callbacks were not bound.');
+assert(exportSettingsActions === 4, 'Export settings callbacks were not bound.');
 const advisorButton = new FakeElement('advisor-button');
 advisorButton.dataset = { resolution: '1280x720', fps: '30', iterations: '400' };
 const advisorTitle = new FakeElement('strong');
@@ -567,13 +569,15 @@ exportController.applyAdvisorSelection(advisorSelection);
 assert(elements.get('#resolution').value === '1280x720' && elements.get('#fps').value === '30' && elements.get('#exportIterations').value === '400', 'Export advisor controls were not applied by the controller.');
 elements.get('#videoFormat').value = 'youtube_sdr';
 elements.get('#exportDetail').value = '1.6';
+elements.get('#exportMatchLive').checked = true;
 elements.get('#exportSupersampling').checked = true;
 elements.get('#exportHdrOutput').checked = false;
 elements.get('#showExportPreview').checked = true;
 const controllerSettings = exportController.readSettings();
 assert(controllerSettings.resolution === '1280x720' && controllerSettings.fps === '30'
   && controllerSettings.format === 'youtube_sdr' && controllerSettings.requestedIterations === '400'
-  && controllerSettings.detail === '1.6' && controllerSettings.supersampling && controllerSettings.showPreview,
+  && controllerSettings.detail === '1.6' && controllerSettings.matchLive
+  && controllerSettings.supersampling && controllerSettings.showPreview,
 'Export controller settings snapshot lost or transformed control values.');
 assert(elements.get('#exportProgressFill').style.width === '50%', 'Export progress did not render.');
 assert(elements.get('#stageRenderMode').textContent === 'OFFLINE MASTER EXPORT', 'Export mode did not render.');
