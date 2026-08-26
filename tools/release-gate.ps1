@@ -64,13 +64,17 @@ function Invoke-DesktopSmoke {
 Invoke-NodeCheck -Arguments @('tools/release-validation.js') -Label 'Release metadata, assets, CSP, licenses, and FFmpeg'
 Invoke-NodeCheck -Arguments @('tools/controller-smoke.js') -Label 'Controller and engine unit smoke'
 Invoke-NodeCheck -Arguments @('--test', 'tools/report-relay/tests/report-core.test.js') -Label 'Report relay tests'
+Invoke-NodeCheck -Arguments @('--test', 'src/main/tests/visualizer-package-manager.test.js') -Label 'Visualizer package manager tests'
 
 Invoke-DesktopSmoke -Arguments @('--smoke-tab=music', '--smoke-style=0', '--smoke-synthetic-audio', '--smoke-adaptive-beat') -Label 'Basic music and fractal workflow'
+Invoke-DesktopSmoke -Arguments @('--smoke-tab=appearance', '--smoke-custom-visualizer', '--smoke-synthetic-audio', '--capture-preview', '--capture-temp') -Label 'Imported Data Horizon visualizer workflow'
 if (-not $Quick) {
   Invoke-DesktopSmoke -Arguments @('--smoke-tab=analysis', '--smoke-style=0', '--smoke-song-map', '--smoke-interface-advanced') -Label 'Song analysis and advanced interface'
   Invoke-DesktopSmoke -Arguments @('--smoke-tab=folding', '--smoke-style=0', '--smoke-dimensional', '--smoke-folding', '--smoke-fold-low', '--smoke-open-advanced') -Label 'Dimensional and folding controls'
   Invoke-DesktopSmoke -Arguments @('--smoke-tab=composer', '--smoke-style=0', '--smoke-composer-workspace', '--smoke-performance-mode') -Label 'Show Composer and performance mode'
-  Invoke-DesktopSmoke -Arguments @('--smoke-tab=stream', '--smoke-style=5', '--smoke-obs-output') -Label 'OBS and 3D stream workflow'
+  Invoke-DesktopSmoke -Arguments @('--smoke-tab=stream', '--smoke-style=5', '--smoke-synthetic-audio', '--smoke-obs-output') -Label 'OBS and 3D stream workflow'
+  Invoke-DesktopSmoke -Arguments @('--smoke-tab=stream', '--smoke-style=6', '--smoke-synthetic-audio', '--smoke-obs-output') -Label 'Data Horizon audio and OBS workflow'
+  Invoke-DesktopSmoke -Arguments @('--smoke-tab=stream', '--smoke-custom-visualizer', '--smoke-synthetic-audio', '--smoke-obs-output') -Label 'Imported visualizer OBS workflow'
   Invoke-DesktopSmoke -Arguments @('--smoke-tab=export', '--smoke-style=0', '--smoke-interface-advanced', '--smoke-av1', '--smoke-auto-gpu', '--smoke-encoder-scan', '--smoke-export-benchmark', '--smoke-export-advisor') -Label 'Offline export pipeline'
   Invoke-DesktopSmoke -Arguments @('--smoke-tab=system', '--smoke-style=1', '--smoke-output-audio', '--smoke-panel-max', '--smoke-open-advanced') -Label 'Audio routing, layout, and performance settings'
   Invoke-DesktopSmoke -Arguments @('--smoke-tab=reports', '--smoke-style=0') -Label 'Report Center'

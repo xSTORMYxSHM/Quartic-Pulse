@@ -6,7 +6,7 @@
     const root = options.root || document.body;
     const offlineControlSelectors = Object.freeze([
       '#resolution', '#fps', '#videoFormat', '#exportIterations', '#exportDetail',
-      '#exportMatchLive', '#exportSupersampling', '#exportHdrOutput', '#exportMode', '#unleashedMode', '#performanceMode'
+      '#exportMatchLive', '#exportSamplingMode', '#exportSupersampling', '#exportHdrOutput', '#exportMode', '#unleashedMode', '#performanceMode'
     ]);
     const liveControlSelectors = Object.freeze([
       '#resolution', '#fps', '#videoFormat', '#exportDetail',
@@ -34,6 +34,7 @@
       listen('#exportMode', 'change', (event) => options.onModeChange?.(event));
       listen('#exportDetail', 'change', (event) => options.onDetailChange?.(event));
       listen('#exportMatchLive', 'change', (event) => options.onMatchLiveChange?.(event));
+      listen('#exportSamplingMode', 'change', (event) => options.onSamplingModeChange?.(event));
       listen('#exportSupersampling', 'change', (event) => options.onSupersamplingChange?.(event));
       listen('#videoFormat', 'change', (event) => options.onFormatChange?.(event));
       listen('#exportHdrOutput', 'change', (event) => options.onHdrChange?.(event));
@@ -61,6 +62,8 @@
     }
 
     function readSettings() {
+      const samplingMode = query('#exportSamplingMode')?.value
+        || (query('#exportSupersampling')?.checked ? 'maximum' : 'standard');
       return Object.freeze({
         resolution: query('#resolution')?.value || '',
         fps: query('#fps')?.value || '',
@@ -68,7 +71,8 @@
         requestedIterations: query('#exportIterations')?.value || '',
         detail: query('#exportDetail')?.value || '',
         matchLive: Boolean(query('#exportMatchLive')?.checked),
-        supersampling: Boolean(query('#exportSupersampling')?.checked),
+        samplingMode,
+        supersampling: samplingMode !== 'standard',
         hdrOutput: Boolean(query('#exportHdrOutput')?.checked),
         showPreview: Boolean(query('#showExportPreview')?.checked)
       });

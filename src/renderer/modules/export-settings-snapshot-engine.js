@@ -37,6 +37,8 @@
       const unleashed = Boolean(context.unleashed);
       const hdrOutput = Boolean(raw.hdrOutput);
       const hdrProfile = format === 'youtube_hdr' && hdrOutput;
+      const samplingMode = sampling.normalizeMode(raw.samplingMode, raw.supersampling);
+      const samplingSamples = sampling.sampleCount(samplingMode);
       const snapshot = {
         resolution: resolution.value,
         width: resolution.width,
@@ -52,7 +54,9 @@
         }),
         matchLive,
         liveIterations,
-        supersampling: Boolean(raw.supersampling),
+        samplingMode,
+        samplingSamples,
+        supersampling: samplingSamples > 1,
         hdrOutput,
         hdrProfile,
         tenBitProfile: hdrProfile || format === 'av1_quality' || format === 'gpu_auto',
@@ -75,6 +79,8 @@
         durationOverride: options.durationOverride ?? null,
         format: snapshot.format,
         hdrOutput: snapshot.hdrOutput,
+        samplingMode: snapshot.samplingMode,
+        samplingSamples: snapshot.samplingSamples,
         supersampling: snapshot.supersampling,
         matchLive: snapshot.matchLive,
         effectiveIterations: snapshot.effectiveIterations,
@@ -89,11 +95,15 @@
       };
       const engine = create({
         profiles: catalog,
-        samplingEngine: { effectiveIterations: (value, { unleashed }) => unleashed ? value : Math.min(value, 1200) }
+        samplingEngine: {
+          effectiveIterations: (value, { unleashed }) => unleashed ? value : Math.min(value, 1200),
+          normalizeMode: (value, legacy) => ['standard', 'balanced', 'maximum'].includes(value) ? value : legacy ? 'maximum' : 'standard',
+          sampleCount: (mode) => mode === 'maximum' ? 4 : mode === 'balanced' ? 2 : 1
+        }
       });
       const snapshot = engine.capture({
         resolution: '3840x2160', fps: '60', format: 'youtube_hdr', detail: '1.6',
-        requestedIterations: '1400', supersampling: true, hdrOutput: true, showPreview: true
+        requestedIterations: '1400', samplingMode: 'balanced', supersampling: true, hdrOutput: true, showPreview: true
       }, { unleashed: false, audioDuration: 90.5 });
       const request = engine.preflight(snapshot, { durationOverride: 5, refreshEncoder: true });
       let invalidRejected = false;
@@ -108,6 +118,8 @@
         && snapshot.effectiveIterations === 1200
         && snapshot.hdrProfile
         && snapshot.tenBitProfile
+        && snapshot.samplingMode === 'balanced'
+        && snapshot.samplingSamples === 2
         && snapshot.supersampling
         && request.durationOverride === 5
         && request.refreshEncoder

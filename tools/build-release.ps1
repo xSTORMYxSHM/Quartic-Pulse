@@ -34,12 +34,55 @@ try {
   } else {
     @('node_modules/electron-builder/cli.js', '--win', 'nsis', 'portable')
   }
-  & $nodePath @builderArguments
-  if ($LASTEXITCODE -ne 0) { throw "electron-builder failed with exit code $LASTEXITCODE." }
+  $builderExitCode = 1
+  for ($builderAttempt = 1; $builderAttempt -le 2; $builderAttempt++) {
+    & $nodePath @builderArguments
+    $builderExitCode = $LASTEXITCODE
+    if ($builderExitCode -eq 0) { break }
+    if ($builderAttempt -lt 2) {
+      Write-Warning "electron-builder failed with exit code $builderExitCode; retrying once after transient file locks clear."
+      Start-Sleep -Seconds 2
+    }
+  }
+  if ($builderExitCode -ne 0) { throw "electron-builder failed with exit code $builderExitCode after two attempts." }
 
   $packagedExecutable = Join-Path $projectRoot 'release\win-unpacked\Quartic Pulse.exe'
   if (Test-Path -LiteralPath $packagedExecutable) {
     & $releaseGate -Quick -DesktopExecutablePath $packagedExecutable
+  }
+  if (-not $DirectoryOnly) {
+    $packageMetadata = Get-Content -Raw -LiteralPath (Join-Path $projectRoot 'package.json') | ConvertFrom-Json
+    $appMetadataText = Get-Content -Raw -LiteralPath (Join-Path $projectRoot 'src\shared\app-metadata.js')
+    $channelMatch = [regex]::Match($appMetadataText, "releaseChannel:\s*'([^']+)'")
+    if (-not $channelMatch.Success) { throw 'Release channel was not found in shared application metadata.' }
+    $releaseChannel = $channelMatch.Groups[1].Value
+    $releaseDirectory = Join-Path $projectRoot 'release'
+    $installerName = "Quartic Pulse Setup $($packageMetadata.version).exe"
+    $portableName = "Quartic Pulse $($packageMetadata.version).exe"
+    $installerPath = Join-Path $releaseDirectory $installerName
+    $portablePath = Join-Path $releaseDirectory $portableName
+    $installer = Get-Item -LiteralPath $installerPath
+    $portable = Get-Item -LiteralPath $portablePath
+    $installerHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $installerPath).Hash
+    $portableHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $portablePath).Hash
+    $checksumPath = Join-Path $releaseDirectory "SHA256SUMS-v$($packageMetadata.version).txt"
+    @(
+      "$installerHash  $installerName"
+      "$portableHash  $portableName"
+    ) | Set-Content -LiteralPath $checksumPath -Encoding utf8
+    $manifest = [ordered]@{
+      application = 'Quartic Pulse'
+      version = $packageMetadata.version
+      channel = $releaseChannel
+      builtOn = (Get-Date).ToString('yyyy-MM-dd')
+      platform = 'Windows 11 x64'
+      authenticode = 'not-signed'
+      artifacts = @(
+        [ordered]@{ file = $installerName; type = 'customizable-nsis-installer'; bytes = $installer.Length; sha256 = $installerHash }
+        [ordered]@{ file = $portableName; type = 'portable-executable'; bytes = $portable.Length; sha256 = $portableHash }
+      )
+    }
+    $manifest | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $releaseDirectory "RELEASE_MANIFEST-v$($packageMetadata.version).json") -Encoding utf8
   }
 } finally {
   Pop-Location

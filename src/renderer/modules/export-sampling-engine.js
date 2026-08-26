@@ -7,6 +7,8 @@
     Object.freeze([-.375, .125]),
     Object.freeze([.125, .375])
   ]);
+  const standardOffsets = Object.freeze([Object.freeze([0, 0])]);
+  const balancedOffsets = Object.freeze([offsets[0], offsets[3]]);
   const hlgA = 0.17883277;
   const hlgB = 0.28466892;
   const hlgC = 0.55991073;
@@ -29,6 +31,23 @@
       const maximum = settings.unleashed ? unleashedMaximum : standardMaximum;
       const minimum = Math.max(1, Math.round(Number(settings.minimum) || 240));
       return Math.min(maximum, Math.max(minimum, requested));
+    }
+
+    function normalizeMode(value, legacySupersampling = false) {
+      const mode = String(value || '').trim().toLowerCase();
+      if (mode === 'standard' || mode === 'balanced' || mode === 'maximum') return mode;
+      return legacySupersampling ? 'maximum' : 'standard';
+    }
+
+    function offsetsForMode(value, legacySupersampling = false) {
+      const mode = normalizeMode(value, legacySupersampling);
+      if (mode === 'maximum') return offsets;
+      if (mode === 'balanced') return balancedOffsets;
+      return standardOffsets;
+    }
+
+    function sampleCount(value, legacySupersampling = false) {
+      return offsetsForMode(value, legacySupersampling).length;
     }
 
     function createFrameBuffers(width, height, settings = {}) {
@@ -157,6 +176,11 @@
 
     return Object.freeze({
       offsets,
+      standardOffsets,
+      balancedOffsets,
+      normalizeMode,
+      offsetsForMode,
+      sampleCount,
       recommendedIterations,
       effectiveIterations,
       createFrameBuffers,
@@ -164,8 +188,9 @@
       resolve,
       selfTest,
       diagnostics: Object.freeze({
-        ready: offsets.length === 4,
+        ready: offsets.length === 4 && balancedOffsets.length === 2 && standardOffsets.length === 1,
         sampleCount: offsets.length,
+        supportedSampleCounts: Object.freeze([1, 2, 4]),
         standardMaximum,
         unleashedMaximum
       })

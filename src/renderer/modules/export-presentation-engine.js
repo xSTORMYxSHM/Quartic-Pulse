@@ -18,6 +18,14 @@
       return candidate || profiles.profiles[profiles.normalizeProfileId(fallbackId)];
     }
 
+    function samplingLabel(settings = {}) {
+      const samples = Math.max(1, Math.round(Number(settings.samplingSamples)
+        || (settings.supersampling ? 4 : 1)));
+      if (samples === 2) return 'Balanced Clarity · 2× sampling';
+      if (samples >= 4) return 'Maximum Clarity · 4× sampling';
+      return 'Standard Clarity · 1× sampling';
+    }
+
     function performanceView(settings = {}) {
       const estimate = settings.estimate;
       if (!estimate?.profile || !estimate.bitrate || !estimate.size) {
@@ -31,7 +39,7 @@
         ? ` · about ${planning.formatByteRange(size)}`
         : ` · about ${planning.formatByteRange(size)} per minute`;
       message += ` · ${iterations} math iterations`;
-      if (settings.supersampling) message += ' · 4× supersampling';
+      message += ` · ${samplingLabel(settings)}`;
       if (estimate.loadLevel === 'extreme') message += ' · extreme GPU, encoder, and storage load';
       else if (estimate.loadLevel === 'high') message += ' · high GPU and storage load';
       return Object.freeze({
@@ -81,7 +89,7 @@
         warnings.push('The default Videos drive may not have enough space. Choose another destination when prompted.');
       }
       return Object.freeze({
-        video: `${preflight.width}×${preflight.height} · ${preflight.fps} FPS · ${preflight.iterations} math iterations${preflight.matchLive ? ' · live parity' : ' · alternate depth'}${preflight.supersampling ? ' · 4× supersampling' : ''} · ${profile.label}`,
+        video: `${preflight.width}×${preflight.height} · ${preflight.fps} FPS · ${preflight.iterations} math iterations${preflight.matchLive ? ' · live parity' : ' · alternate depth'} · ${samplingLabel(preflight)} · ${profile.label}`,
         encoder: preflight.encoder?.label || 'Encoder unavailable',
         format: `${profile.container} · ${profile.videoCodec}`,
         color: hdrOutput ? '10-bit · 4:2:0 · Rec.2020 HLG' : `${profile.colorDepth} · ${profile.chroma} · BT.709`,
@@ -252,7 +260,7 @@
         size: { minimum: 100000000, maximum: 200000000 },
         loadLevel: 'normal'
       };
-      const performance = performanceView({ estimate, iterations: 600, supersampling: true });
+      const performance = performanceView({ estimate, iterations: 600, samplingSamples: 2, supersampling: true });
       const preflight = preflightView({
         preflight: {
           profile,
@@ -266,6 +274,7 @@
           estimatedSize: estimate.size,
           requiredBytes: 300000000,
           freeBytes: 200000000,
+          samplingSamples: 2,
           supersampling: true
         },
         hdrOutput: false,
@@ -285,7 +294,7 @@
         rating: 'Fast offline'
       };
       return performance.message.includes('600 math iterations')
-        && performance.message.includes('4× supersampling')
+        && performance.message.includes('Balanced Clarity · 2× sampling')
         && preflight.warning.includes('not have enough space')
         && preflight.video.includes('1920×1080')
         && encoderStatusView({ encoder: { label: 'Smoke Encoder', hardware: true }, profile }).ready

@@ -19,7 +19,7 @@ Completed specialized export work:
 - Encoder Compatibility: Advanced users can scan the current PC and see verified AV1, HEVC, and H.264 GPU/CPU paths plus the reason Automatic chose its selected encoder. ✓
 - Export Readiness: a no-file benchmark measures actual encoder throughput, estimates the current visual renderer's throughput, names the expected bottleneck, and projects time per minute of music. ✓
 - Setting Advisor: benchmark results generate reversible Faster, Balanced, and Maximum Detail combinations using only supported resolutions, frame rates, and visible iteration recommendations. ✓
-- Resolution selection now loads an editable iteration recommendation instead of enforcing a hidden floor, and optional 2×2 supersampling averages four subpixel renders for final-master antialiasing. ✓
+- Resolution selection loads an editable iteration recommendation instead of enforcing a hidden floor. Export Clarity now offers Standard 1×, Balanced 2×, and Maximum 4× linear-light subpixel sampling for controllable antialiasing cost. ✓
 - AV1: Advanced-only 10-bit AV1 WebM automatically prefers detected NVIDIA, Intel, or AMD hardware and clearly warns when it must use the much slower CPU fallback. ✓
 
 The Export workspace now shows the selected container, codec, color depth, chroma format, estimated final bitrate, and estimated file-size range before rendering. ✓

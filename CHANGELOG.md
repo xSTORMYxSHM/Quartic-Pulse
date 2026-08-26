@@ -6,6 +6,91 @@ All notable Quartic Pulse changes are documented here. Quartic Pulse follows sem
 
 _No unreleased changes._
 
+## 0.50.0 - 2026-08-25
+
+### Added
+
+- Added Balanced Clarity for offline exports. It averages two opposed rotated subpixel samples in linear light, improving dense high-iteration fractal edges at about half the render cost of the existing four-sample path.
+
+### Changed
+
+- Replaced the Supersampling switch with explicit Standard 1×, Balanced Clarity 2×, and Maximum Clarity 4× export modes. Performance estimates and preflight summaries now show the selected render multiplier.
+- Preserved Full Visual Settings profile compatibility: older profiles with Supersampling enabled restore as Maximum Clarity 4×, while new profiles retain the exact clarity mode.
+
+### Fixed
+
+- Restored the Advanced Export Live Iterations control so Match Live Mathematics no longer leaves the active iteration count locked behind a hidden slider.
+- Removed the shader's time-varying one-pixel grain from export frames so high-iteration fractal boundaries remain clearer and compress without crawling static; the live visual treatment is unchanged.
+
+## 0.45.0 - 2026-08-21
+
+### Added
+
+- Added compatibility with Data Horizon Studio 0.15.0 visualizer packages and its reusable preset authoring workflow.
+- Added packaged regression coverage for the synchronized Data Horizon 0.15.0 runtime, all seven native layer types, effects, masks, audio bindings, animation tracks, and package palettes.
+
+### Changed
+
+- Regenerated the isolated first-party Data Horizon vendor runtime from the tested 0.15.0 source while preserving Quartic Pulse's small host adapter and data-only package security boundary.
+- Promoted the modular custom-visualizer, palette-library, profiles, mapping, shader, renderer, audio-response, and controller work completed since 0.40.2 into the 0.45.0 release line.
+
+### Fixed
+
+- Kept imported Data Horizon projects on the same deterministic live, OBS, and offline audio/transport path used by the built-in visualizers after the runtime upgrade.
+- Made Equation Fold & Warp and Dimensional Rotation preset cards reflect their actual feature state: clicking the active card again now turns the feature off, and disabling it elsewhere clears the highlight.
+
+## 0.40.2 - 2026-08-21
+
+### Added
+
+- Added an independently tested Audio Modulation Engine with per-visual target capabilities, applied-output diagnostics, compatible preset adaptation, and a dedicated 3D Pulse preset for Mandelbulb.
+- Added an independently tested Audio Response Engine that owns frame-rate-independent band, spectrum, waveform, hue, gain, decay, and continuous music-clock state for both live and offline rendering.
+- Added persistent custom visualizer packages exported by Data Horizon, including strict manifest/project/path/asset validation, stable style identities, preview cards, import/update/remove controls, shared main/OBS rendering, deterministic audio-feature and transport-clock input, and SDR/8-bit offline-frame support.
+- Added a built-in compatible Data Horizon project renderer so imported visualizers remain same-canvas WebGL2 compositions without executing package JavaScript or adding a runtime dependency on the exported bundle.
+- Expanded the bundled first-party Data Horizon renderer to version 0.10 with native text, shape, spectrum, waveform, particle, and animated path layers; region and painted masks; posterize, bloom, scanlines, and displacement; authored timeline evaluation; and direct audio-frame input.
+- Added a reproducible runtime synchronization tool so reviewed Data Horizon renderer upgrades generate a dedicated vendor module while the Quartic host adapter remains small and auditable.
+- Added a My Palettes browser backed by portable Color Palette profiles, with one-click custom-color saving, named gradient cards, favorite ordering, and immediate application of saved or imported palettes.
+- Added optional, validated four-color palettes to Data Horizon packages, with pre-install package previews, package attribution, stable update identities, preserved favorites, and automatic cleanup on package removal.
+- Added a documented Data Horizon package contract and reference export fixture for visualizer and palette round-trip testing.
+- Full Visual Settings profiles now retain the stable Data Horizon package identity for custom visualizers and report a missing package while safely applying the rest of the profile.
+
+### Changed
+
+- Reduced `app.js` from 5,060 to 2,769 lines by moving Show/Performance ownership, audio-source and Windows-device lifecycle, Song Map presentation/cache coordination, profiles, performance packages/session restore, operator tools, workspace UI, and Show Composer orchestration into focused controllers.
+- Kept `app.js` as the composition root for cross-controller callbacks, the render/audio-response loop, and export job orchestration rather than relocating those shared workflows into feature modules.
+- Added release readiness diagnostics and required-asset checks for every newly extracted renderer controller.
+- Moved dimensional, fold, spectrum, radial, Mandelbulb, pulse, experience, recommended-fractal, and visual-safety preset ownership out of `app.js` into a dedicated tested controller with consistent control dispatch and Custom-state tracking.
+- Moved Music Personality profile application, manual-mode transitions, ordered frequency-band boundaries, response-control synchronization, panel rendering, and event binding out of `app.js` into a dedicated tested controller shared by live analysis, Song Map, capture, and export consumers.
+- Moved Audio Modulation Matrix persistence, route rendering, preset application, compatibility messaging, event binding, profile replacement, and live meter presentation out of `app.js` into a dedicated tested controller.
+- Mapping now identifies the active visual's supported targets, pauses incompatible saved routes without deleting them, disables unavailable preset/target choices, and distinguishes Quartic routes from authored Data Horizon package bindings.
+- Included the deterministic Data Horizon signal fixture in packaged resources so release builds can exercise custom visualizer installation and rendering during their packaged-application smoke test.
+- Upgraded the packaged Data Horizon fixture and smoke diagnostics to require all seven native visual layer types, timeline animation, native effects, and bundled palettes in the live WebGL path.
+
+### Fixed
+
+- Fixed a stale Show serializer reference exposed during controller extraction and a latent unload-time OSC reference that could raise a renderer error while closing the app.
+- Fixed playlist performance updates still targeting the retired in-file Performance Dock function after Show ownership moved to its controller.
+- Fixed release builds leaving stale checksum and manifest files behind; packaging now regenerates artifact sizes and SHA-256 hashes after a successful build and packaged smoke test.
+- Added one bounded electron-builder retry when Windows or OneDrive briefly locks the staged executable during release packaging.
+- Fixed Color Position routes being suppressed when Color by Frequency was disabled; mapped palette movement now has its own shader input and works independently.
+- Fixed route meters displaying source-envelope motion for zero-output or incompatible routes instead of the modulation actually applied to the renderer.
+- Fixed the enabled Audio Modulation Matrix muting all built-in bass, mids, highs, beat, and motion response for Fractal and 3D Mandelbulb, including when the matrix had no active routes. Matrix routes now layer over the normal visual response as intended.
+- Removed a duplicate live pulse-event advancement that made emitted rings age twice per rendered frame.
+
+- Replaced duplicated live/offline audio smoothing with one deterministic response path and converted audio-driven shader phase motion to accumulated music clocks, preventing changing band levels from causing late-song phase jumps.
+- Moved analyzer smoothing out of Web Audio's renderer-dependent history and into shared time-based envelopes while preserving existing Music Personality controls and modulation routing.
+- Moved the WebGL2 vertex and fragment shader source out of `app.js` into a dedicated immutable renderer module without changing compilation or uniform ownership.
+- Moved visual, audio-personality, modulation, effect, and control configuration data into a dedicated renderer settings catalog.
+- Moved WebGL2 context creation, shader compilation, uniform uploads, canvas sizing, HDR framebuffer ownership, and GPU draw submission into a dedicated visual renderer module.
+- Moved reusable FFT math and Song Map tempo, section, and full-buffer analysis out of `app.js` into independently tested audio-analysis modules.
+- Moved frame-sample classification and hardware-mode recommendations into a pure performance analysis engine.
+- Moved OBS WebSocket authentication, request tracking, scene/source control, profile links, and automation UI ownership into a dedicated controller.
+- Moved MIDI learning, keyboard bindings, OSC routing, persistence, and live-control UI ownership into a dedicated controller while keeping application commands in the composition root.
+- Moved camera bookmarks, path interpolation, motion presets, mouse-wheel zoom, drag, and pinch interaction into a dedicated camera controller.
+- Moved deterministic offline FFT frame extraction and response application into a dedicated offline audio analysis engine shared by export orchestration.
+- Moved playlist files, selection, transport state, object-URL cleanup, and playlist rendering into a dedicated controller.
+- Moved application-state construction into a factory so the composition root owns a fresh state instance instead of embedding its schema.
+
 ## 0.40.1 - 2026-08-16
 
 ### Added

@@ -5,7 +5,7 @@
       "name": "Run Quartic Pulse",
       "type": "node",
       "request": "launch",
-      "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/electron.cmd",
+      "runtimeExecutable": "${workspaceFolder}/node_modules/electron/dist/electron.exe",
       "args": [".", "--dev"],
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal",

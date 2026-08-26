@@ -1,0 +1,88 @@
+{
+  "schemaVersion": 1,
+  "engineVersion": "0.15.0",
+  "id": "project-quartic-smoke-signal",
+  "name": "Data Horizon Signal Test",
+  "revision": 1,
+  "canvas": { "width": 1280, "height": 720, "background": [0.003, 0.008, 0.02, 1] },
+  "assets": [
+    {
+      "id": "asset-signal-scene",
+      "name": "Signal Scene",
+      "kind": "image",
+      "mimeType": "image/svg+xml",
+      "uri": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1280' height='720' viewBox='0 0 1280 720'%3E%3Cdefs%3E%3ClinearGradient id='g' x2='0' y2='1'%3E%3Cstop stop-color='%23020713'/%3E%3Cstop offset='1' stop-color='%230b1634'/%3E%3C/linearGradient%3E%3CradialGradient id='r'%3E%3Cstop stop-color='%235cf5dc' stop-opacity='.7'/%3E%3Cstop offset='1' stop-color='%23875cff' stop-opacity='0'/%3E%3C/radialGradient%3E%3Cpattern id='p' width='48' height='48' patternUnits='userSpaceOnUse'%3E%3Cpath d='M48 0H0V48' fill='none' stroke='%235cf5dc' stroke-opacity='.16'/%3E%3C/pattern%3E%3C/defs%3E%3Crect width='1280' height='720' fill='url(%23g)'/%3E%3Ccircle cx='640' cy='340' r='330' fill='url(%23r)'/%3E%3Cpath d='M0 560L170 380 310 500 480 260 650 480 820 210 1000 470 1160 300 1280 420V720H0Z' fill='%23081227' stroke='%235cf5dc' stroke-width='5'/%3E%3Cpath d='M0 520C260 410 410 650 650 500S1010 520 1280 360V720H0Z' fill='url(%23p)' stroke='%23875cff' stroke-width='4'/%3E%3Cg fill='%23c8fff7' font-family='monospace'%3E%3Ctext x='54' y='70' font-size='22'%3EDATA HORIZON // PACKAGE RUNTIME%3C/text%3E%3Ctext x='54' y='102' font-size='13' opacity='.65'%3ETEMPEST AUDIO CONTRACT ONLINE%3C/text%3E%3C/g%3E%3C/svg%3E"
+    }
+  ],
+  "layers": [
+    {
+      "id": "layer-native-text", "name": "Native Text", "type": "text", "text": "NATIVE LAYERS ONLINE",
+      "fontFamily": "Segoe UI", "fontSize": 48, "fontWeight": 700, "alignment": "center", "verticalAlignment": "middle",
+      "color": "#D8FBFF", "italic": false, "letterSpacing": 2, "lineHeight": 1.1, "padding": 12,
+      "backgroundColor": "#07131F", "backgroundOpacity": 0.72, "borderColor": "#49E4E1", "borderWidth": 2,
+      "cornerRadius": 12, "outlineColor": "#031018", "outlineWidth": 1, "shadowColor": "#49E4E1", "shadowBlur": 8,
+      "visible": true, "opacity": 0.92, "blendMode": "screen", "depth": 0.1, "parallax": 0.05,
+      "transform": { "x": 640, "y": 88, "width": 720, "height": 100, "rotation": 0 },
+      "effects": [{ "id": "effect-text-bloom", "type": "bloom", "name": "Bloom", "enabled": true, "parameters": { "threshold": 0.45, "intensity": 0.55, "radius": 1.2 } }]
+    },
+    {
+      "id": "layer-native-frame", "name": "Native Frame", "type": "shape", "shape": "frame", "fill": "#00000000", "stroke": "#49E4E1", "strokeWidth": 8, "cornerRadius": 20,
+      "visible": true, "opacity": 0.75, "blendMode": "screen", "depth": 0, "parallax": 0,
+      "transform": { "x": 640, "y": 360, "width": 1190, "height": 640, "rotation": 0 }, "effects": []
+    },
+    {
+      "id": "layer-native-spectrum", "name": "Native Spectrum", "type": "spectrum", "bars": 48, "colorLow": "#9585FF", "colorHigh": "#49E4E1", "gain": 1.15, "glow": 0.65, "mirror": false,
+      "visible": true, "opacity": 0.8, "blendMode": "screen", "depth": 0, "parallax": 0,
+      "transform": { "x": 640, "y": 585, "width": 900, "height": 175, "rotation": 0 }, "effects": []
+    },
+    {
+      "id": "layer-native-waveform", "name": "Native Waveform", "type": "waveform", "color": "#C8FFF7", "amplitude": 0.28, "frequency": 3.5, "thickness": 0.018, "glow": 0.7, "mirror": false,
+      "visible": true, "opacity": 0.62, "blendMode": "screen", "depth": 0, "parallax": 0,
+      "transform": { "x": 640, "y": 475, "width": 980, "height": 150, "rotation": 0 }, "effects": []
+    },
+    {
+      "id": "layer-native-particles", "name": "Native Particles", "type": "particles", "count": 72, "colorLow": "#9585FF", "colorHigh": "#49E4E1", "size": 0.14, "speed": 0.2, "spread": 0.88, "audioGain": 0.85,
+      "visible": true, "opacity": 0.72, "blendMode": "screen", "depth": 0.05, "parallax": 0.08,
+      "transform": { "x": 640, "y": 360, "width": 1280, "height": 720, "rotation": 0 }, "effects": []
+    },
+    {
+      "id": "layer-native-path", "name": "Native Path", "type": "path",
+      "points": [{ "x": 0.08, "y": 0.72 }, { "x": 0.3, "y": 0.3 }, { "x": 0.58, "y": 0.62 }, { "x": 0.92, "y": 0.18 }],
+      "color": "#F0C36C", "strokeWidth": 7, "glow": 0.78, "dashLength": 72, "gapLength": 30, "flowSpeed": 120, "closed": false,
+      "visible": true, "opacity": 0.55, "blendMode": "screen", "depth": 0, "parallax": 0,
+      "transform": { "x": 640, "y": 360, "width": 1000, "height": 500, "rotation": 0 }, "effects": []
+    },
+    {
+      "id": "layer-signal-scene",
+      "name": "Signal Scene",
+      "type": "image",
+      "assetId": "asset-signal-scene",
+      "fit": "cover",
+      "visible": true,
+      "opacity": 1,
+      "blendMode": "normal",
+      "depth": 0.15,
+      "parallax": 0.35,
+      "transform": { "x": 640, "y": 360, "width": 1280, "height": 720, "rotation": 0 },
+      "effects": [
+        { "id": "effect-grade", "type": "colorGrade", "name": "Color Grade", "enabled": true, "parameters": { "contrast": 1.08, "saturation": 1.18, "warmth": -0.05 } },
+        { "id": "effect-outline", "type": "outline", "name": "Outline", "enabled": true, "parameters": { "strength": 0.55, "threshold": 0.17 } },
+        { "id": "effect-scanlines", "type": "scanlines", "name": "Scanlines", "enabled": true, "parameters": { "density": 420, "intensity": 0.14, "speed": 0.08 } }
+      ]
+    }
+  ],
+  "timeline": {
+    "duration": 8, "fps": 60, "loop": true,
+    "tracks": [{
+      "id": "track-path-flow", "target": "layer.layer-native-path.source.flowSpeed", "name": "Path Flow",
+      "keyframes": [{ "id": "key-path-a", "time": 0, "value": 80, "easing": "easeInOut" }, { "id": "key-path-b", "time": 4, "value": 180, "easing": "easeInOut" }, { "id": "key-path-c", "time": 8, "value": 80, "easing": "easeInOut" }]
+    }]
+  },
+  "bindings": [
+    { "id": "binding-bass-depth", "source": "bass", "target": "layer.layer-signal-scene.depth", "amount": 0.55, "direction": 1, "inputMinimum": 0, "inputMaximum": 1, "outputMinimum": 0, "outputMaximum": 0.7, "smoothingMs": 90, "attackMs": 24, "releaseMs": 180, "curve": "smoothstep", "combine": "add", "enabled": true },
+    { "id": "binding-mids-parallax", "source": "mids", "target": "layer.layer-signal-scene.parallax", "amount": 0.8, "direction": 1, "inputMinimum": 0, "inputMaximum": 1, "outputMinimum": 0, "outputMaximum": 0.8, "smoothingMs": 80, "attackMs": 30, "releaseMs": 160, "curve": "smoothstep", "combine": "add", "enabled": true },
+    { "id": "binding-beat-outline", "source": "beat", "target": "layer.layer-signal-scene.effect.effect-outline.strength", "amount": 0.7, "direction": 1, "inputMinimum": 0, "inputMaximum": 1, "outputMinimum": 0, "outputMaximum": 0.8, "smoothingMs": 20, "attackMs": 5, "releaseMs": 120, "curve": "exponential", "combine": "max", "enabled": true }
+  ],
+  "presets": [],
+  "outputs": { "fps": 60, "colorSpace": "srgb" }
+}

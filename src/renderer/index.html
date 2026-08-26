@@ -13,7 +13,7 @@
   <body data-interface-mode="basic" data-workspace="music">
     <div class="app-shell">
       <nav class="workspace-rail" aria-label="Quartic Pulse workspaces">
-        <div class="workspace-rail-brand" aria-hidden="true">QP</div>
+        <div class="workspace-rail-brand" aria-hidden="true"><img src="../../assets/storm-horizon-sh.png" alt="" /></div>
         <button class="workspace-button active" type="button" data-workspace="music" aria-selected="true" title="Music workspace">
           <span class="workspace-symbol" aria-hidden="true">MU</span><strong>MUSIC</strong><small>Source</small>
         </button>
@@ -36,9 +36,11 @@
         <div class="performance-blackout-overlay" id="performanceBlackoutOverlay" aria-hidden="true"></div>
 
         <header class="stage-header glass">
-          <div>
-            <div class="eyebrow">TEMPEST MAINFRAME</div>
+          <div class="product-brand">
+            <img src="../../assets/storm-horizon-sh.png" alt="Storm Horizon Media" />
+            <div><div class="eyebrow">STORM HORIZON MEDIA</div>
             <h1>QUARTIC <span>PULSE</span></h1>
+            </div>
           </div>
           <div class="live-state">
             <span class="live-dot" id="liveDot"></span>
@@ -518,6 +520,17 @@
             <option value="6">Scene · Data Horizon</option>
           </select>
 
+          <div class="visual-package-manager">
+            <div class="section-heading"><span>CUSTOM VISUALIZERS + PALETTES</span><small>DATA HORIZON PACKAGES</small></div>
+            <p id="visualizerPackageStatus">Checking installed visualizers…</p>
+            <div class="visual-package-actions">
+              <button class="primary" id="importVisualizerPackageButton" type="button">＋ PREVIEW PACKAGE</button>
+              <select id="installedVisualizerPackage" aria-label="Installed custom visualizer"><option value="">No custom visualizers installed</option></select>
+              <button id="removeVisualizerPackageButton" type="button" disabled>REMOVE</button>
+            </div>
+            <small>Choose an exported bundle folder, preview its visualizer and palettes, then install. Quartic Pulse validates all data and uses its built-in Data Horizon engine for safe, deterministic rendering.</small>
+          </div>
+
           <div class="basic-experience-card basic-ui-only" aria-label="Visual intensity presets">
             <div class="section-heading"><span>START HERE</span><small>CALM BY DEFAULT</small></div>
             <p>Choose a visual above, then pick how strongly music should reshape it. Every option can still be fine-tuned in Advanced mode.</p>
@@ -780,6 +793,11 @@
             <button class="palette custom-palette" type="button" data-palette="4" aria-label="Custom palette"><i></i><span>CUSTOM</span></button>
           </div>
 
+          <div class="saved-palette-library" id="savedPaletteLibrary" hidden>
+            <div class="section-heading saved-palette-heading"><span>MY PALETTES</span><small>SAVED &amp; IMPORTED</small></div>
+            <div class="palette-grid saved-palette-grid" id="savedPaletteGrid"></div>
+          </div>
+
           <div class="custom-palette-editor" id="customPaletteEditor" hidden>
             <div class="color-editor-heading"><span>COLOR</span><span>HEX</span><span>RGB</span></div>
             <div class="color-stop" data-color-index="0">
@@ -806,7 +824,10 @@
               <input class="hex-input" id="customHex3" value="#5CF5DC" maxlength="7" aria-label="Detail color hexadecimal value" />
               <div class="rgb-inputs"><input id="customR3" type="number" min="0" max="255" value="92" aria-label="Detail color red" /><input id="customG3" type="number" min="0" max="255" value="245" aria-label="Detail color green" /><input id="customB3" type="number" min="0" max="255" value="220" aria-label="Detail color blue" /></div>
             </div>
-            <button class="custom-color-reset" id="resetCustomPaletteButton" type="button">↺ RESET CUSTOM COLORS</button>
+            <div class="custom-palette-actions">
+              <button class="custom-color-reset" id="resetCustomPaletteButton" type="button">↺ RESET CUSTOM COLORS</button>
+              <button id="saveCurrentPaletteButton" type="button">SAVE TO MY PALETTES</button>
+            </div>
           </div>
 
           <div class="quick-controls-card">
@@ -1045,7 +1066,7 @@
             <p class="modulation-lead">Route bass, mids, highs, beats, or overall level directly into visual and equation parameters without changing their base settings.</p>
 
             <label class="toggle-row modulation-master-toggle">
-              <span><strong>Enable modulation matrix</strong><small>Enabled routes replace the built-in fractal response; turn off to hear the automatic response</small></span>
+              <span><strong>Enable modulation matrix</strong><small>Enabled routes add to the visual's built-in audio response without changing its base settings</small></span>
               <input id="modulationEnabled" type="checkbox" checked /><i></i>
             </label>
 
@@ -1058,17 +1079,19 @@
             </div>
 
             <div class="section-heading modulation-preset-heading"><span>STARTING POINTS</span><small>REPLACES ROUTES</small></div>
+            <p class="modulation-support" id="modulationVisualSupport"></p>
             <div class="modulation-presets" id="modulationPresets">
               <button type="button" data-modulation-preset="math"><strong>MATH DRIVE</strong><small>Equation, warp, color, zoom</small></button>
               <button type="button" data-modulation-preset="dimension"><strong>DEEP MOTION</strong><small>Depth, slice, camera, rotation</small></button>
               <button type="button" data-modulation-preset="conventional"><strong>CONVENTIONAL</strong><small>Motion, color, flow, pulse shape</small></button>
+              <button type="button" data-modulation-preset="bulb"><strong>3D PULSE</strong><small>Recurrence, fold, glow, color</small></button>
               <button type="button" data-modulation-preset="clear"><strong>CLEAR</strong><small>Remove every route</small></button>
             </div>
 
             <div class="modulation-route-list" id="modulationRouteList"></div>
             <div class="modulation-empty" id="modulationEmpty">No routes yet. Add one manually or choose a starting point.</div>
             <button class="modulation-add-button" id="addModulationRoute" type="button">＋ ADD MODULATION ROUTE</button>
-            <p class="modulation-note">Equation Fold, Warp, Tilt, and Slice routes become visible only when their related Appearance feature is enabled. Up to eight routes can run at once.</p>
+            <p class="modulation-note">Compatible Fold, Warp, Tilt, and Slice routes activate their shader path automatically. Up to eight routes can run at once.</p>
           </section>
         </div>
 
@@ -1401,7 +1424,7 @@
             <label><span>EXPORT ITERATIONS</span><output id="exportIterationsValue">600</output></label>
             <input id="exportIterations" type="range" min="240" max="1200" value="600" step="20" />
           </div>
-          <div class="slider-group live-iterations-config" hidden>
+          <div class="slider-group live-iterations-config advanced-ui-only">
             <label><span>LIVE ITERATIONS</span><output id="iterationsValue">220</output></label>
             <input id="iterations" type="range" min="80" max="500" value="220" step="10" />
           </div>
@@ -1490,10 +1513,15 @@
             <span><strong>Match live mathematics</strong><small>Keeps the same fractal structure and framing as the live visualizer. Resolution and sampling add quality without changing the set.</small></span>
             <input id="exportMatchLive" type="checkbox" checked /><i></i>
           </label>
-          <label class="toggle-row export-supersampling-toggle">
-            <span><strong>Supersampling</strong><small>Renders four linear-light subpixel samples per frame for cleaner bright fractal detail. About 4× slower.</small></span>
-            <input id="exportSupersampling" type="checkbox" /><i></i>
+          <label class="select-control export-clarity-control">
+            <span><strong>EXPORT CLARITY</strong><small id="exportSamplingDescription">Standard renders once per frame for the fastest clean export.</small></span>
+            <select id="exportSamplingMode">
+              <option value="standard" selected>Standard · 1× render time</option>
+              <option value="balanced">Balanced Clarity · 2× render time</option>
+              <option value="maximum">Maximum Clarity · 4× render time</option>
+            </select>
           </label>
+          <input id="exportSupersampling" type="checkbox" hidden aria-hidden="true" tabindex="-1" />
           <label class="toggle-row export-hdr-toggle">
             <span><strong>HDR output</strong><small>Rec.2020 HLG for HDR displays and YouTube. Off uses standard SDR color.</small></span>
             <input id="exportHdrOutput" type="checkbox" /><i></i>
@@ -1569,7 +1597,7 @@
             </div>
 
             <div class="about-title">
-              <div class="eyebrow">TEMPEST MAINFRAME PRESENTS</div>
+              <div class="eyebrow">STORM HORIZON MEDIA PRESENTS</div>
               <h2>QUARTIC PULSE</h2>
               <span id="appVersionText">Version</span>
             </div>
@@ -1585,7 +1613,7 @@
             </div>
 
             <div class="about-feature-grid" aria-label="Quartic Pulse capabilities">
-              <article><span>VISUAL ENGINE</span><strong>2D + True 3D Fractals</strong><p>Audio-modulated equations, a ray-marched power-4 Mandelbulb, Server Scapes, radial visuals, pulse rings, and waveform fields.</p></article>
+              <article><span>VISUAL ENGINE</span><strong>2D + True 3D Fractals</strong><p>Audio-modulated equations, a ray-marched power-4 Mandelbulb, Data Horizon, Server Scapes, radial visuals, pulse rings, and waveform fields.</p></article>
               <article><span>AUDIO ROUTING</span><strong>Files + Windows Audio</strong><p>Load songs and playlists or capture playback, input, and virtual audio endpoints.</p></article>
               <article><span>LIVE PRODUCTION</span><strong>OBS Ready</strong><p>Window capture, chroma-key output, presentation controls, saved scenes, and profiles.</p></article>
               <article><span>VIDEO CREATION</span><strong>Offline Export</strong><p>Render common resolutions and frame rates without limiting quality to live playback speed.</p></article>
@@ -1610,7 +1638,7 @@
             </div>
 
             <div class="about-card">
-              <strong>TEMPEST MAINFRAME</strong>
+              <strong>STORM HORIZON MEDIA</strong>
               <p>Creator and maintainer of Quartic Pulse—experimental visual software built at the intersection of mathematics, music, and digital media.</p>
               <small>Human-directed, AI-assisted development · Storm Horizon Media and Storm Horizon Radio</small>
             </div>
@@ -1686,18 +1714,47 @@
     <script src="../shared/app-metadata.js"></script>
     <script src="../shared/export-profiles.js"></script>
     <script src="modules/workspace-shell.js"></script>
+    <script src="modules/workspace-ui-controller.js"></script>
     <script src="modules/visual-catalog.js"></script>
+    <script src="modules/visual-settings-catalog.js"></script>
+    <script src="modules/audio-modulation-engine.js"></script>
+    <script src="modules/audio-modulation-controller.js"></script>
+    <script src="modules/music-personality-controller.js"></script>
+    <script src="modules/visual-preset-controller.js"></script>
+    <script src="modules/app-state.js"></script>
+    <script src="modules/shader-source.js"></script>
+    <script src="modules/visual-renderer.js"></script>
+    <script src="modules/data-horizon-runtime-vendor.js"></script>
+    <script src="modules/data-horizon-runtime.js"></script>
+    <script src="modules/visualizer-package-controller.js"></script>
+    <script src="modules/obs-automation-controller.js"></script>
+    <script src="modules/live-control-controller.js"></script>
+    <script src="modules/camera-controller.js"></script>
+    <script src="modules/operator-tools-controller.js"></script>
     <script src="modules/audio-controller.js"></script>
+    <script src="modules/audio-source-controller.js"></script>
+    <script src="modules/playlist-controller.js"></script>
+    <script src="modules/audio-response-engine.js"></script>
     <script src="modules/audio-analysis-engine.js"></script>
+    <script src="modules/audio-fft-engine.js"></script>
+    <script src="modules/offline-audio-analysis-engine.js"></script>
     <script src="modules/performance-controller.js"></script>
+    <script src="modules/performance-analysis-engine.js"></script>
     <script src="modules/performance-sequencer-engine.js"></script>
     <script src="modules/performance-show-data-engine.js"></script>
+    <script src="modules/performance-show-controller.js"></script>
     <script src="modules/performance-show-composer-controller.js"></script>
+    <script src="modules/show-composer-orchestrator.js"></script>
     <script src="modules/profile-manager-controller.js"></script>
+    <script src="modules/palette-library-controller.js"></script>
+    <script src="modules/profile-service-controller.js"></script>
     <script src="modules/song-map-data-engine.js"></script>
+    <script src="modules/song-map-analysis-engine.js"></script>
+    <script src="modules/song-map-controller.js"></script>
     <script src="modules/song-director-engine.js"></script>
     <script src="modules/song-director-controller.js"></script>
     <script src="modules/performance-package-engine.js"></script>
+    <script src="modules/performance-package-session-controller.js"></script>
     <script src="modules/export-controller.js"></script>
     <script src="modules/export-session-engine.js"></script>
     <script src="modules/export-progress-workflow-engine.js"></script>

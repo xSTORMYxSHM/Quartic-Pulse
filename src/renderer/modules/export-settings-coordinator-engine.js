@@ -34,7 +34,8 @@
         } else if (normalizedKind === 'parity') {
           await run('sync-parity', config.syncParity, Boolean(payload.checked));
         } else if (normalizedKind === 'supersampling') {
-          await run('sync-supersampling', config.syncSupersampling, Boolean(payload.checked));
+          await run('sync-supersampling', config.syncSupersampling,
+            payload.mode ?? Boolean(payload.checked));
         }
 
         if (normalizedKind === 'format' || normalizedKind === 'initialize') {

@@ -60,6 +60,10 @@ class FakeElement {
     return this.children.find((child) => child.tagName === tagName) || null;
   }
   querySelectorAll() { return []; }
+  closest(selector) {
+    if (selector === '.visual-preset' && this.dataset.effectPreset) return this;
+    return selector === '[data-saved-palette-id]' && this.dataset.savedPaletteId ? this : null;
+  }
 }
 
 const ids = [
@@ -81,7 +85,7 @@ const ids = [
   'performanceDockProgress', 'exportProgress', 'exportProgressFill', 'exportProgressText', 'stageRenderFill',
   'stageRenderText', 'stageRenderMeta', 'stageRenderMode', 'stageRenderNote', 'pauseExportButton',
   'endExportButton', 'cancelExportButton', 'resolution', 'exportIterations', 'fps', 'exportMode',
-  'exportDetail', 'exportMatchLive', 'exportSupersampling', 'videoFormat', 'exportHdrOutput', 'scanExportEncodersButton',
+  'exportDetail', 'exportMatchLive', 'exportSamplingMode', 'exportSupersampling', 'videoFormat', 'exportHdrOutput', 'scanExportEncodersButton',
   'exportButton', 'exportLabel', 'exportIcon', 'revealButton', 'showExportPreview', 'unleashedMode', 'performanceMode',
   'benchmarkExportButton', 'clearExportHistoryButton', 'exportAdvisor', 'exportAdvisorList',
   'exportPerformanceNote', 'exportProfileSummary', 'exportEncoderStatus', 'exportEncoderDecision',
@@ -120,12 +124,189 @@ global.document = {
   }
 };
 
-for (const file of ['audio-controller.js', 'audio-analysis-engine.js', 'performance-controller.js', 'performance-sequencer-engine.js', 'performance-show-data-engine.js', 'performance-show-composer-controller.js', 'profile-manager-controller.js', 'song-map-data-engine.js', 'song-director-engine.js', 'song-director-controller.js', 'performance-package-engine.js', 'export-controller.js', 'export-session-engine.js', 'export-progress-workflow-engine.js', 'export-progress-coordinator.js', 'export-command-coordinator.js', 'export-job-coordinator.js', 'export-result-workflow-engine.js', 'export-encoder-engine.js', 'export-live-capture-engine.js', 'export-quick-clip-workflow-engine.js', 'export-sampling-engine.js', 'export-settings-snapshot-engine.js', 'export-preparation-engine.js', 'export-frame-capture-engine.js', 'export-planning-engine.js', 'export-presentation-engine.js', 'export-preflight-engine.js', 'export-advisor-engine.js', 'export-settings-coordinator-engine.js', 'export-runtime-state-coordinator.js', 'export-encoder-scan-engine.js', 'export-benchmark-engine.js', 'export-history-engine.js', 'export-history-action-engine.js', 'export-recovery-engine.js', 'export-render-coordinator.js', 'export-workflow-engine.js', 'export-offline-lifecycle.js', 'export-live-lifecycle.js']) {
+for (const file of ['workspace-ui-controller.js', 'visual-catalog.js', 'visual-settings-catalog.js', 'audio-modulation-engine.js', 'audio-modulation-controller.js', 'music-personality-controller.js', 'visual-preset-controller.js', 'app-state.js', 'shader-source.js', 'visual-renderer.js', 'data-horizon-runtime-vendor.js', 'data-horizon-runtime.js', 'visualizer-package-controller.js', 'obs-automation-controller.js', 'live-control-controller.js', 'camera-controller.js', 'operator-tools-controller.js', 'audio-controller.js', 'audio-source-controller.js', 'playlist-controller.js', 'audio-response-engine.js', 'audio-analysis-engine.js', 'audio-fft-engine.js', 'offline-audio-analysis-engine.js', 'performance-controller.js', 'performance-analysis-engine.js', 'performance-sequencer-engine.js', 'performance-show-data-engine.js', 'performance-show-controller.js', 'performance-show-composer-controller.js', 'show-composer-orchestrator.js', 'profile-manager-controller.js', 'palette-library-controller.js', 'profile-service-controller.js', 'song-map-data-engine.js', 'song-map-analysis-engine.js', 'song-map-controller.js', 'song-director-engine.js', 'song-director-controller.js', 'performance-package-engine.js', 'performance-package-session-controller.js', 'export-controller.js', 'export-session-engine.js', 'export-progress-workflow-engine.js', 'export-progress-coordinator.js', 'export-command-coordinator.js', 'export-job-coordinator.js', 'export-result-workflow-engine.js', 'export-encoder-engine.js', 'export-live-capture-engine.js', 'export-quick-clip-workflow-engine.js', 'export-sampling-engine.js', 'export-settings-snapshot-engine.js', 'export-preparation-engine.js', 'export-frame-capture-engine.js', 'export-planning-engine.js', 'export-presentation-engine.js', 'export-preflight-engine.js', 'export-advisor-engine.js', 'export-settings-coordinator-engine.js', 'export-runtime-state-coordinator.js', 'export-encoder-scan-engine.js', 'export-benchmark-engine.js', 'export-history-engine.js', 'export-history-action-engine.js', 'export-recovery-engine.js', 'export-render-coordinator.js', 'export-workflow-engine.js', 'export-offline-lifecycle.js', 'export-live-lifecycle.js']) {
   const source = fs.readFileSync(path.join(__dirname, '..', 'src', 'renderer', 'modules', file), 'utf8');
   vm.runInThisContext(source, { filename: file });
 }
 
 assert(window.QuarticSongDirectorController?.create, 'Song Director controller module did not load.');
+assert(window.QuarticAudioSourceController?.create, 'Audio source controller module did not load.');
+assert(window.QuarticSongMapController?.create, 'Song Map controller module did not load.');
+assert(window.QuarticPerformancePackageSessionController?.create, 'Performance package/session controller module did not load.');
+assert(window.QuarticProfileServiceController?.create, 'Profile service controller module did not load.');
+assert(window.QuarticOperatorToolsController?.create, 'Operator tools controller module did not load.');
+assert(window.QuarticWorkspaceUiController?.create, 'Workspace UI controller module did not load.');
+assert(window.QuarticShowComposerOrchestrator?.create, 'Show Composer orchestrator module did not load.');
+assert(window.QuarticVisualCatalog?.styles?.length === 7, 'Visual catalog must expose all seven visual styles.');
+assert(window.QuarticVisualCatalog?.get(6)?.key === 'data-horizon', 'Data Horizon visual catalog entry did not load.');
+const customCatalogStyle = { styleId: 901001, packageId: 'test.custom', key: 'custom-test', name: 'Custom Test', category: 'CUSTOM', description: 'Test package' };
+window.QuarticVisualCatalog.registerCustom([customCatalogStyle]);
+assert(window.QuarticVisualCatalog?.get(901001)?.custom, 'Custom visual catalog registration failed.');
+window.QuarticVisualCatalog.registerCustom([]);
+assert(window.QuarticShaderSource?.vertex.startsWith('#version 300 es'), 'Vertex shader source module did not load.');
+assert(window.QuarticShaderSource?.fragment.includes('void main()'), 'Fragment shader source module did not load.');
+assert(window.QuarticShaderSource?.fragment.includes('renderMainframeLandscape'), 'Data Horizon shader module did not load.');
+assert(window.QuarticShaderSource?.fragment.includes('uMusicClockBass * 3.5'), 'Data Horizon must use the continuous bass clock.');
+assert(window.QuarticShaderSource?.fragment.includes('uExporting > .5 ? 0.0 : 1.0 / 255.0'), 'Offline export must suppress time-varying shader grain.');
+assert(Object.isFrozen(window.QuarticShaderSource), 'Shader source export must remain immutable.');
+assert(window.QuarticVisualSettingsCatalog?.musicPersonalityProfiles?.balanced, 'Visual settings catalog did not load.');
+assert(window.QuarticVisualSettingsCatalog?.numericSliderConfigs?.zoom, 'Visual slider catalog did not load.');
+assert(Object.isFrozen(window.QuarticVisualSettingsCatalog), 'Visual settings catalog export must remain immutable.');
+assert(window.QuarticAudioModulationEngine?.create, 'Audio modulation engine did not load.');
+const modulationEngine = window.QuarticAudioModulationEngine.create({
+  sources: window.QuarticVisualSettingsCatalog.modulationSources,
+  targets: window.QuarticVisualSettingsCatalog.modulationTargets,
+  presets: window.QuarticVisualSettingsCatalog.modulationPresets
+});
+const colorRoute = modulationEngine.createMapping({ source: 'mids', target: 'frequencyHue', amount: -50, attack: 100, floor: 20, ceiling: 80 });
+const colorResult = modulationEngine.update({ enabled: true, mappings: [colorRoute], state: { mids: .5 }, delta: 1, styleId: 1 });
+assert(colorResult.frequencyHue < -.13 && colorRoute.output < 0 && colorRoute.compatible, 'Audio modulation amount, floor, ceiling, or polarity regression failed.');
+const unsupportedRoute = modulationEngine.createMapping({ source: 'bass', target: 'equation', amount: 100 });
+const unsupportedResult = modulationEngine.update({ enabled: true, mappings: [unsupportedRoute], state: { bass: 1 }, delta: 1, styleId: 5 });
+assert(!Object.hasOwn(unsupportedResult, 'equation') && unsupportedRoute.output === 0 && !unsupportedRoute.compatible, 'Unsupported visual mapping routes must remain paused.');
+assert(modulationEngine.preset('bulb', 5).length === 4, 'Mandelbulb mapping preset was not adapted for the 3D visual.');
+assert(modulationEngine.preset('dimension', 5).length === 0, 'Fractal-only Deep Motion routes must not be applied to Mandelbulb.');
+assert(modulationEngine.supportedTargets(1000).length === 0, 'Imported Data Horizon visuals must keep their authored package bindings.');
+assert(window.QuarticAudioModulationController?.create, 'Audio modulation controller did not load.');
+const modulationElements = new Map(['modulationRouteList', 'modulationEmpty', 'modulationCount', 'addModulationRoute', 'modulationVisualSupport', 'modulationEnabled', 'modulationPresets']
+  .map((id) => [`#${id}`, new FakeElement(id)]));
+const modulationPresetButtons = ['math', 'dimension', 'conventional', 'bulb', 'clear'].map((name) => {
+  const button = new FakeElement(name);
+  button.dataset.modulationPreset = name;
+  return button;
+});
+const modulationStorage = new Map();
+const modulationControllerState = {
+  visualStyle: 5, modulationEnabled: true, modulationMappings: [],
+  bass: 0, mids: 0, highs: 0, beat: 0, rms: 0
+};
+const modulationController = window.QuarticAudioModulationController.create({
+  query: (selector) => modulationElements.get(selector) || null,
+  queryAll: (selector) => selector === '#modulationPresets [data-modulation-preset]' ? modulationPresetButtons : [],
+  documentRef: document,
+  storage: { getItem: (key) => modulationStorage.get(key) || null, setItem: (key, value) => modulationStorage.set(key, value) },
+  state: modulationControllerState,
+  engine: modulationEngine,
+  sources: window.QuarticVisualSettingsCatalog.modulationSources,
+  targets: window.QuarticVisualSettingsCatalog.modulationTargets,
+  visualCatalog: window.QuarticVisualCatalog
+});
+modulationController.initialize();
+modulationController.applyPreset('bulb');
+assert(modulationController.diagnostics.initialized && modulationController.diagnostics.bound, 'Audio modulation controller did not initialize and bind.');
+assert(modulationControllerState.modulationMappings.length === 4 && modulationElements.get('#modulationCount').textContent === '4 ROUTES', 'Audio modulation controller did not render the 3D preset.');
+assert(JSON.parse(modulationStorage.get('quarticPulseModulationMatrixV1')).mappings.length === 4, 'Audio modulation controller did not persist preset routes.');
+const serializedMapping = window.QuarticAudioModulationController.serializeMapping({ ...modulationControllerState.modulationMappings[0], output: .5, compatible: true });
+assert(!Object.hasOwn(serializedMapping, 'output') && !Object.hasOwn(serializedMapping, 'compatible'), 'Runtime modulation diagnostics must not leak into saved profiles.');
+assert(window.QuarticMusicPersonalityController?.create, 'Music Personality controller did not load.');
+const personalityElementIds = [
+  'musicPersonalityMount', 'advancedFrequencyBands', 'frequencyBandSummary', 'musicPersonality', 'frequencyBandMode',
+  'frequencyFloor', 'lowMidSplit', 'midHighSplit', 'frequencyCeiling', 'analysisSmoothing', 'analysisSmoothingValue',
+  'beatSensitivity', 'beatSensitivityValue', 'beatCooldown', 'beatCooldownValue'
+];
+const personalityElements = new Map(personalityElementIds.map((id) => [`#${id}`, new FakeElement(id)]));
+const personalityState = window.QuarticAppState.create({
+  defaultFrequencyBands: window.QuarticVisualSettingsCatalog.defaultFrequencyBands,
+  now: () => 0
+});
+let personalityApplied = 0;
+const personalityController = window.QuarticMusicPersonalityController.create({
+  query: (selector) => personalityElements.get(selector) || null,
+  state: personalityState,
+  profiles: window.QuarticVisualSettingsCatalog.musicPersonalityProfiles,
+  defaultBands: window.QuarticVisualSettingsCatalog.defaultFrequencyBands,
+  onProfileApplied: () => { personalityApplied += 1; }
+});
+personalityController.initialize();
+personalityController.apply('electronic', { quiet: true });
+assert(personalityController.diagnostics.initialized && personalityController.diagnostics.bound, 'Music Personality controller did not initialize and bind.');
+assert(personalityController.getBands().lowMid === 160 && personalityState.analysisBassGain === 1.12 && personalityApplied === 2, 'Music Personality profile application regression failed.');
+personalityController.markCustom();
+const boundedLowMid = personalityController.setBoundary('lowMidSplit', 10000);
+assert(personalityState.musicPersonality === 'custom' && personalityState.frequencyBandMode === 'advanced' && boundedLowMid === personalityState.midHighSplit - 50, 'Custom frequency boundaries must remain ordered.');
+assert(window.QuarticVisualPresetController?.create, 'Visual preset controller did not load.');
+const visualPresetElements = new Map();
+for (const selector of ['#flow', '#flowValue', '#pulseSize', '#barStyle', '#experiencePresetGrid', '#pulsePresetGrid', '#fractalDimensional', '#equationFolding', '#fractalDepthControls', '#equationFoldControls', '[data-effect-group="test"]', '[data-effect-group="fold"]']) {
+  visualPresetElements.set(selector, new FakeElement(selector));
+}
+visualPresetElements.get('#flow').type = 'range';
+visualPresetElements.get('#pulseSize').type = 'range';
+const effectButton = new FakeElement('effectButton');
+effectButton.dataset.effectPreset = 'boost';
+const foldButton = new FakeElement('foldButton');
+foldButton.dataset.effectPreset = 'liquid';
+const pulseButton = new FakeElement('pulseButton');
+pulseButton.dataset.pulsePreset = 'balanced';
+const experienceButton = new FakeElement('experienceButton');
+experienceButton.dataset.experiencePreset = 'balanced';
+const visualPresetState = { flow: .2, pulseSize: 1, fractalDimensional: false, equationFolding: true };
+visualPresetElements.get('#equationFolding').checked = true;
+visualPresetElements.get('#pulseSize').addEventListener('input', (event) => { visualPresetState.pulseSize = Number(event.target.value); });
+const visualPresetController = window.QuarticVisualPresetController.create({
+  query: (selector) => visualPresetElements.get(selector) || null,
+  queryAll: (selector) => selector === '[data-effect-group="fold"] .visual-preset' ? [foldButton]
+    : selector.includes('data-effect-group') ? [effectButton]
+    : selector === '.pulse-preset' ? [pulseButton]
+      : selector === '[data-experience-preset]' ? [experienceButton] : [],
+  state: visualPresetState,
+  effectPresets: { test: { boost: { label: 'Boost', values: { flow: .75 } } }, fold: { liquid: { label: 'Liquid Equation', values: { flow: .65 } } } },
+  effectControlGroups: { test: ['flow'], fold: ['flow'] },
+  pulsePresets: { balanced: { label: 'Balanced', values: { pulseSize: 1.4 } } },
+  experiencePresets: { balanced: { label: 'Balanced', values: { flow: .5 }, checks: {} } },
+  equationProfiles: { signature: { flow: .28 } },
+  sliderConfigs: window.QuarticVisualSettingsCatalog.numericSliderConfigs,
+  storage: { getItem: () => 'acknowledged', setItem() {} },
+  requestFrame: (callback) => callback()
+});
+visualPresetController.initialize();
+visualPresetController.applyEffect('test', 'boost', { quiet: true });
+visualPresetController.applyPulse('balanced', { quiet: true });
+assert(visualPresetController.diagnostics.initialized && visualPresetController.diagnostics.bound, 'Visual preset controller did not initialize and bind.');
+assert(visualPresetState.flow === .75 && effectButton.classList.contains('active'), 'Visual effect preset application regression failed.');
+assert(visualPresetState.pulseSize === 1.4 && pulseButton.classList.contains('active'), 'Pulse preset application regression failed.');
+assert(visualPresetController.formatPercent('flow', .28) === '28%' && visualPresetElements.get('#fractalDepthControls').inert && !visualPresetElements.get('#equationFoldControls').inert, 'Visual preset formatting or toggle-state regression failed.');
+visualPresetController.applyEffect('fold', 'liquid', { quiet: true });
+visualPresetElements.get('[data-effect-group="fold"]').dispatch('click', { target: foldButton });
+assert(!visualPresetState.equationFolding && !visualPresetElements.get('#equationFolding').checked && visualPresetElements.get('#equationFoldControls').inert && !foldButton.classList.contains('active') && foldButton.getAttribute('aria-pressed') === 'false', 'Clicking the active Fold preset must clear it and disable Equation Folding.');
+assert(window.QuarticVisualRenderer?.create, 'Visual renderer module did not load.');
+assert(Object.isFrozen(window.QuarticVisualRenderer), 'Visual renderer factory must remain immutable.');
+assert(window.QuarticDataHorizonRuntime?.create, 'Data Horizon package runtime did not load.');
+assert(window.QuarticDataHorizonRuntime.engineVersion === '0.15.0', 'Bundled Data Horizon runtime version is stale.');
+assert(['regionMask', 'paintMask', 'posterize', 'bloom', 'scanlines', 'displacement'].every((type) => window.QuarticDataHorizonRuntime.effectRegistry[type]), 'Native Data Horizon effects are incomplete.');
+assert(Math.abs(window.QuarticDataHorizonRuntime.evaluateTimeline({ duration: 2, loop: false, tracks: [{ target: 'layer.test.opacity', keyframes: [{ time: 0, value: 0, easing: 'linear' }, { time: 2, value: 1, easing: 'linear' }] }] }, 1).get('layer.test.opacity') - .5) < 1e-9, 'Data Horizon timeline interpolation failed.');
+assert(window.QuarticVisualizerPackageController?.create, 'Visualizer package controller did not load.');
+assert(window.QuarticPaletteLibraryController?.create, 'Palette library controller did not load.');
+assert(window.QuarticPaletteLibraryController.normalizedColors({ kind: 'colors', data: { palette: 4, customColors: [[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1]] } })?.length === 4, 'Custom palette profile colors were not validated.');
+assert(window.QuarticObsAutomationController?.create, 'OBS automation controller module did not load.');
+assert(window.QuarticLiveControlController?.create, 'Live-control controller module did not load.');
+assert(window.QuarticCameraController?.create, 'Camera controller module did not load.');
+assert(window.QuarticOfflineAudioAnalysisEngine?.create, 'Offline audio analysis engine did not load.');
+assert(window.QuarticPlaylistController?.create, 'Playlist controller module did not load.');
+const initialAppState = window.QuarticAppState.create({
+  defaultFrequencyBands: window.QuarticVisualSettingsCatalog.defaultFrequencyBands,
+  now: () => 2500
+});
+assert(initialAppState.beatGridAnchor === 2.5, 'Application state clock initialization regression failed.');
+assert(initialAppState.spectrumData instanceof Float32Array && initialAppState.spectrumData.length === 64, 'Application state spectrum initialization regression failed.');
+const fftReal = new Float64Array([1, 0, 0, 0]);
+const fftImaginary = new Float64Array(4);
+window.QuarticAudioFftEngine.fftInPlace(fftReal, fftImaginary);
+assert(Array.from(fftReal).every((value) => Math.abs(value - 1) < .000001), 'Audio FFT impulse response was incorrect.');
+const songMapAnalysis = window.QuarticSongMapAnalysisEngine.create({
+  fftInPlace: window.QuarticAudioFftEngine.fftInPlace
+});
+const estimatedTempo = songMapAnalysis.estimateBpm([0, .5, 1, 1.5, 2, 2.5]);
+assert(estimatedTempo.bpm === 120, 'Song Map tempo estimation regression failed.');
+assert(songMapAnalysis.deriveSections({ energy: [20, 40], bass: [20, 40], mids: [20, 40], highs: [20, 40] }, 12, 6).length >= 1, 'Song Map section derivation regression failed.');
+const limitedPerformance = window.QuarticPerformanceAnalysisEngine.analyzeSamples({
+  samples: [34, 35, 36, 38],
+  frameTime: 35,
+  iterations: 300,
+  dimensional: true,
+  folding: true
+});
+assert(limitedPerformance.tier === 'limited' && limitedPerformance.disableHeavy, 'Performance sample classification regression failed.');
+assert(window.QuarticPerformanceAnalysisEngine.recommendHardwareMode({ logicalProcessors: 4, totalMemoryBytes: 8 * 1073741824 }, '') === 'efficient', 'Hardware mode recommendation regression failed.');
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -180,6 +361,42 @@ assert(toggled === 1 && restarted === 1 && skipped === 10, 'Audio transport call
 assert(audio.currentTime === 60, 'Timeline pointer seeking did not update the media position.');
 assert(elements.get('#timelineFill').style.width === '50%', 'Timeline presentation did not render.');
 assert(audioController.diagnostics.ready && audioController.diagnostics.bound, 'Audio controller diagnostics failed.');
+
+function simulateAudioResponse(fps) {
+  const engine = window.QuarticAudioResponseEngine.create();
+  const state = {
+    bass: 0, mids: 0, highs: 0, rms: 0, beat: .4,
+    analysisSmoothing: .78,
+    frequencyHue: 0,
+    dominantBand: 'silence',
+    spectrumData: new Float32Array(64),
+    waveformData: new Float32Array(64)
+  };
+  engine.reset(state);
+  const spectrum = new Float32Array(64).fill(.58);
+  const waveform = new Float32Array(64).fill(.22);
+  for (let frame = 0; frame < fps * 2; frame++) {
+    engine.applyFrame(state, {
+      levels: [.72, .48, .31], rms: .56, spectrum, waveform, maximumLevel: 1
+    }, 1 / fps);
+    engine.advanceClocks(state, 1 / fps);
+  }
+  return { engine, state };
+}
+
+const response30 = simulateAudioResponse(30);
+const response60 = simulateAudioResponse(60);
+const response120 = simulateAudioResponse(120);
+for (const field of ['bass', 'mids', 'highs', 'rms']) {
+  assert(Math.abs(response30.state[field] - response120.state[field]) < .0001,
+    `Audio response ${field} changed with frame rate.`);
+}
+for (const field of ['musicClockBass', 'musicClockMids', 'musicClockHighs', 'musicClockRms', 'musicClockBeat']) {
+  assert(Math.abs(response30.state[field] - response120.state[field]) < .012,
+    `Accumulated ${field} changed materially with frame rate.`);
+}
+assert(response60.state.musicClockMids > 0 && response60.engine.diagnostics.ready,
+  'Audio response clocks or diagnostics did not initialize.');
 
 const spectrumAnalyser = {
   frequencyBinCount: 128,
@@ -317,6 +534,75 @@ elements.get('#profileSearch').dispatch('input');
 assert(elements.get('#applyProfileButton').disabled && elements.get('#profileStatus').textContent.includes('No saved profile'), 'Empty profile search state did not disable actions.');
 assert(profileManagerController.diagnostics.ready && profileManagerController.diagnostics.bound && profileManagerController.diagnostics.initialized, 'Profile manager diagnostics failed.');
 
+const savedPaletteGrid = new FakeElement('savedPaletteGrid');
+const savedPaletteSection = new FakeElement('savedPaletteLibrary');
+const paletteProfiles = [{
+  id: 'palette-a',
+  name: 'Signal Colors',
+  kind: 'colors',
+  favorite: true,
+  updatedAt: '2026-01-02T00:00:00.000Z',
+  packagePalette: { managed: true, packageId: 'com.example.signal', packageName: 'Signal Package', paletteId: 'signal-colors' },
+  data: { palette: 4, customColors: [[0, .1, .2], [.2, .4, .6], [.6, .2, .8], [1, .8, .2]] }
+}];
+let appliedPaletteId = '';
+const paletteLibraryController = window.QuarticPaletteLibraryController.create({
+  container: savedPaletteGrid,
+  section: savedPaletteSection,
+  documentRef: document,
+  getProfiles: () => paletteProfiles,
+  onApply: (profile) => { appliedPaletteId = profile.id; }
+});
+paletteLibraryController.initialize();
+assert(!savedPaletteSection.hidden && savedPaletteGrid.children.length === 1, 'Saved palette cards did not render.');
+assert(savedPaletteGrid.children[0].children[0].style.background.includes('linear-gradient'), 'Saved palette gradient preview was not generated.');
+assert(savedPaletteGrid.children[0].children[1].textContent.includes('Signal Package'), 'Package palette attribution was not rendered.');
+savedPaletteGrid.dispatch('click', { target: savedPaletteGrid.children[0] });
+assert(appliedPaletteId === 'palette-a' && paletteLibraryController.activeProfileId === 'palette-a', 'Saved palette selection did not apply its profile.');
+assert(paletteLibraryController.diagnostics.ready && paletteLibraryController.diagnostics.bound, 'Palette library diagnostics failed.');
+
+let storedProfiles = JSON.stringify([{
+  id: 'user-palette', name: 'User Palette', kind: 'colors', favorite: false,
+  data: { palette: 4, customColors: [[0, 0, 0], [.2, .2, .2], [.6, .6, .6], [1, 1, 1]] }
+}]);
+let managedDeleteConfirmed = false;
+const packagePaletteToasts = [];
+const packageProfileService = window.QuarticProfileServiceController.create({
+  query: () => null,
+  documentRef: document,
+  windowRef: { confirm: () => { managedDeleteConfirmed = true; return true; } },
+  storage: {
+    getItem: () => storedProfiles,
+    setItem: (_key, value) => { storedProfiles = value; }
+  },
+  desktop: {},
+  state: { palette: 4, customColors: [], visualStyle: 0 },
+  dataEngine: window.QuarticPerformanceShowDataEngine.create(),
+  profileManagerController: { initialize() {}, render() { return null; }, setStatus() {}, selectedProfile() { return null; } },
+  paletteLibraryController: { initialize() {}, render() {}, markActive() {}, clearActive() {} },
+  audioModulationController: { serializeMapping: (mapping) => mapping },
+  visualCatalog: { get: () => ({ name: 'Fractal' }) },
+  setCustomColor() {},
+  showToast: (message, warning) => packagePaletteToasts.push({ message, warning })
+});
+const packageRecord = {
+  packageId: 'com.example.signal', name: 'Signal Package', version: '1.0.0',
+  palettes: [{ id: 'signal-neon', name: 'Signal Neon', colors: ['#091125', '#20466E', '#63558E', '#6BA8B5'], favorite: true }]
+};
+packageProfileService.syncPackagePalettes([packageRecord]);
+packageProfileService.initialize();
+let managedPalette = packageProfileService.profiles.find((profile) => profile.packagePalette?.managed);
+assert(packageProfileService.profiles.length === 2 && managedPalette?.id === 'package-palette:com.example.signal:signal-neon', 'Package palettes were not synchronized after deferred initialization.');
+assert(Math.abs(managedPalette.data.customColors[0][0] - (9 / 255)) < 1e-9 && managedPalette.favorite, 'Package palette HEX colors or initial favorite were not converted correctly.');
+packageProfileService.favorite(managedPalette);
+packageProfileService.syncPackagePalettes([{ ...packageRecord, version: '1.1.0', palettes: [{ ...packageRecord.palettes[0], favorite: true }] }]);
+managedPalette = packageProfileService.profiles.find((profile) => profile.packagePalette?.managed);
+assert(managedPalette.packagePalette.packageVersion === '1.1.0' && !managedPalette.favorite, 'Package palette identity or user favorite was not preserved across update.');
+packageProfileService.remove(managedPalette);
+assert(!managedDeleteConfirmed && packagePaletteToasts.at(-1)?.warning, 'Managed package palette removal did not redirect to package removal.');
+packageProfileService.syncPackagePalettes([]);
+assert(packageProfileService.profiles.length === 1 && packageProfileService.profiles[0].id === 'user-palette', 'Package removal did not clean up only managed palettes.');
+
 const straightSequencer = window.QuarticPerformanceSequencerEngine.create();
 assert(straightSequencer.entryDurationSeconds({ advance: 'beats', value: 16 }, 120) === 8, 'Beat cue duration was incorrect.');
 assert(straightSequencer.sequenceDurationSeconds([
@@ -369,6 +655,33 @@ const parsedProfiles = showDataEngine.parseProfiles(JSON.stringify([validProfile
 assert(parsedProfiles.length === 1 && showDataEngine.findProfile(parsedProfiles, 'profile-1')?.name === validProfile.name, 'Saved profile validation or lookup failed.');
 assert(JSON.parse(showDataEngine.serializeProfiles(parsedProfiles)).length === 1, 'Saved profile serialization failed.');
 assert(showDataEngine.diagnostics.ready, 'Performance show data diagnostics failed.');
+assert(window.QuarticPerformanceShowController?.create, 'Performance Show controller did not load.');
+const showControllerStorage = new Map();
+const showControllerState = window.QuarticAppState.create({
+  defaultFrequencyBands: window.QuarticVisualSettingsCatalog.defaultFrequencyBands,
+  now: () => 0
+});
+showControllerState.autoBpm = false;
+showControllerState.manualBpm = 128;
+showControllerState.beatGridAnchor = 0;
+const showController = window.QuarticPerformanceShowController.create({
+  query: () => new FakeElement('show'),
+  queryAll: () => [],
+  documentRef: document,
+  storage: { getItem: (key) => showControllerStorage.get(key) || null, setItem: (key, value) => showControllerStorage.set(key, value) },
+  state: showControllerState,
+  sequencer: straightSequencer,
+  dataEngine: showDataEngine,
+  performanceController: { renderDock() {}, setVisible() {}, bind() {}, setProgress() {} },
+  composerController: { initialized: false },
+  beatClock: () => 1,
+  getProfiles: () => []
+});
+assert(showController.effectiveBpm() === 128 && showController.updateBeatGrid(), 'Performance Show tempo or beat-grid ownership regression failed.');
+showControllerState.showSequence = [showDataEngine.sanitizeEntry({ id: 'show-a', profileId: 'profile-a', advance: 'beats', value: 16 })];
+showController.persist();
+assert(JSON.parse(showControllerStorage.get('quarticPulseShowSequenceV1')).entries.length === 1, 'Performance Show sequence persistence regression failed.');
+assert(window.QuarticPerformanceShowController.escapeMarkup('<cue>') === '&lt;cue&gt;', 'Performance Show markup escaping regression failed.');
 
 const songMapEngine = window.QuarticSongMapDataEngine.create({
   cacheLimit: 2,
@@ -539,6 +852,7 @@ const exportController = window.QuarticExportController.create({
   onResolutionChange: () => { exportSettingsActions += 1; },
   onIterationsInput: () => { exportSettingsActions += 1; },
   onMatchLiveChange: () => { exportSettingsActions += 1; },
+  onSamplingModeChange: () => { exportSettingsActions += 1; },
   onSupersamplingChange: () => { exportSettingsActions += 1; },
   onAdvisorApply: (selection) => { advisorSelection = selection; }
 });
@@ -547,6 +861,7 @@ exportController.bind();
 elements.get('#resolution').dispatch('change');
 elements.get('#exportIterations').dispatch('input');
 elements.get('#exportMatchLive').dispatch('change');
+elements.get('#exportSamplingMode').dispatch('change');
 elements.get('#exportSupersampling').dispatch('change');
 exportController.begin();
 exportController.setMode('offline');
@@ -556,7 +871,7 @@ exportController.renderPreflight({ video: '1920×1080 · 60 FPS', encoder: 'NVEN
 exportController.renderHistory([{ id: 'history-1', name: 'smoke.mp4', meta: 'OFFLINE · 1080p' }]);
 exportController.renderRecoveries([{ id: 'recovery-1', name: 'interrupted.mkv', meta: '120 saved frames', recoverable: true }]);
 assert(exportActions === 3, 'Export controller callbacks were not bound.');
-assert(exportSettingsActions === 4, 'Export settings callbacks were not bound.');
+assert(exportSettingsActions === 5, 'Export settings callbacks were not bound.');
 const advisorButton = new FakeElement('advisor-button');
 advisorButton.dataset = { resolution: '1280x720', fps: '30', iterations: '400' };
 const advisorTitle = new FakeElement('strong');
@@ -570,6 +885,7 @@ assert(elements.get('#resolution').value === '1280x720' && elements.get('#fps').
 elements.get('#videoFormat').value = 'youtube_sdr';
 elements.get('#exportDetail').value = '1.6';
 elements.get('#exportMatchLive').checked = true;
+elements.get('#exportSamplingMode').value = 'balanced';
 elements.get('#exportSupersampling').checked = true;
 elements.get('#exportHdrOutput').checked = false;
 elements.get('#showExportPreview').checked = true;
@@ -577,7 +893,7 @@ const controllerSettings = exportController.readSettings();
 assert(controllerSettings.resolution === '1280x720' && controllerSettings.fps === '30'
   && controllerSettings.format === 'youtube_sdr' && controllerSettings.requestedIterations === '400'
   && controllerSettings.detail === '1.6' && controllerSettings.matchLive
-  && controllerSettings.supersampling && controllerSettings.showPreview,
+  && controllerSettings.samplingMode === 'balanced' && controllerSettings.supersampling && controllerSettings.showPreview,
 'Export controller settings snapshot lost or transformed control values.');
 assert(elements.get('#exportProgressFill').style.width === '50%', 'Export progress did not render.');
 assert(elements.get('#stageRenderMode').textContent === 'OFFLINE MASTER EXPORT', 'Export mode did not render.');
@@ -644,11 +960,14 @@ assert(exportSamplingEngine.recommendedIterations(3840, 2160) === 1000, '4K iter
 assert(exportSamplingEngine.effectiveIterations(740) === 740, 'Manual export iterations were not preserved.');
 assert(exportSamplingEngine.effectiveIterations(1800) === 1200, 'Standard export ceiling was not enforced.');
 assert(exportSamplingEngine.effectiveIterations(1800, { unleashed: true }) === 1800, 'Unleashed export ceiling was not applied.');
+assert(exportSamplingEngine.normalizeMode('', true) === 'maximum', 'Legacy supersampling did not migrate to Maximum Clarity.');
+assert(exportSamplingEngine.sampleCount('standard') === 1 && exportSamplingEngine.sampleCount('balanced') === 2 && exportSamplingEngine.sampleCount('maximum') === 4, 'Export clarity sample counts are invalid.');
+assert(exportSamplingEngine.offsetsForMode('balanced').length === 2, 'Balanced Clarity offsets are invalid.');
 const exportSamplingBuffers = exportSamplingEngine.createFrameBuffers(2, 2, { tenBit: true, supersampling: true });
 assert(exportSamplingBuffers.output.length === 4 && exportSamplingBuffers.outputBytes.length === 16, 'RGB10 output buffers are invalid.');
 assert(exportSamplingBuffers.sample !== exportSamplingBuffers.output && exportSamplingBuffers.accumulator.length === 16, 'Supersampling buffers are invalid.');
 assert(exportSamplingEngine.selfTest(), 'Export sampling RGBA/RGB10 averaging failed.');
-assert(exportSamplingEngine.diagnostics.ready && exportSamplingEngine.diagnostics.sampleCount === 4, 'Export sampling diagnostics failed.');
+assert(exportSamplingEngine.diagnostics.ready && exportSamplingEngine.diagnostics.supportedSampleCounts.join(',') === '1,2,4', 'Export sampling diagnostics failed.');
 
 const exportPlanningEngine = window.QuarticExportPlanningEngine.create({ profiles: exportProfileCatalog });
 const planningEstimate = exportPlanningEngine.profileEstimate({

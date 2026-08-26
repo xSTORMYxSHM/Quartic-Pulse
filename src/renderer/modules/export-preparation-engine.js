@@ -73,6 +73,8 @@
         format,
         hdrProfile: Boolean(settings.hdrProfile),
         tenBitProfile: Boolean(settings.tenBitProfile),
+        samplingMode: String(settings.samplingMode || (settings.supersampling ? 'maximum' : 'standard')),
+        samplingSamples: Math.max(1, Math.round(Number(settings.samplingSamples) || (settings.supersampling ? 4 : 1))),
         supersampling: Boolean(settings.supersampling),
         exportDetail: positiveNumber(settings.detail, 'Export detail'),
         showPreview: Boolean(settings.showPreview),
@@ -110,6 +112,8 @@
         format: 'youtube_sdr',
         hdrProfile: false,
         tenBitProfile: false,
+        samplingMode: 'balanced',
+        samplingSamples: 2,
         supersampling: true,
         detail: 1.6,
         showPreview: false,
@@ -145,6 +149,8 @@
         && offline.sessionRequest.suggestedName === 'Smoke-5-second-test'
         && offline.sessionRequest.finalEncoder === 'h264_nvenc'
         && offline.sessionRequest.pixelFormat === 'rgba'
+        && offline.samplingMode === 'balanced'
+        && offline.samplingSamples === 2
         && offline.supersampling
         && live.sessionRequest.suggestedName === 'quartic-pulse'
         && live.sessionRequest.finalEncoder === 'libx264'

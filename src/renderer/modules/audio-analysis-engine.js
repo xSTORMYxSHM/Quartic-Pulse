@@ -2,14 +2,19 @@
   'use strict';
 
   const clamp = (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, value));
+  const responseEngineFactory = window.QuarticAudioResponseEngine;
+  if (!responseEngineFactory) throw new Error('Quartic audio response engine failed to load.');
 
-  function create() {
+  function create(options = {}) {
+    const responseEngine = options.responseEngine || responseEngineFactory.create();
     let audioContext = null;
     let analyser = null;
     let beatAnalyser = null;
     let frequencyData = null;
     let beatFrequencyData = null;
     let timeData = null;
+    const spectrumFrame = new Float32Array(64);
+    const waveformFrame = new Float32Array(64);
     let lastBeatDiagnostics = { energy: 0, onset: 0, threshold: 0, detected: false };
 
     function attach(context, spectrumAnalyser, onsetAnalyser) {
@@ -75,26 +80,9 @@
       return detectedBeat;
     }
 
-    function decay(target) {
-      target.bass *= .94;
-      target.mids *= .94;
-      target.highs *= .94;
-      target.rms *= .94;
-      target.beat *= .86;
-      for (let band = 0; band < 3; band++) target.pulsePreviousLevels[band] *= .94;
-      for (let index = 0; index < 64; index++) {
-        target.spectrumData[index] *= .94;
-        target.waveformData[index] *= .88;
-      }
-      if (target.bass + target.mids + target.highs < .035) {
-        target.dominantBand = 'silence';
-        target.frequencyHue *= .97;
-      }
-    }
-
     function update(target, options = {}) {
       if (!analyser || !options.active) {
-        decay(target);
+        responseEngine.decay(target, options.delta);
         return { levels: [target.bass, target.mids, target.highs], beat: lastBeatDiagnostics };
       }
       analyser.getByteFrequencyData(frequencyData);
@@ -106,19 +94,12 @@
         squareSum += normalized * normalized;
       }
       const rms = Math.sqrt(squareSum / timeData.length);
-      const manualGain = target.reactivity;
       const bands = options.bands;
       const rawBass = averageBand(frequencyData, bands.floor, bands.lowMid) * 1.6 * target.analysisBassGain;
       const rawMids = averageBand(frequencyData, bands.lowMid, bands.midHigh) * 1.45 * target.analysisMidGain;
       const rawHighs = averageBand(frequencyData, bands.midHigh, bands.ceiling) * 1.8 * target.analysisHighGain;
       const rawPeak = Math.max(rawBass, rawMids, rawHighs);
-      if (target.autoReactivity && rawPeak > .03) {
-        const desiredGain = clamp(target.autoReactivityTarget / Math.max(.03, rawPeak * manualGain), .25, 3);
-        const response = desiredGain < target.autoReactivityGain ? .18 : .015;
-        target.autoReactivityGain += (desiredGain - target.autoReactivityGain) * response;
-      } else if (!target.autoReactivity) target.autoReactivityGain += (1 - target.autoReactivityGain) * .08;
-      const effectiveGain = manualGain * (target.autoReactivity ? target.autoReactivityGain : 1);
-      const maximumLevel = target.autoReactivity ? .96 : 1;
+      const { effectiveGain, maximumLevel } = responseEngine.resolveGain(target, rawPeak, options.delta);
       const spectrumFloor = 20;
       const spectrumCeiling = Math.min(20000, audioContext.sampleRate / 2);
       for (let index = 0; index < 64; index++) {
@@ -126,27 +107,20 @@
         const highPosition = (index + 1) / 64;
         const lowHz = spectrumFloor * Math.pow(spectrumCeiling / spectrumFloor, lowPosition);
         const highHz = spectrumFloor * Math.pow(spectrumCeiling / spectrumFloor, highPosition);
-        const spectrumTarget = Math.min(maximumLevel, averageBand(frequencyData, lowHz, highHz) * 1.55 * effectiveGain);
-        target.spectrumData[index] += (spectrumTarget - target.spectrumData[index]) * .22;
+        spectrumFrame[index] = Math.min(maximumLevel, averageBand(frequencyData, lowHz, highHz) * 1.55 * effectiveGain);
         const timeIndex = Math.min(timeData.length - 1, Math.round(index / 63 * (timeData.length - 1)));
-        const waveformTarget = clamp((timeData[timeIndex] - 128) / 128 * effectiveGain, -1, 1);
-        target.waveformData[index] += (waveformTarget - target.waveformData[index]) * .42;
+        waveformFrame[index] = clamp((timeData[timeIndex] - 128) / 128 * effectiveGain, -1, 1);
       }
       const bass = Math.min(maximumLevel, rawBass * effectiveGain);
       const mids = Math.min(maximumLevel, rawMids * effectiveGain);
       const highs = Math.min(maximumLevel, rawHighs * effectiveGain);
-      target.bass += (bass - target.bass) * .24;
-      target.mids += (mids - target.mids) * .18;
-      target.highs += (highs - target.highs) * .2;
-      target.rms += (Math.min(maximumLevel, rms * 3.2 * effectiveGain) - target.rms) * .2;
-      const colorEnergy = target.bass + target.mids + target.highs;
-      if (colorEnergy > .035) {
-        const targetHue = (target.bass * .06 + target.mids * .45 + target.highs * .88) / colorEnergy;
-        const hueResponse = .04 + (1 - target.analysisSmoothing) * .28;
-        target.frequencyHue += (targetHue - target.frequencyHue) * hueResponse;
-        const strongest = Math.max(target.bass, target.mids, target.highs);
-        target.dominantBand = strongest === target.bass ? 'bass' : (strongest === target.mids ? 'mids' : 'highs');
-      } else target.dominantBand = 'silence';
+      responseEngine.applyFrame(target, {
+        levels: [bass, mids, highs],
+        rms: Math.min(maximumLevel, rms * 3.2 * effectiveGain),
+        spectrum: spectrumFrame,
+        waveform: waveformFrame,
+        maximumLevel
+      }, options.delta);
       const beatLow = averageBand(beatFrequencyData, 30, 190) * 1.35;
       const beatLowMid = averageBand(beatFrequencyData, 150, 520) * 1.18;
       updateBeatDetector(target, beatLow, beatLowMid, options.delta, { onBeat: options.onBeat });

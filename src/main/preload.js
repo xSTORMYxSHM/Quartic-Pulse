@@ -1,6 +1,12 @@
 const { contextBridge, ipcRenderer, webUtils } = require('electron');
 
 contextBridge.exposeInMainWorld('quarticDesktop', {
+  listVisualizerPackages: () => ipcRenderer.invoke('visualizer-package:list'),
+  previewVisualizerPackage: () => ipcRenderer.invoke('visualizer-package:preview'),
+  installVisualizerPackage: (token) => ipcRenderer.invoke('visualizer-package:install-preview', token),
+  importVisualizerPackage: () => ipcRenderer.invoke('visualizer-package:import'),
+  loadVisualizerPackage: (styleId) => ipcRenderer.invoke('visualizer-package:load', styleId),
+  removeVisualizerPackage: (styleId) => ipcRenderer.invoke('visualizer-package:remove', styleId),
   exportProfile: (suggestedName, json) => ipcRenderer.invoke('profile:export', { suggestedName, json }),
   exportPerformancePackage: (suggestedName, json) => ipcRenderer.invoke('performance-package:export', { suggestedName, json }),
   saveScreenshot: (bytes) => ipcRenderer.invoke('capture:save-png', bytes),

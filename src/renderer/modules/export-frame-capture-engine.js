@@ -27,7 +27,10 @@
       const hlg = Boolean(settings.hdr);
       const supersampling = Boolean(settings.supersampling);
       const buffers = samplingEngine.createFrameBuffers(width, height, { tenBit, supersampling });
-      const sampleCount = supersampling ? samplingEngine.offsets.length : 1;
+      const sampleOffsets = supersampling && Array.isArray(settings.sampleOffsets) && settings.sampleOffsets.length
+        ? settings.sampleOffsets
+        : supersampling ? samplingEngine.offsets : samplingEngine.standardOffsets || [[0, 0]];
+      const sampleCount = sampleOffsets.length;
       let frameOpen = false;
 
       function beginFrame() {
@@ -116,6 +119,17 @@
       supersampled.resolveFrame();
       supersampled.cleanup();
 
+      values.push(20, 40);
+      const balanced = harness.createCapture({
+        width: 1, height: 1, supersampling: true, sampleOffsets: samplingEngine.balancedOffsets
+      });
+      balanced.beginFrame();
+      for (let index = 0; index < samplingEngine.balancedOffsets.length; index++) {
+        await balanced.captureSample({ sampleIndex: index, offset: samplingEngine.balancedOffsets[index] });
+      }
+      balanced.resolveFrame();
+      balanced.cleanup();
+
       const packed = (100 | (200 << 10) | (300 << 20) | (3 << 30)) >>> 0;
       values.push(packed);
       const tenBit = harness.createCapture({ width: 1, height: 1, tenBit: true });
@@ -126,9 +140,10 @@
 
       return standard.output[0] === 77
         && supersampled.output[0] > 25 && supersampled.output[0] < 30
+        && balanced.output[0] > 30 && balanced.output[0] < 35
         && tenBit.output[0] === packed
-        && reads.join(',') === '5121,5121,5121,5121,5121,33640'
-        && sampleStates.filter((entry) => entry.startsWith('sample')).length === 6
+        && reads.join(',') === '5121,5121,5121,5121,5121,5121,5121,33640'
+        && sampleStates.filter((entry) => entry.startsWith('sample')).length === 8
         && sampleStates.at(-1) === 'reset:0';
     }
 

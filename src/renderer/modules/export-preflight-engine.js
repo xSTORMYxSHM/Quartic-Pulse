@@ -40,6 +40,8 @@
         masterBitrate,
         format: String(settings.format || ''),
         hdrOutput: Boolean(settings.hdrOutput),
+        samplingMode: sampling.normalizeMode(settings.samplingMode, settings.supersampling),
+        samplingSamples: sampling.sampleCount(settings.samplingMode, settings.supersampling),
         supersampling: Boolean(settings.supersampling),
         matchLive,
         refreshEncoder: Boolean(settings.refreshEncoder)
@@ -54,6 +56,8 @@
         masterBitrate: context.masterBitrate,
         format: context.format,
         hdrOutput: context.hdrOutput,
+        samplingMode: context.samplingMode,
+        samplingSamples: context.samplingSamples,
         supersampling: context.supersampling,
         matchLive: context.matchLive,
         refreshEncoder: context.refreshEncoder
@@ -98,6 +102,7 @@
         durationOverride: 5,
         format: 'gpu_auto',
         hdrOutput: true,
+        samplingMode: 'balanced',
         supersampling: true,
         refreshEncoder: true
       });
@@ -119,6 +124,8 @@
       return prepared.request.duration === 5
         && prepared.context.iterations === 620
         && prepared.request.hdrOutput
+        && prepared.request.samplingMode === 'balanced'
+        && prepared.request.samplingSamples === 2
         && prepared.request.supersampling
         && prepared.request.refreshEncoder
         && prepared.request.masterBitrate > 0

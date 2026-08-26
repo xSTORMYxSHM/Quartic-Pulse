@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "format": "data-horizon.quartic-visualizer",
+  "target": "quartic-pulse",
+  "id": "com.tempestmainframe.data-horizon.quartic-smoke-signal",
+  "name": "Data Horizon Signal Test",
+  "version": "1.0.0",
+  "createdBy": "Data Horizon Studio",
+  "engine": { "id": "data-horizon-runtime", "version": "0.15.0" },
+  "project": "project.horizon.json",
+  "entrypoint": "runtime/index.html",
+  "canvas": { "width": 1280, "height": 720, "transparent": false },
+  "audio": {
+    "contract": "tempest.audio-features.v1",
+    "sources": ["bass", "mids", "highs", "beat", "rms"],
+    "parameterBindings": 3
+  },
+  "runtime": { "browser": "chromium-webgl2", "localFile": true, "deterministic": true },
+  "visualizer": {
+    "key": "quartic-smoke-signal",
+    "category": "CUSTOM",
+    "mode": "full-canvas",
+    "acceptsTransportClock": true,
+    "acceptsOfflineFrames": true
+  },
+  "palettes": [
+    {
+      "id": "signal-neon",
+      "name": "Signal Neon",
+      "colors": ["#091125", "#20466E", "#63558E", "#6BA8B5"],
+      "favorite": true
+    },
+    {
+      "id": "signal-ember",
+      "name": "Signal Ember",
+      "colors": ["#17090D", "#6E2633", "#C76543", "#F0C36C"]
+    }
+  ]
+}

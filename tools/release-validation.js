@@ -34,10 +34,19 @@ check(packageData.build?.asarUnpack?.includes('assets/windows-audio/**/*'), 'Win
 const indexHtml = read('src/renderer/index.html');
 check(indexHtml.includes('id="appVersionText"'), 'About version element is missing.');
 check(indexHtml.includes('../shared/app-metadata.js'), 'Renderer does not load centralized app metadata.');
+check(indexHtml.includes('data-visual-style="6"') && indexHtml.includes('data-visual-options="6"'), 'Data Horizon selector or options panel is missing.');
+check(indexHtml.includes('id="importVisualizerPackageButton"') && indexHtml.includes('id="installedVisualizerPackage"') && indexHtml.includes('id="removeVisualizerPackageButton"'), 'Custom visualizer package controls are missing.');
+check(indexHtml.includes('PREVIEW PACKAGE') && indexHtml.includes('CUSTOM VISUALIZERS + PALETTES'), 'Data Horizon package preview or palette messaging is missing.');
+check(indexHtml.includes('modules/data-horizon-runtime-vendor.js') && indexHtml.includes('modules/data-horizon-runtime.js') && indexHtml.includes('modules/visualizer-package-controller.js'), 'Imported visualizer renderer modules are not loaded.');
+check(indexHtml.includes('modules/audio-modulation-engine.js') && indexHtml.includes('modules/audio-modulation-controller.js') && indexHtml.includes('id="modulationVisualSupport"'), 'Visual-aware audio modulation modules or capability messaging is missing.');
+check(indexHtml.includes('modules/music-personality-controller.js') && indexHtml.includes('id="musicPersonalityMount"'), 'Music Personality controller or mount is missing.');
+check(indexHtml.includes('modules/visual-preset-controller.js') && indexHtml.includes('id="experiencePresetGrid"'), 'Visual preset controller or preset grid is missing.');
+check(indexHtml.includes('id="savedPaletteGrid"') && indexHtml.includes('id="saveCurrentPaletteButton"') && indexHtml.includes('modules/palette-library-controller.js'), 'Saved color palette library is missing.');
 check(!/style-src[^;]*(?:'unsafe-inline'|\*)/.test(indexHtml), 'CSP must not allow unrestricted inline styles.');
 
 const requiredFiles = [
   'LICENSE',
+  'DATA_HORIZON_PACKAGE_SPEC.md',
   'THIRD_PARTY_NOTICES.md',
   'BRAND_ASSETS.md',
   'assets/icon.png',
@@ -52,11 +61,36 @@ const requiredFiles = [
   'assets/bin/ffmpeg.exe',
   'assets/bin/FFmpeg-LICENSE.txt',
   'assets/bin/FFmpeg-README.txt',
-  'assets/bin/FFmpeg-SOURCE.txt'
+  'assets/bin/FFmpeg-SOURCE.txt',
+  'src/main/visualizer-package-manager.js',
+  'src/renderer/modules/data-horizon-runtime-vendor.js',
+  'src/renderer/modules/data-horizon-runtime.js',
+  'src/renderer/modules/visualizer-package-controller.js',
+  'src/renderer/modules/audio-modulation-engine.js',
+  'src/renderer/modules/audio-modulation-controller.js',
+  'src/renderer/modules/music-personality-controller.js',
+  'src/renderer/modules/visual-preset-controller.js',
+  'src/renderer/modules/performance-show-controller.js',
+  'src/renderer/modules/audio-source-controller.js',
+  'src/renderer/modules/song-map-controller.js',
+  'src/renderer/modules/performance-package-session-controller.js',
+  'src/renderer/modules/profile-service-controller.js',
+  'src/renderer/modules/operator-tools-controller.js',
+  'src/renderer/modules/workspace-ui-controller.js',
+  'src/renderer/modules/show-composer-orchestrator.js',
+  'src/renderer/modules/palette-library-controller.js'
 ];
 for (const relativePath of requiredFiles) {
   check(fs.existsSync(path.join(root, relativePath)), `Required release asset is missing: ${relativePath}`);
 }
+
+const dataHorizonSpec = read('DATA_HORIZON_PACKAGE_SPEC.md');
+const dataHorizonFixtureManifest = JSON.parse(read('tools/fixtures/data-horizon-signal-test/manifest.json'));
+const dataHorizonFixtureProject = JSON.parse(read('tools/fixtures/data-horizon-signal-test/project.horizon.json'));
+check(dataHorizonSpec.includes('data-horizon.quartic-visualizer') && dataHorizonSpec.includes('Shadow, Field, Accent, and Detail'), 'Data Horizon package specification is incomplete.');
+check(Array.isArray(dataHorizonFixtureManifest.palettes) && dataHorizonFixtureManifest.palettes.length >= 2, 'Data Horizon reference fixture must include package palettes.');
+check(['image', 'text', 'shape', 'spectrum', 'waveform', 'particles', 'path'].every((type) => dataHorizonFixtureProject.layers.some((layer) => layer.type === type)), 'Data Horizon reference fixture must cover every native visual layer type.');
+check(read('src/renderer/modules/data-horizon-runtime-vendor.js').includes('Generated from first-party Data Horizon 0.15.0') && read('src/renderer/modules/data-horizon-runtime.js').includes('evaluateTimeline'), 'Bundled Data Horizon 0.15 runtime or host timeline adapter is missing.');
 
 const publicText = [];
 walk(path.join(root, 'src'), (file) => {

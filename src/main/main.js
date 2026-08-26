@@ -7,6 +7,7 @@ const crypto = require('crypto');
 const dgram = require('dgram');
 const { pipeline } = require('stream/promises');
 const exportProfileCatalog = require('../shared/export-profiles');
+const { VisualizerPackageManager, styleIdFor } = require('./visualizer-package-manager');
 const {
   videoFormats,
   normalizeRequestedFormat,
@@ -27,6 +28,7 @@ let oscOwnerId = null;
 let cachedExportEncoder = null;
 const cachedFixedExportEncoders = new Map();
 let lastReportSubmitTime = 0;
+let smokeCustomVisualizerStyleId = 0;
 const reportProjectUrl = 'https://github.com/xSTORMYxSHM/Quartic-Pulse';
 const reportIncidentLimit = 20;
 
@@ -309,7 +311,8 @@ function listWindowsOutputDevices() {
 function createWindow() {
   const smokeTest = process.argv.includes('--smoke-test');
   const smokeStyleArgument = process.argv.find((argument) => argument.startsWith('--smoke-style='));
-  const requestedSmokeStyle = Math.max(0, Math.min(6, Number.parseInt(smokeStyleArgument?.split('=')[1] || '0', 10) || 0));
+  const requestedSmokeStyle = smokeCustomVisualizerStyleId
+    || Math.max(0, Math.min(6, Number.parseInt(smokeStyleArgument?.split('=')[1] || '0', 10) || 0));
   const smokeTabArgument = process.argv.find((argument) => argument.startsWith('--smoke-tab='));
   const requestedTabValue = smokeTabArgument?.split('=')[1] || 'music';
   const requestedSmokeTab = ['music', 'playlist', 'analysis', 'frequency-color', 'appearance', 'reactivity', 'dimensional', 'folding', 'mapping', 'show', 'composer', 'controls', 'camera', 'tools', 'stream', 'export', 'system', 'reports', 'about'].includes(requestedTabValue) ? requestedTabValue : 'music';
@@ -435,7 +438,10 @@ function createWindow() {
             const modulationMatrixReady = Boolean(document.querySelector('#modulationEnabled'))
               && Boolean(document.querySelector('#modulationRouteList'))
               && Boolean(document.querySelector('#addModulationRoute'))
-              && document.querySelectorAll('[data-modulation-preset]').length === 4;
+              && Boolean(document.querySelector('#modulationVisualSupport'))
+              && document.querySelectorAll('[data-modulation-preset]').length === 5
+              && Boolean(window.QuarticAudioModulationEngine?.create)
+              && Boolean(window.QuarticAudioModulationController?.create);
             const showSequencerReady = document.querySelectorAll('.live-subtab').length === 6
               && Boolean(document.querySelector('[data-tab-panel="show"]'))
               && Boolean(document.querySelector('#beatBpm'))
@@ -635,7 +641,7 @@ function createWindow() {
               mode.dispatchEvent(new Event('change', { bubbles: true }));
               frequencyBands = advancedOpened && advancedPanel.hidden;
             }
-            if (visualStyle && visualStyle.options.length === 7) {
+            if (visualStyle && visualStyle.options.length >= 7) {
               for (const value of ['1', '2', '3', '4', '5', '6']) {
                 visualStyle.value = value;
                 visualStyle.dispatchEvent(new Event('change', { bubbles: true }));
@@ -644,6 +650,7 @@ function createWindow() {
               visualStyle.value = '${requestedSmokeStyle}';
               visualStyle.dispatchEvent(new Event('change', { bubbles: true }));
             }
+            if (Number('${requestedSmokeStyle}') >= 1000) await new Promise((resolve) => setTimeout(resolve, 900));
             if ('${requestedSmokeStyle}' === '3' && pulseControls) {
               document.querySelector('[data-pulse-preset="rapid"]')?.click();
               document.querySelector('[data-pulse-preset="balanced"]')?.click();
@@ -939,7 +946,7 @@ function createWindow() {
               && document.querySelectorAll('.interface-mode-switch [data-interface-mode]').length === 2
             );
             const visualCatalogReady = Boolean(
-              window.QuarticVisualCatalog?.styles?.length === 7
+              window.QuarticVisualCatalog?.styles?.length >= 7
               && window.QuarticVisualCatalog.validate()
               && window.QuarticVisualCatalog.get(5)?.key === 'mandelbulb'
             );
@@ -953,11 +960,43 @@ function createWindow() {
             );
             const controllerModulesReady = Boolean(
               window.QuarticAudioController
+              && window.QuarticAudioSourceController
               && window.QuarticPerformanceController
               && window.QuarticExportController
               && window.QuarticSongDirectorController
+              && window.QuarticSongMapController
+              && window.QuarticAudioModulationEngine
+              && window.QuarticAudioModulationController
+              && window.QuarticMusicPersonalityController
+              && window.QuarticVisualPresetController
+              && window.QuarticPerformanceShowController
+              && window.QuarticPerformancePackageSessionController
+              && window.QuarticProfileServiceController
+              && window.QuarticOperatorToolsController
+              && window.QuarticWorkspaceUiController
+              && window.QuarticShowComposerOrchestrator
+              && window.__quarticControllers?.modulation?.diagnostics?.ready
+              && window.__quarticControllers.modulation.diagnostics.bound
+              && window.__quarticControllers.modulation.diagnostics.initialized
+              && window.__quarticControllers?.musicPersonality?.diagnostics?.ready
+              && window.__quarticControllers.musicPersonality.diagnostics.bound
+              && window.__quarticControllers.musicPersonality.diagnostics.initialized
+              && window.__quarticControllers?.visualPresets?.diagnostics?.ready
+              && window.__quarticControllers.visualPresets.diagnostics.bound
+              && window.__quarticControllers.visualPresets.diagnostics.initialized
+              && window.__quarticControllers?.performanceShow?.diagnostics?.ready
+              && window.__quarticControllers.performanceShow.diagnostics.showBound
+              && window.__quarticControllers.performanceShow.diagnostics.showInitialized
+              && window.__quarticControllers.performanceShow.diagnostics.performanceBound
+              && window.__quarticControllers.performanceShow.diagnostics.performanceInitialized
+              && window.QuarticDataHorizonRuntime
+              && window.QuarticVisualizerPackageController
               && window.__quarticControllers?.audio?.diagnostics?.ready
               && window.__quarticControllers.audio.diagnostics.bound
+              && window.__quarticControllers?.audioSource?.diagnostics?.initialized
+              && window.__quarticControllers?.songMap?.diagnostics?.initialized
+              && window.__quarticControllers?.performancePackage?.diagnostics?.packagesInitialized
+              && window.__quarticControllers?.profileService?.diagnostics?.initialized
               && window.__quarticControllers?.performance?.diagnostics?.ready
               && window.__quarticControllers.performance.diagnostics.bound
               && window.__quarticControllers?.export?.diagnostics?.ready
@@ -989,6 +1028,14 @@ function createWindow() {
               && window.__quarticControllers.profileManager.diagnostics.initialized
               && typeof window.__quarticControllers.profileManager.render === 'function'
               && typeof window.__quarticControllers.profileManager.selectedProfile === 'function'
+            );
+            const paletteLibraryReady = Boolean(
+              window.QuarticPaletteLibraryController
+              && window.__quarticControllers?.paletteLibrary?.diagnostics?.ready
+              && window.__quarticControllers.paletteLibrary.diagnostics.bound
+              && typeof window.__quarticControllers.paletteLibrary.render === 'function'
+              && document.querySelector('#savedPaletteGrid')
+              && document.querySelector('#saveCurrentPaletteButton')
             );
             const audioAnalysisEngineReady = Boolean(
               window.QuarticAudioAnalysisEngine
@@ -1355,6 +1402,21 @@ function createWindow() {
                 && entry.automation.equation >= 0 && entry.automation.equation <= 1.5
                 && entry.automation.flow >= 0 && entry.automation.flow <= 1);
             const performanceHardwareModePreserved = document.querySelector('#performanceMode')?.value === performanceHardwareModeBefore;
+            const customVisualizerDiagnostics = window.__quarticCustomVisualizerDiagnostics || null;
+            const customVisualizerReady = Number('${requestedSmokeStyle}') < 1000 || Boolean(
+              customVisualizerDiagnostics
+              && customVisualizerDiagnostics.webgl2
+              && (customVisualizerDiagnostics.loadedAssets > 0 || customVisualizerDiagnostics.drawCalls > 0)
+              && !customVisualizerDiagnostics.lastError
+            );
+            const customNativeLayersReady = Number('${requestedSmokeStyle}') < 1000 || ['image', 'text', 'shape', 'spectrum', 'waveform', 'particles', 'path']
+              .every((type) => customVisualizerDiagnostics?.layerTypes?.includes(type));
+            const customPackagePalettes = window.__quarticControllers?.profileService?.profiles
+              ?.filter((profile) => profile.packagePalette?.managed && profile.packagePalette.packageId === 'com.tempestmainframe.data-horizon.quartic-smoke-signal') || [];
+            const customPackagePalettesReady = Number('${requestedSmokeStyle}') < 1000 || (
+              customPackagePalettes.length === 2
+              && customPackagePalettes.every((profile) => profile.kind === 'colors' && profile.data?.customColors?.length === 4)
+            );
             return {
               ready: Boolean(window.__quarticReady),
               webgl2: Boolean(document.querySelector('#fractalCanvas')?.getContext('webgl2')),
@@ -1387,6 +1449,7 @@ function createWindow() {
               exportLivePresentationReady,
               showComposerControllerReady,
               profileManagerControllerReady,
+              paletteLibraryReady,
               audioAnalysisEngineReady,
               performanceSequencerEngineReady,
               performanceShowDataEngineReady,
@@ -1486,6 +1549,10 @@ function createWindow() {
               visualEffectControls,
               effectPresetsReady,
               visualOptionsReady: [...document.querySelectorAll('[data-visual-options]')].every((panel) => panel.hidden === (Number(panel.dataset.visualOptions) !== Number('${requestedSmokeStyle}'))),
+              customVisualizerReady,
+              customNativeLayersReady,
+              customPackagePalettesReady,
+              customVisualizerDiagnostics,
               activeTab: activeTopTab === 'music' ? activeMusicTab : (activeTopTab === 'appearance' ? activeAppearanceTab : (activeTopTab === 'live' ? activeLiveTab : (activeTopTab === 'system' ? activeSystemTab : activeTopTab))),
               activeVisualStyle: document.body.dataset.visualStyle || '',
               dimensionalEnabled: Boolean(document.querySelector('#fractalDimensional')?.checked),
@@ -1700,11 +1767,23 @@ function createWindow() {
             })()`);
             result.pulseEventCount = 0;
             result.pulsePeakCount = 0;
+            result.fractalAudioPeak = 0;
+            result.fractalAudioDiagnostics = null;
             result.beatSamples = [];
             for (let attempt = 0; attempt < 12; attempt++) {
               await new Promise((resolve) => setTimeout(resolve, 500));
               result.pulseEventCount = await window.webContents.executeJavaScript(`Number(window.__quarticPulseEventCount || 0)`);
               result.pulsePeakCount = Math.max(result.pulsePeakCount, result.pulseEventCount);
+              result.fractalAudioDiagnostics = await window.webContents.executeJavaScript(`window.__quarticFractalAudioDiagnostics || null`);
+              if (result.fractalAudioDiagnostics) {
+                result.fractalAudioPeak = Math.max(result.fractalAudioPeak,
+                  Number(result.fractalAudioDiagnostics.directBass || 0),
+                  Number(result.fractalAudioDiagnostics.directMids || 0),
+                  Number(result.fractalAudioDiagnostics.directHighs || 0),
+                  Number(result.fractalAudioDiagnostics.equationBass || 0),
+                  Number(result.fractalAudioDiagnostics.equationMids || 0),
+                  Number(result.fractalAudioDiagnostics.equationHighs || 0));
+              }
               result.beatSamples.push(await window.webContents.executeJavaScript(`({ total: Number(window.__quarticPulseBeatDetectedTotal || 0), energy: Number(window.__quarticPulseBeatEnergy || 0), onset: Number(window.__quarticPulseBeatOnset || 0), threshold: Number(window.__quarticPulseBeatThreshold || 0) })`));
             }
             result.pulseEventLimit = await window.webContents.executeJavaScript(`Number(window.__quarticPulseEventLimit || 0)`);
@@ -1716,7 +1795,12 @@ function createWindow() {
             })()`);
             result.syntheticPulseReady = requestedSmokeStyle !== 3
               || (result.pulseAcceptedTotal > 0 && result.pulsePeakCount <= result.pulseEventLimit);
-          } else result.syntheticPulseReady = true;
+            result.fractalAudioReady = ![0, 5].includes(requestedSmokeStyle)
+              || (result.fractalAudioPeak > .01 && result.fractalAudioDiagnostics?.matrixOwnsFractalAudio === false);
+          } else {
+            result.syntheticPulseReady = true;
+            result.fractalAudioReady = true;
+          }
           result.adaptiveBeatReady = !smokeAdaptiveBeat || result.beatDetectedTotal >= 4;
           if (smokeObsOutput) {
             await window.webContents.executeJavaScript(`(() => {
@@ -1724,7 +1808,7 @@ function createWindow() {
               resolution.value = '1280x720';
               resolution.dispatchEvent(new Event('change', { bubbles: true }));
               const chroma = document.querySelector('#obsChromaKey');
-              chroma.checked = true;
+              chroma.checked = Number('${requestedSmokeStyle}') < 1000;
               chroma.dispatchEvent(new Event('change', { bubbles: true }));
               document.querySelector('#obsOutputButton')?.click();
             })()`);
@@ -1739,16 +1823,20 @@ function createWindow() {
               const bitmap = outputImage.toBitmap();
               let keyPixels = 0;
               let unsafeGreenPixels = 0;
+              let visiblePixels = 0;
               for (let offset = 0; offset < bitmap.length; offset += 4) {
                 const blue = bitmap[offset];
                 const green = bitmap[offset + 1];
                 const red = bitmap[offset + 2];
+                if (red + green + blue > 24) visiblePixels += 1;
                 const pureKey = green >= 245 && red <= 10 && blue <= 10;
                 if (pureKey) keyPixels += 1;
                 else if (green >= 36 && green > red * 1.25 && green > blue * 1.25) unsafeGreenPixels += 1;
               }
-              result.obsChromaMetrics = { keyPixels, unsafeGreenPixels };
-              result.obsChromaSafe = keyPixels > 100 && unsafeGreenPixels === 0;
+              result.obsChromaMetrics = { keyPixels, unsafeGreenPixels, visiblePixels };
+              result.obsChromaSafe = requestedSmokeStyle >= 1000
+                ? visiblePixels > 100
+                : keyPixels > 100 && unsafeGreenPixels === 0;
               obsOutputWindow.close();
             } else result.obsChromaSafe = false;
           } else {
@@ -1774,7 +1862,7 @@ function createWindow() {
           }
           console.log(`SMOKE_TEST ${JSON.stringify(result)}`);
           fs.writeFileSync(path.join(os.tmpdir(), 'quartic-pulse-smoke-result.json'), JSON.stringify(result, null, 2));
-          process.exitCode = result.ready && result.webgl2 && result.frequencyBands && result.visualStyles && result.playlistReady && result.obsOutputReady && result.profilesReady && result.windowsAudioReady && result.deckOutputRoutingReady && result.outputCaptureReady && result.audioHudReady && result.hudTransportReady && result.stageGeometryReady && result.exportStatusReady && result.sidebarLayoutReady && result.quickControlsLayoutReady && result.mainTabsFit && result.workspaceShellReady && result.visualCatalogReady && result.controllerModulesReady && result.exportOfflinePresentationReady && result.exportLivePresentationReady && result.showComposerControllerReady && result.profileManagerControllerReady && result.audioAnalysisEngineReady && result.performanceSequencerEngineReady && result.performanceShowDataEngineReady && result.songMapDataEngineReady && result.performancePackageEngineReady && result.exportSessionEngineReady && result.exportSamplingEngineReady && result.exportFrameCaptureEngineReady && result.exportPlanningEngineReady && result.exportPresentationEngineReady && result.exportPreflightEngineReady && result.exportEncoderScanEngineReady && result.exportBenchmarkEngineReady && result.exportHistoryEngineReady && result.exportRenderCoordinatorReady && result.exportWorkflowEngineReady && result.exportOfflineLifecycleReady && result.exportLiveLifecycleReady && result.exportEncoderEngineReady && result.basicWorkflowReady && result.advancedWorkflowReady && result.unleashedLayoutReady && result.aboutContentReady && result.musicPersonalityReady && result.songMapReady && result.songMapAnalysisReady && result.songDirectorReady && result.songDirectorAnalysisReady && result.appearanceNavigationReady && result.modulationMatrixReady && result.showSequencerReady && result.showComposerReady && result.showComposerWorkspaceReady && result.showComposerGenerationReady && result.liveControlsReady && result.creativeToolsReady && result.performanceAssistantReady && result.reportCenterReady && result.reportGenerationReady && result.performanceAutomationStandbyReady && result.offlineExportReady && result.exportSamplingReady && result.exportQolReady && result.nativeExportEncoderReady && result.obsAutomationReady && result.coreEquationReady && result.coreEquationInputReady && result.percentageScalesReady && result.pulseControls && result.customColorRolesReady && result.beatDetectorControls && result.bulbControls && result.pulsePresetsReady && result.visualEffectControls && result.effectPresetsReady && result.visualOptionsReady && result.syntheticPulseReady && result.adaptiveBeatReady && result.obsWindowMovable && result.obsDragStripReady && result.obsChromaSafe && result.rotationVelocityReady && result.activeTab === requestedSmokeTab && result.activeVisualStyle === String(requestedSmokeStyle) && result.canvasWidth > 0 ? 0 : 1;
+          process.exitCode = result.ready && result.webgl2 && result.frequencyBands && result.visualStyles && result.playlistReady && result.obsOutputReady && result.profilesReady && result.windowsAudioReady && result.deckOutputRoutingReady && result.outputCaptureReady && result.audioHudReady && result.hudTransportReady && result.stageGeometryReady && result.exportStatusReady && result.sidebarLayoutReady && result.quickControlsLayoutReady && result.mainTabsFit && result.workspaceShellReady && result.visualCatalogReady && result.controllerModulesReady && result.exportOfflinePresentationReady && result.exportLivePresentationReady && result.showComposerControllerReady && result.profileManagerControllerReady && result.paletteLibraryReady && result.audioAnalysisEngineReady && result.performanceSequencerEngineReady && result.performanceShowDataEngineReady && result.songMapDataEngineReady && result.performancePackageEngineReady && result.exportSessionEngineReady && result.exportSamplingEngineReady && result.exportFrameCaptureEngineReady && result.exportPlanningEngineReady && result.exportPresentationEngineReady && result.exportPreflightEngineReady && result.exportEncoderScanEngineReady && result.exportBenchmarkEngineReady && result.exportHistoryEngineReady && result.exportRenderCoordinatorReady && result.exportWorkflowEngineReady && result.exportOfflineLifecycleReady && result.exportLiveLifecycleReady && result.exportEncoderEngineReady && result.basicWorkflowReady && result.advancedWorkflowReady && result.unleashedLayoutReady && result.aboutContentReady && result.musicPersonalityReady && result.songMapReady && result.songMapAnalysisReady && result.songDirectorReady && result.songDirectorAnalysisReady && result.appearanceNavigationReady && result.modulationMatrixReady && result.showSequencerReady && result.showComposerReady && result.showComposerWorkspaceReady && result.showComposerGenerationReady && result.liveControlsReady && result.creativeToolsReady && result.performanceAssistantReady && result.reportCenterReady && result.reportGenerationReady && result.performanceAutomationStandbyReady && result.offlineExportReady && result.exportSamplingReady && result.exportQolReady && result.nativeExportEncoderReady && result.obsAutomationReady && result.coreEquationReady && result.coreEquationInputReady && result.percentageScalesReady && result.pulseControls && result.customColorRolesReady && result.beatDetectorControls && result.bulbControls && result.pulsePresetsReady && result.visualEffectControls && result.effectPresetsReady && result.visualOptionsReady && result.syntheticPulseReady && result.fractalAudioReady && result.adaptiveBeatReady && result.obsWindowMovable && result.obsDragStripReady && result.obsChromaSafe && result.rotationVelocityReady && result.activeTab === requestedSmokeTab && result.activeVisualStyle === String(requestedSmokeStyle) && result.canvasWidth > 0 ? 0 : 1;
           if (!result.songDirectorEngineReady) process.exitCode = 1;
           if (!result.exportAdvisorEngineReady) process.exitCode = 1;
           if (!result.exportSettingsCoordinatorEngineReady) process.exitCode = 1;
@@ -1795,6 +1883,9 @@ function createWindow() {
           if (!result.encoderCapabilityScanReady) process.exitCode = 1;
           if (!result.exportBenchmarkReady) process.exitCode = 1;
           if (!result.exportAdvisorReady) process.exitCode = 1;
+          if (!result.customVisualizerReady) process.exitCode = 1;
+          if (!result.customNativeLayersReady) process.exitCode = 1;
+          if (!result.customPackagePalettesReady) process.exitCode = 1;
         } catch (error) {
           console.error('SMOKE_TEST_FAILED', error);
           try {
@@ -2782,7 +2873,51 @@ async function detectHardware() {
   };
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  const smokeCustomVisualizer = process.argv.includes('--smoke-custom-visualizer');
+  const visualizerPackageRoot = smokeCustomVisualizer
+    ? path.join(os.tmpdir(), `quartic-pulse-smoke-visualizers-${process.pid}`)
+    : path.join(app.getPath('userData'), 'visualizer-packages');
+  const visualizerPackageManager = new VisualizerPackageManager(visualizerPackageRoot);
+  const pendingVisualizerImports = new Map();
+  ipcMain.handle('visualizer-package:list', () => visualizerPackageManager.list());
+  ipcMain.handle('visualizer-package:preview', async () => {
+    const result = await dialog.showOpenDialog({
+      title: 'Preview Data Horizon package',
+      buttonLabel: 'Preview package',
+      properties: ['openDirectory']
+    });
+    if (result.canceled || !result.filePaths[0]) return null;
+    const packagePreview = await visualizerPackageManager.preview(result.filePaths[0]);
+    const token = crypto.randomUUID();
+    pendingVisualizerImports.clear();
+    pendingVisualizerImports.set(token, result.filePaths[0]);
+    return Object.freeze({ token, package: packagePreview });
+  });
+  ipcMain.handle('visualizer-package:install-preview', async (_event, token) => {
+    const sourcePath = pendingVisualizerImports.get(String(token || ''));
+    pendingVisualizerImports.delete(String(token || ''));
+    if (!sourcePath) throw new Error('The package preview expired. Choose the Data Horizon export again.');
+    return visualizerPackageManager.install(sourcePath);
+  });
+  ipcMain.handle('visualizer-package:import', async () => {
+    const result = await dialog.showOpenDialog({
+      title: 'Import Data Horizon visualizer package',
+      buttonLabel: 'Import visualizer',
+      properties: ['openDirectory']
+    });
+    if (result.canceled || !result.filePaths[0]) return null;
+    return visualizerPackageManager.install(result.filePaths[0]);
+  });
+  ipcMain.handle('visualizer-package:load', (_event, styleId) => visualizerPackageManager.load(styleId));
+  ipcMain.handle('visualizer-package:remove', (_event, styleId) => visualizerPackageManager.remove(styleId));
+  if (smokeCustomVisualizer) {
+    const fixturePath = app.isPackaged
+      ? path.join(process.resourcesPath, 'smoke-fixtures', 'data-horizon-signal-test')
+      : path.join(__dirname, '..', '..', 'tools', 'fixtures', 'data-horizon-signal-test');
+    const installed = await visualizerPackageManager.install(fixturePath);
+    smokeCustomVisualizerStyleId = installed.styleId || styleIdFor(installed.packageId);
+  }
   ipcMain.on('report:renderer-error', (event, error) => {
     if (mainWindow && event.sender === mainWindow.webContents) {
       recordReportIncident('renderer-javascript', error?.message || 'Renderer JavaScript error.', {

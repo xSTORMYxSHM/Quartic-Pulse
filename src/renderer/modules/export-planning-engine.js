@@ -70,7 +70,9 @@
         );
       } else if (visualStyle === 5) detailFactor = .58;
       else if (visualStyle === 6) detailFactor = .76;
-      if (settings.supersampling) detailFactor *= .25;
+      const samplingSamples = Math.max(1, Math.round(Number(settings.samplingSamples)
+        || (settings.supersampling ? 4 : 1)));
+      detailFactor /= samplingSamples;
       return clamp(liveFps * resolutionFactor * detailFactor * .82, .05, 500);
     }
 
