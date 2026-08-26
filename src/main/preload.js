@@ -17,6 +17,8 @@ contextBridge.exposeInMainWorld('quarticDesktop', {
   openReportIssues: () => ipcRenderer.invoke('report:open-issues'),
   reportRendererError: (error) => ipcRenderer.send('report:renderer-error', error),
   getExportPreflight: (options) => ipcRenderer.invoke('export:preflight', options),
+  getExportEncoderCapabilities: () => ipcRenderer.invoke('export:encoder-capabilities'),
+  benchmarkExportEncoder: (options) => ipcRenderer.invoke('export:benchmark-encoder', options),
   getRecoverableExports: () => ipcRenderer.invoke('export:recovery-list'),
   recoverExport: (id) => ipcRenderer.invoke('export:recovery-finish', id),
   discardRecoverableExport: (id) => ipcRenderer.invoke('export:recovery-discard', id),
