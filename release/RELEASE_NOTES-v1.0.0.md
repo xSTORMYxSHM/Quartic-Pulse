@@ -18,8 +18,8 @@ Quartic Pulse 1.0.0 is the first stable major release of the Windows 11 audio-re
 
 ## Packages
 
-- `Quartic Pulse Setup 1.0.0.exe` — signed customizable Windows 11 x64 installer.
-- `Quartic Pulse 1.0.0.exe` — signed portable Windows 11 x64 executable.
+- `Quartic.Pulse.Setup.1.0.0.exe` — signed customizable Windows 11 x64 installer.
+- `Quartic.Pulse.1.0.0.exe` — signed portable Windows 11 x64 executable.
 - `SHA256SUMS-v1.0.0.txt` — SHA-256 integrity hashes.
 - `RELEASE_MANIFEST-v1.0.0.json` — machine-readable sizes, hashes, stable channel, and Authenticode identity.
 

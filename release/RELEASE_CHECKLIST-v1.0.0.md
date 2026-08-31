@@ -14,10 +14,10 @@
 
 ## Release publication
 
-- [ ] Release branch is committed and pushed.
-- [ ] Annotated `v1.0.0` tag is pushed.
-- [ ] GitHub release is published with installer, portable executable, checksums, manifest, license, third-party notices, and source archive.
-- [ ] GitHub release is marked as the latest stable release.
+- [x] Release branch is committed and pushed.
+- [x] Annotated `v1.0.0` tag is pushed.
+- [x] GitHub release is published with installer, portable executable, checksums, manifest, license, third-party notices, and source archive.
+- [x] GitHub release is marked as the latest stable release.
 
 ## Recommended real-machine follow-up
 
