@@ -74,15 +74,15 @@ Offline quality profiles include the recommended Automatic GPU Master, YouTube H
 3. Install dependencies:
 
    ```powershell
-   npm install
+   pnpm install --frozen-lockfile
    ```
 
-   Release packaging also requires a GPL-enabled 64-bit Windows FFmpeg 8.1.2 or newer build on PATH. `npm run dist` automatically runs `npm run bundle:ffmpeg`, verifies the security and licensing baseline, copies FFmpeg and its notices into the packaged application, and keeps the large executable out of the Git repository.
+   Release packaging also requires a GPL-enabled 64-bit Windows FFmpeg 8.1.2 or newer build on PATH. `pnpm run dist` automatically runs `pnpm run bundle:ffmpeg`, verifies the security and licensing baseline, copies FFmpeg and its notices into the packaged application, and keeps the large executable out of the Git repository.
 
 4. Start the app:
 
    ```powershell
-   npm start
+   pnpm start
    ```
 
 You can also press `F5` and choose **Run Quartic Pulse**. The included `.vscode/launch.json` starts Electron with DevTools open.
@@ -218,16 +218,18 @@ The Export workspace and preflight window show the chosen container, codec, colo
 Create an unpacked test build:
 
 ```powershell
-npm run pack
+pnpm run pack
 ```
 
 Create an NSIS installer and a portable executable:
 
 ```powershell
-npm run dist
+pnpm run dist
 ```
 
 Build output is written to `release/`.
+
+Production builds use Azure Trusted Signing. `pnpm run dist` requires an authenticated Az.Accounts context for the configured signing profile and refuses to complete unless the unpacked application, installer, and portable executable all carry one valid timestamped Authenticode signature.
 
 The normal Windows installer uses a branded Quartic Pulse assisted setup flow. It requests administrator approval for an all-users installation, displays the installation-folder page with a **Browse** button, and shows the selected path again before the user chooses **Install**. The portable executable remains available for users who do not want an installed copy.
 
@@ -255,4 +257,4 @@ src/renderer/styles.css
 
 ## Current scope
 
-Offline export is deterministic but intentionally bounded by the selected song length, resolution, FPS, shader detail, available GPU memory, system memory, destination storage, and the selected FFmpeg codec. High-detail output may render slower than the song duration, which is expected. Live Windows capture sources still cannot use offline export because they have no fixed local audio file. Code signing is also required before distributing a warning-free installer broadly.
+Offline export is deterministic but intentionally bounded by the selected song length, resolution, FPS, shader detail, available GPU memory, system memory, destination storage, and the selected FFmpeg codec. High-detail output may render slower than the song duration, which is expected. Live Windows capture sources still cannot use offline export because they have no fixed local audio file. Official 1.0.0 Windows artifacts are Authenticode-signed and timestamped; SmartScreen reputation remains controlled by Microsoft and can take time to accumulate for a new publisher or product.

@@ -1,6 +1,6 @@
 # Data Horizon → Quartic Pulse Package Format
 
-Quartic Pulse 0.50.0 accepts a folder exported by Data Horizon. Import is data-only: Quartic Pulse validates the bundle and renders `project.horizon.json` with its own compatible engine. JavaScript shipped inside the bundle is not executed.
+Quartic Pulse 1.0.0 accepts a folder exported by Data Horizon. Import is data-only: Quartic Pulse validates the bundle and renders `project.horizon.json` with its own compatible engine. JavaScript shipped inside the bundle is not executed.
 
 ## Required bundle layout
 

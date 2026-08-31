@@ -94,6 +94,9 @@
       if (!performance || typeof performance !== 'object' || !isValidProfile(performance.currentVisual)) {
         throw new Error('The performance package is incomplete or damaged.');
       }
+      if (performance.director?.map && !isValidSongMap({ ...performance.director.map, key: 'package-validation' })) {
+        throw new Error('The performance package contains an invalid Song Map.');
+      }
       const expectedFingerprint = fingerprint(performance);
       if (documentData.fingerprint !== expectedFingerprint) throw new Error('The package fingerprint does not match its contents.');
       return { performance, fingerprint: expectedFingerprint };

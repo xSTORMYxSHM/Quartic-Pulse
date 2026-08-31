@@ -6,20 +6,32 @@ const { discordWebhook, reportIdentity, sanitizeText, validatePayload } = requir
 
 const rateBuckets = new Map();
 const instanceSalt = crypto.randomBytes(32);
+let lastRateSweep = 0;
 
 function json(status, body, headers = {}) {
   return { status, jsonBody: body, headers: { 'Cache-Control': 'no-store', ...headers } };
 }
 
 function requestFingerprint(request) {
-  const forwarded = request.headers.get('x-forwarded-for') || request.headers.get('x-azure-clientip') || 'unknown';
-  return crypto.createHash('sha256').update(instanceSalt).update(String(forwarded).split(',')[0].trim()).digest('hex');
+  const azureClient = request.headers.get('x-azure-clientip');
+  const forwarded = String(request.headers.get('x-forwarded-for') || '').split(',').map((value) => value.trim()).filter(Boolean);
+  const client = azureClient || forwarded.at(-1) || 'unknown';
+  return crypto.createHash('sha256').update(instanceSalt).update(String(client)).digest('hex');
+}
+
+function pruneRateBuckets(now) {
+  if (rateBuckets.size < 1024 && now - lastRateSweep < 60000) return;
+  for (const [key, bucket] of rateBuckets) {
+    if (now >= bucket.resetAt) rateBuckets.delete(key);
+  }
+  lastRateSweep = now;
 }
 
 function acceptRate(request) {
   const now = Date.now();
   const limit = Math.max(1, Math.min(20, Number(process.env.REPORT_RATE_LIMIT) || 3));
   const windowMs = Math.max(10000, Math.min(3600000, (Number(process.env.REPORT_RATE_WINDOW_SECONDS) || 60) * 1000));
+  pruneRateBuckets(now);
   const key = requestFingerprint(request);
   const bucket = rateBuckets.get(key);
   if (!bucket || now >= bucket.resetAt) {
@@ -40,7 +52,9 @@ async function quarticReport(request, context) {
   if (!rate.accepted) return json(429, { error: 'Too many reports. Please try again later.' }, { 'Retry-After': String(rate.retryAfter) });
 
   try {
-    const payload = validatePayload(await request.json());
+    const rawBody = await request.text();
+    if (Buffer.byteLength(rawBody, 'utf8') > 70000) return json(413, { error: 'Request is too large.' });
+    const payload = validatePayload(JSON.parse(rawBody));
     const id = reportIdentity(payload.metadata);
     const webhook = discordWebhook(process.env.DISCORD_WEBHOOK_URL);
     const summary = sanitizeText(payload.metadata.summary || 'Quartic Pulse user report', 180);
@@ -70,4 +84,4 @@ app.http('quartic-report', {
   handler: quarticReport
 });
 
-module.exports = { quarticReport };
+module.exports = { acceptRate, pruneRateBuckets, quarticReport, requestFingerprint };

@@ -17,9 +17,9 @@ The endpoint accepts only `POST` JSON for `project: quartic-pulse`, limits repor
 Copy `local.settings.example.json` to the ignored `local.settings.json`, insert a private test webhook, then run:
 
 ```powershell
-npm install
-npm test
-npm start
+pnpm install --frozen-lockfile
+pnpm test
+pnpm start
 ```
 
 Do not publish `local.settings.json`. The root Quartic Pulse GPL-3.0-or-later license covers this reference relay source.

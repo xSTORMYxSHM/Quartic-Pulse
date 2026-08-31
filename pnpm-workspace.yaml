@@ -1,3 +1,7 @@
+packages:
+  - .
+  - tools/report-relay
+
 allowBuilds:
   electron: true
   electron-winstaller: true

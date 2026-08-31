@@ -714,6 +714,8 @@ const validSongMap = {
   updatedAt: '2026-08-09T00:00:00.000Z'
 };
 assert(songMapEngine.isValidMap(validSongMap) && !songMapEngine.isValidMap({ ...validSongMap, highs: [1] }), 'Song Map validation failed.');
+assert(!songMapEngine.isValidMap({ ...validSongMap, sections: [{ start: 4, end: 2, label: 'Invalid' }] }), 'Song Map validation accepted reversed section bounds.');
+assert(!songMapEngine.isValidMap({ ...validSongMap, sections: [{ start: 0, end: 4, label: 'x'.repeat(121) }] }), 'Song Map validation accepted an oversized section label.');
 assert(songMapEngine.parseCache('{bad-json').length === 0, 'Malformed Song Map cache did not recover safely.');
 const olderMap = { ...validSongMap, key: 'map-old', updatedAt: '2025-01-01T00:00:00.000Z' };
 const newestMap = { ...validSongMap, key: 'map-new', updatedAt: '2026-08-10T00:00:00.000Z' };

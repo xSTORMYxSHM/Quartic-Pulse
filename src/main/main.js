@@ -9,6 +9,12 @@ const { pipeline } = require('stream/promises');
 const exportProfileCatalog = require('../shared/export-profiles');
 const { VisualizerPackageManager, styleIdFor } = require('./visualizer-package-manager');
 const {
+  isAllowedExportTarget,
+  isTrustedRendererEvent,
+  isTrustedRendererUrl,
+  resolveLocalAbsolutePath
+} = require('./security-policy');
+const {
   videoFormats,
   normalizeRequestedFormat,
   saveDialogFilters,
@@ -31,6 +37,29 @@ let lastReportSubmitTime = 0;
 let smokeCustomVisualizerStyleId = 0;
 const reportProjectUrl = 'https://github.com/xSTORMYxSHM/Quartic-Pulse';
 const reportIncidentLimit = 20;
+const rendererEntryPath = path.resolve(__dirname, '..', 'renderer', 'index.html');
+
+function trustedRendererOptions() {
+  return { mainWindow, obsOutputWindow, rendererEntryPath };
+}
+
+function requireTrustedRenderer(event) {
+  if (!isTrustedRendererEvent(event, trustedRendererOptions())) throw new Error('Untrusted renderer IPC request rejected.');
+}
+
+function hardenAppWindow(window) {
+  window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  window.webContents.on('will-navigate', (event, url) => {
+    if (!isTrustedRendererUrl(url, rendererEntryPath)) event.preventDefault();
+  });
+}
+
+function isTrustedPermissionRequest(webContents, origin = '') {
+  if (!webContents || ![mainWindow?.webContents, obsOutputWindow?.webContents].includes(webContents)) return false;
+  if (!isTrustedRendererUrl(webContents.getURL(), rendererEntryPath)) return false;
+  if (!origin || origin === 'file://' || origin === 'file:') return true;
+  return isTrustedRendererUrl(origin, rendererEntryPath);
+}
 
 function reportDirectory() {
   try { return path.join(app.getPath('userData'), 'reports'); }
@@ -242,6 +271,7 @@ function openObsOutput(options = {}) {
       backgroundThrottling: false
     }
   });
+  hardenAppWindow(obsOutputWindow);
   obsOutputWindow.setAlwaysOnTop(settings.alwaysOnTop, 'floating');
   obsOutputWindow.setAspectRatio(settings.width / settings.height);
   obsOutputWindow.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'), {
@@ -348,6 +378,7 @@ function createWindow() {
     }
   });
   mainWindow = window;
+  hardenAppWindow(window);
   window.on('closed', () => {
     mainWindow = null;
     if (obsOutputWindow && !obsOutputWindow.isDestroyed()) obsOutputWindow.close();
@@ -363,7 +394,14 @@ function createWindow() {
   // Chromium cannot request Windows loopback directly. Electron supplies the
   // default Windows output mix when the renderer asks for display media; the
   // renderer immediately discards the required video track.
-  window.webContents.session.setDisplayMediaRequestHandler(async (_request, callback) => {
+  window.webContents.session.setDisplayMediaRequestHandler(async (request, callback) => {
+    const frame = request.frame;
+    const frameContents = [mainWindow?.webContents, obsOutputWindow?.webContents]
+      .find((webContents) => webContents?.mainFrame === frame);
+    if (!frame || frame !== frame.top || !isTrustedPermissionRequest(frameContents, frame.url)) {
+      callback({});
+      return;
+    }
     try {
       const sources = await desktopCapturer.getSources({ types: ['screen'] });
       callback(sources[0] ? { video: sources[0], audio: 'loopback' } : {});
@@ -371,12 +409,17 @@ function createWindow() {
       callback({});
     }
   });
-  window.webContents.session.setPermissionCheckHandler((_webContents, permission) => ['media', 'midi', 'midiSysex'].includes(permission));
-  window.webContents.session.setPermissionRequestHandler((_webContents, permission, callback) => {
-    callback(['media', 'midi', 'midiSysex'].includes(permission));
+  window.webContents.session.setPermissionCheckHandler((webContents, permission, requestingOrigin, details) => {
+    const origin = details?.requestingUrl || requestingOrigin;
+    return ['media', 'midi', 'midiSysex'].includes(permission) && isTrustedPermissionRequest(webContents, origin);
+  });
+  window.webContents.session.setPermissionRequestHandler((webContents, permission, callback, details) => {
+    callback(['media', 'midi', 'midiSysex'].includes(permission)
+      && details?.isMainFrame !== false
+      && isTrustedPermissionRequest(webContents, details?.requestingUrl || details?.securityOrigin));
   });
 
-  window.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'), smokeTest ? { query: { smoke: '1' } } : undefined);
+  window.loadFile(rendererEntryPath, smokeTest ? { query: { smoke: '1' } } : undefined);
   window.once('ready-to-show', () => {
     if (!smokeTest) window.show();
   });
@@ -420,6 +463,11 @@ function createWindow() {
               && Boolean(document.querySelector('#exportProfileButton'))
               && Boolean(document.querySelector('#importProfileInput'))
               && typeof window.quarticDesktop?.exportProfile === 'function';
+            for (let attempt = 0; attempt < 50; attempt++) {
+              if (document.querySelector('#audioSourceSelect')?.options.length >= 2
+                && document.querySelector('#audioOutputOptions')?.children.length > 0) break;
+              await new Promise((resolve) => setTimeout(resolve, 100));
+            }
             const windowsAudioReady = document.querySelector('#audioSourceSelect')?.options.length >= 2
               && document.querySelector('#audioSourceSelect')?.value === 'deck'
               && document.querySelector('#audioOutputOptions')?.children.length > 0
@@ -650,7 +698,13 @@ function createWindow() {
               visualStyle.value = '${requestedSmokeStyle}';
               visualStyle.dispatchEvent(new Event('change', { bubbles: true }));
             }
-            if (Number('${requestedSmokeStyle}') >= 1000) await new Promise((resolve) => setTimeout(resolve, 900));
+            if (Number('${requestedSmokeStyle}') >= 1000) {
+              for (let attempt = 0; attempt < 50; attempt++) {
+                const diagnostics = window.__quarticCustomVisualizerDiagnostics;
+                if (diagnostics?.webgl2 && (diagnostics.loadedAssets > 0 || diagnostics.drawCalls > 0)) break;
+                await new Promise((resolve) => setTimeout(resolve, 100));
+              }
+            }
             if ('${requestedSmokeStyle}' === '3' && pulseControls) {
               document.querySelector('[data-pulse-preset="rapid"]')?.click();
               document.querySelector('[data-pulse-preset="balanced"]')?.click();
@@ -853,6 +907,7 @@ function createWindow() {
                 iterations: balanced.dataset.iterations
               } : null;
               balanced?.click();
+              await new Promise((resolve) => setTimeout(resolve, 100));
               exportAdvisorReady = exportAdvisorOptionCount === 3
                 && Boolean(expected)
                 && document.querySelector('#resolution')?.value === expected.resolution
@@ -1860,9 +1915,10 @@ function createWindow() {
               : path.join(process.cwd(), 'quartic-pulse-preview.png');
             fs.writeFileSync(capturePath, image.toPNG());
           }
-          console.log(`SMOKE_TEST ${JSON.stringify(result)}`);
-          fs.writeFileSync(path.join(os.tmpdir(), 'quartic-pulse-smoke-result.json'), JSON.stringify(result, null, 2));
-          process.exitCode = result.ready && result.webgl2 && result.frequencyBands && result.visualStyles && result.playlistReady && result.obsOutputReady && result.profilesReady && result.windowsAudioReady && result.deckOutputRoutingReady && result.outputCaptureReady && result.audioHudReady && result.hudTransportReady && result.stageGeometryReady && result.exportStatusReady && result.sidebarLayoutReady && result.quickControlsLayoutReady && result.mainTabsFit && result.workspaceShellReady && result.visualCatalogReady && result.controllerModulesReady && result.exportOfflinePresentationReady && result.exportLivePresentationReady && result.showComposerControllerReady && result.profileManagerControllerReady && result.paletteLibraryReady && result.audioAnalysisEngineReady && result.performanceSequencerEngineReady && result.performanceShowDataEngineReady && result.songMapDataEngineReady && result.performancePackageEngineReady && result.exportSessionEngineReady && result.exportSamplingEngineReady && result.exportFrameCaptureEngineReady && result.exportPlanningEngineReady && result.exportPresentationEngineReady && result.exportPreflightEngineReady && result.exportEncoderScanEngineReady && result.exportBenchmarkEngineReady && result.exportHistoryEngineReady && result.exportRenderCoordinatorReady && result.exportWorkflowEngineReady && result.exportOfflineLifecycleReady && result.exportLiveLifecycleReady && result.exportEncoderEngineReady && result.basicWorkflowReady && result.advancedWorkflowReady && result.unleashedLayoutReady && result.aboutContentReady && result.musicPersonalityReady && result.songMapReady && result.songMapAnalysisReady && result.songDirectorReady && result.songDirectorAnalysisReady && result.appearanceNavigationReady && result.modulationMatrixReady && result.showSequencerReady && result.showComposerReady && result.showComposerWorkspaceReady && result.showComposerGenerationReady && result.liveControlsReady && result.creativeToolsReady && result.performanceAssistantReady && result.reportCenterReady && result.reportGenerationReady && result.performanceAutomationStandbyReady && result.offlineExportReady && result.exportSamplingReady && result.exportQolReady && result.nativeExportEncoderReady && result.obsAutomationReady && result.coreEquationReady && result.coreEquationInputReady && result.percentageScalesReady && result.pulseControls && result.customColorRolesReady && result.beatDetectorControls && result.bulbControls && result.pulsePresetsReady && result.visualEffectControls && result.effectPresetsReady && result.visualOptionsReady && result.syntheticPulseReady && result.fractalAudioReady && result.adaptiveBeatReady && result.obsWindowMovable && result.obsDragStripReady && result.obsChromaSafe && result.rotationVelocityReady && result.activeTab === requestedSmokeTab && result.activeVisualStyle === String(requestedSmokeStyle) && result.canvasWidth > 0 ? 0 : 1;
+          const workspaceShellCheck = process.argv.includes('--smoke-performance-mode')
+            ? result.showComposerWorkspaceReady
+            : result.workspaceShellReady;
+          process.exitCode = result.ready && result.webgl2 && result.frequencyBands && result.visualStyles && result.playlistReady && result.obsOutputReady && result.profilesReady && result.windowsAudioReady && result.deckOutputRoutingReady && result.outputCaptureReady && result.audioHudReady && result.hudTransportReady && result.stageGeometryReady && result.exportStatusReady && result.sidebarLayoutReady && result.quickControlsLayoutReady && result.mainTabsFit && workspaceShellCheck && result.visualCatalogReady && result.controllerModulesReady && result.exportOfflinePresentationReady && result.exportLivePresentationReady && result.showComposerControllerReady && result.profileManagerControllerReady && result.paletteLibraryReady && result.audioAnalysisEngineReady && result.performanceSequencerEngineReady && result.performanceShowDataEngineReady && result.songMapDataEngineReady && result.performancePackageEngineReady && result.exportSessionEngineReady && result.exportSamplingEngineReady && result.exportFrameCaptureEngineReady && result.exportPlanningEngineReady && result.exportPresentationEngineReady && result.exportPreflightEngineReady && result.exportEncoderScanEngineReady && result.exportBenchmarkEngineReady && result.exportHistoryEngineReady && result.exportRenderCoordinatorReady && result.exportWorkflowEngineReady && result.exportOfflineLifecycleReady && result.exportLiveLifecycleReady && result.exportEncoderEngineReady && result.basicWorkflowReady && result.advancedWorkflowReady && result.unleashedLayoutReady && result.aboutContentReady && result.musicPersonalityReady && result.songMapReady && result.songMapAnalysisReady && result.songDirectorReady && result.songDirectorAnalysisReady && result.appearanceNavigationReady && result.modulationMatrixReady && result.showSequencerReady && result.showComposerReady && result.showComposerWorkspaceReady && result.showComposerGenerationReady && result.liveControlsReady && result.creativeToolsReady && result.performanceAssistantReady && result.reportCenterReady && result.reportGenerationReady && result.performanceAutomationStandbyReady && result.offlineExportReady && result.exportSamplingReady && result.exportQolReady && result.nativeExportEncoderReady && result.obsAutomationReady && result.coreEquationReady && result.coreEquationInputReady && result.percentageScalesReady && result.pulseControls && result.customColorRolesReady && result.beatDetectorControls && result.bulbControls && result.pulsePresetsReady && result.visualEffectControls && result.effectPresetsReady && result.visualOptionsReady && result.syntheticPulseReady && result.fractalAudioReady && result.adaptiveBeatReady && result.obsWindowMovable && result.obsDragStripReady && result.obsChromaSafe && result.rotationVelocityReady && result.activeTab === requestedSmokeTab && result.activeVisualStyle === String(requestedSmokeStyle) && result.canvasWidth > 0 ? 0 : 1;
           if (!result.songDirectorEngineReady) process.exitCode = 1;
           if (!result.exportAdvisorEngineReady) process.exitCode = 1;
           if (!result.exportSettingsCoordinatorEngineReady) process.exitCode = 1;
@@ -1886,17 +1942,21 @@ function createWindow() {
           if (!result.customVisualizerReady) process.exitCode = 1;
           if (!result.customNativeLayersReady) process.exitCode = 1;
           if (!result.customPackagePalettesReady) process.exitCode = 1;
+          result.smokePassed = process.exitCode === 0;
+          console.log(`SMOKE_TEST ${JSON.stringify(result)}`);
+          fs.writeFileSync(path.join(os.tmpdir(), 'quartic-pulse-smoke-result.json'), JSON.stringify(result, null, 2));
         } catch (error) {
           console.error('SMOKE_TEST_FAILED', error);
           try {
             fs.writeFileSync(path.join(os.tmpdir(), 'quartic-pulse-smoke-result.json'), JSON.stringify({
               ready: false,
+              smokePassed: false,
               smokeError: error?.stack || error?.message || String(error)
             }, null, 2));
           } catch (_) { /* Preserve the original smoke-test failure. */ }
           process.exitCode = 1;
         } finally {
-          app.quit();
+          app.exit(process.exitCode || 0);
         }
       }, 1500);
     });
@@ -2874,14 +2934,18 @@ async function detectHardware() {
 }
 
 app.whenReady().then(async () => {
+  const handleTrusted = (channel, handler) => ipcMain.handle(channel, (event, ...args) => {
+    requireTrustedRenderer(event);
+    return handler(event, ...args);
+  });
   const smokeCustomVisualizer = process.argv.includes('--smoke-custom-visualizer');
   const visualizerPackageRoot = smokeCustomVisualizer
     ? path.join(os.tmpdir(), `quartic-pulse-smoke-visualizers-${process.pid}`)
     : path.join(app.getPath('userData'), 'visualizer-packages');
   const visualizerPackageManager = new VisualizerPackageManager(visualizerPackageRoot);
   const pendingVisualizerImports = new Map();
-  ipcMain.handle('visualizer-package:list', () => visualizerPackageManager.list());
-  ipcMain.handle('visualizer-package:preview', async () => {
+  handleTrusted('visualizer-package:list', () => visualizerPackageManager.list());
+  handleTrusted('visualizer-package:preview', async () => {
     const result = await dialog.showOpenDialog({
       title: 'Preview Data Horizon package',
       buttonLabel: 'Preview package',
@@ -2894,13 +2958,13 @@ app.whenReady().then(async () => {
     pendingVisualizerImports.set(token, result.filePaths[0]);
     return Object.freeze({ token, package: packagePreview });
   });
-  ipcMain.handle('visualizer-package:install-preview', async (_event, token) => {
+  handleTrusted('visualizer-package:install-preview', async (_event, token) => {
     const sourcePath = pendingVisualizerImports.get(String(token || ''));
     pendingVisualizerImports.delete(String(token || ''));
     if (!sourcePath) throw new Error('The package preview expired. Choose the Data Horizon export again.');
     return visualizerPackageManager.install(sourcePath);
   });
-  ipcMain.handle('visualizer-package:import', async () => {
+  handleTrusted('visualizer-package:import', async () => {
     const result = await dialog.showOpenDialog({
       title: 'Import Data Horizon visualizer package',
       buttonLabel: 'Import visualizer',
@@ -2909,8 +2973,8 @@ app.whenReady().then(async () => {
     if (result.canceled || !result.filePaths[0]) return null;
     return visualizerPackageManager.install(result.filePaths[0]);
   });
-  ipcMain.handle('visualizer-package:load', (_event, styleId) => visualizerPackageManager.load(styleId));
-  ipcMain.handle('visualizer-package:remove', (_event, styleId) => visualizerPackageManager.remove(styleId));
+  handleTrusted('visualizer-package:load', (_event, styleId) => visualizerPackageManager.load(styleId));
+  handleTrusted('visualizer-package:remove', (_event, styleId) => visualizerPackageManager.remove(styleId));
   if (smokeCustomVisualizer) {
     const fixturePath = app.isPackaged
       ? path.join(process.resourcesPath, 'smoke-fixtures', 'data-horizon-signal-test')
@@ -2919,14 +2983,14 @@ app.whenReady().then(async () => {
     smokeCustomVisualizerStyleId = installed.styleId || styleIdFor(installed.packageId);
   }
   ipcMain.on('report:renderer-error', (event, error) => {
-    if (mainWindow && event.sender === mainWindow.webContents) {
+    if (mainWindow && event.sender === mainWindow.webContents && isTrustedRendererEvent(event, trustedRendererOptions())) {
       recordReportIncident('renderer-javascript', error?.message || 'Renderer JavaScript error.', {
         stack: sanitizeReportText(error?.stack || '', 8000),
         kind: sanitizeReportText(error?.kind || 'error', 40)
       });
     }
   });
-  ipcMain.handle('report:get-diagnostics', async (_event, rendererSnapshot) => {
+  handleTrusted('report:get-diagnostics', async (_event, rendererSnapshot) => {
     let hardware = null;
     try { hardware = await detectHardware(); } catch (_) { /* Hardware details are optional. */ }
     const configuration = reportingConfiguration();
@@ -2958,8 +3022,8 @@ app.whenReady().then(async () => {
       projectUrl: reportProjectUrl
     };
   });
-  ipcMain.handle('report:clear-incidents', async () => clearReportIncidents());
-  ipcMain.handle('report:save', async (_event, reportText) => {
+  handleTrusted('report:clear-incidents', async () => clearReportIncidents());
+  handleTrusted('report:save', async (_event, reportText) => {
     const stamp = new Date().toISOString().replace(/[:.]/g, '-');
     const result = await dialog.showSaveDialog({
       title: 'Save Quartic Pulse diagnostic report',
@@ -2971,7 +3035,7 @@ app.whenReady().then(async () => {
     await fs.promises.writeFile(outputPath, sanitizeReportText(reportText, 60000), 'utf8');
     return outputPath;
   });
-  ipcMain.handle('report:print', async (event, reportText) => new Promise((resolve, reject) => {
+  handleTrusted('report:print', async (event, reportText) => new Promise((resolve, reject) => {
     const printWindow = new BrowserWindow({
       width: 820,
       height: 920,
@@ -2994,11 +3058,11 @@ app.whenReady().then(async () => {
       });
     });
   }));
-  ipcMain.handle('report:open-issues', async () => {
+  handleTrusted('report:open-issues', async () => {
     await shell.openExternal(`${reportProjectUrl}/issues/new`);
     return true;
   });
-  ipcMain.handle('report:submit', async (_event, reportText) => {
+  handleTrusted('report:submit', async (_event, reportText) => {
     const configuration = reportingConfiguration();
     if (!configuration.enabled) throw new Error('Secure online submission is not configured in this build. Use Copy, Save, Print, or GitHub instead.');
     const now = Date.now();
@@ -3033,7 +3097,7 @@ app.whenReady().then(async () => {
       return { accepted: true, reportId: sanitizeReportText(result?.reportId || reportField('Report ID', 80), 80) };
     } finally { clearTimeout(timeout); }
   });
-  ipcMain.handle('profile:export', async (_event, options) => {
+  handleTrusted('profile:export', async (_event, options) => {
     const suggestedName = String(options?.suggestedName || 'quartic-pulse-profile')
       .replace(/[<>:"/\\|?*]/g, '-')
       .slice(0, 80);
@@ -3051,7 +3115,7 @@ app.whenReady().then(async () => {
     return outputPath;
   });
 
-  ipcMain.handle('performance-package:export', async (_event, options) => {
+  handleTrusted('performance-package:export', async (_event, options) => {
     const suggestedName = String(options?.suggestedName || 'quartic-pulse-performance')
       .replace(/[<>:"/\\|?*]/g, '-')
       .slice(0, 80);
@@ -3069,7 +3133,7 @@ app.whenReady().then(async () => {
     return outputPath;
   });
 
-  ipcMain.handle('capture:save-png', async (_event, bytes) => {
+  handleTrusted('capture:save-png', async (_event, bytes) => {
     const buffer = Buffer.from(bytes || []);
     if (!buffer.length || buffer.length > 100 * 1024 * 1024) throw new Error('The screenshot data is invalid.');
     const stamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -3085,23 +3149,23 @@ app.whenReady().then(async () => {
   });
 
   ipcMain.on('obs:visual-state', (event, snapshot) => {
-    if (!mainWindow || event.sender !== mainWindow.webContents) return;
+    if (!mainWindow || event.sender !== mainWindow.webContents || !isTrustedRendererEvent(event, trustedRendererOptions())) return;
     if (obsOutputWindow && !obsOutputWindow.isDestroyed()) {
       obsOutputWindow.webContents.send('obs:visual-state', snapshot);
     }
   });
-  ipcMain.handle('obs:open-output', async (_event, options) => openObsOutput(options));
-  ipcMain.handle('obs:close-output', async () => {
+  handleTrusted('obs:open-output', async (_event, options) => openObsOutput(options));
+  handleTrusted('obs:close-output', async () => {
     if (!obsOutputWindow || obsOutputWindow.isDestroyed()) return false;
     obsOutputWindow.close();
     return true;
   });
-  ipcMain.handle('obs:get-output-status', async () => Boolean(obsOutputWindow && !obsOutputWindow.isDestroyed()));
-  ipcMain.handle('output:get-capabilities', async () => advancedOutputCapabilities());
-  ipcMain.handle('performance:get-hardware', async () => detectHardware());
-  ipcMain.handle('export:encoder-capabilities', async () => scanExportEncoderCapabilities());
-  ipcMain.handle('export:benchmark-encoder', async (_event, options) => benchmarkExportEncoder(options));
-  ipcMain.handle('export:preflight', async (_event, options) => {
+  handleTrusted('obs:get-output-status', async () => Boolean(obsOutputWindow && !obsOutputWindow.isDestroyed()));
+  handleTrusted('output:get-capabilities', async () => advancedOutputCapabilities());
+  handleTrusted('performance:get-hardware', async () => detectHardware());
+  handleTrusted('export:encoder-capabilities', async () => scanExportEncoderCapabilities());
+  handleTrusted('export:benchmark-encoder', async (_event, options) => benchmarkExportEncoder(options));
+  handleTrusted('export:preflight', async (_event, options) => {
     const format = normalizeRequestedFormat(options?.format);
     const encoder = await encoderForExportFormat(format, { refresh: options?.refreshEncoder === true });
     const duration = Math.max(0, Number(options?.duration) || 0);
@@ -3136,7 +3200,7 @@ app.whenReady().then(async () => {
       defaultDestination
     };
   });
-  ipcMain.handle('export:recovery-list', async () => {
+  handleTrusted('export:recovery-list', async () => {
     const manifests = await readRecoveryManifests();
     return manifests.map((item) => ({
       id: item.id,
@@ -3152,14 +3216,14 @@ app.whenReady().then(async () => {
       tempBytes: item.tempBytes
     }));
   });
-  ipcMain.handle('export:recovery-discard', async (_event, id) => {
+  handleTrusted('export:recovery-discard', async (_event, id) => {
     const manifests = await readRecoveryManifests();
     const manifest = manifests.find((item) => item.id === String(id));
     if (!manifest) return false;
     await removeRecoveryFiles(manifest);
     return true;
   });
-  ipcMain.handle('export:recovery-finish', async (event, id) => {
+  handleTrusted('export:recovery-finish', async (event, id) => {
     const manifests = await readRecoveryManifests();
     const manifest = manifests.find((item) => item.id === String(id));
     if (!manifest) throw new Error('The interrupted export is no longer available.');
@@ -3261,16 +3325,16 @@ app.whenReady().then(async () => {
     }
   });
 
-  ipcMain.handle('audio:list-outputs', async () => listWindowsOutputDevices());
-  ipcMain.handle('session:read-audio-file', async (_event, filePath) => {
-    const resolved = path.resolve(String(filePath || ''));
+  handleTrusted('audio:list-outputs', async () => listWindowsOutputDevices());
+  handleTrusted('session:read-audio-file', async (_event, filePath) => {
+    const resolved = resolveLocalAbsolutePath(filePath);
     if (!/\.(mp3|wav|flac|m4a|aac|ogg|opus)$/i.test(resolved)) throw new Error('The saved session audio format is not supported.');
     const stat = await fs.promises.stat(resolved).catch(() => null);
     if (!stat?.isFile() || stat.size > 256 * 1024 * 1024) throw new Error('The saved session audio file is unavailable or too large to restore automatically.');
     return { path: resolved, name: path.basename(resolved), lastModified: stat.mtimeMs, bytes: await fs.promises.readFile(resolved) };
   });
 
-  ipcMain.handle('audio:start-output', async (event, deviceId) => {
+  handleTrusted('audio:start-output', async (event, deviceId) => {
     if (typeof deviceId !== 'string' || !deviceId) throw new Error('A Windows output device was not selected.');
     const sender = event.sender;
     stopOutputCapture(sender.id);
@@ -3303,15 +3367,15 @@ app.whenReady().then(async () => {
     return true;
   });
 
-  ipcMain.handle('audio:stop-output', async (event) => stopOutputCapture(event.sender.id));
+  handleTrusted('audio:stop-output', async (event) => stopOutputCapture(event.sender.id));
 
-  ipcMain.handle('controls:start-osc', async (event, options) => startOscServer(event.sender, options));
-  ipcMain.handle('controls:stop-osc', async (event) => {
+  handleTrusted('controls:start-osc', async (event, options) => startOscServer(event.sender, options));
+  handleTrusted('controls:stop-osc', async (event) => {
     if (oscOwnerId !== null && oscOwnerId !== event.sender.id) return false;
     return stopOscServer();
   });
 
-  ipcMain.handle('export:begin', async (_event, options) => {
+  handleTrusted('export:begin', async (_event, options) => {
     const suggested = (options?.suggestedName || 'quartic-pulse').replace(/[<>:"/\\|?*]/g, '-');
     const requestedFormat = normalizeRequestedFormat(options?.format);
     const result = await dialog.showSaveDialog({
@@ -3341,7 +3405,7 @@ app.whenReady().then(async () => {
     return { id, outputPath, format };
   });
 
-  ipcMain.handle('export:append', async (_event, id, bytes) => {
+  handleTrusted('export:append', async (_event, id, bytes) => {
     const session = exportSessions.get(id);
     if (!session) throw new Error('Export session was not found.');
     const buffer = Buffer.from(bytes);
@@ -3351,7 +3415,7 @@ app.whenReady().then(async () => {
     return true;
   });
 
-  ipcMain.handle('export:finish', async (event, id) => {
+  handleTrusted('export:finish', async (event, id) => {
     const session = exportSessions.get(id);
     if (!session) throw new Error('Export session was not found.');
     const notify = (stage, progress, message) => {
@@ -3399,7 +3463,7 @@ app.whenReady().then(async () => {
     }
   });
 
-  ipcMain.handle('export:abort', async (_event, id) => {
+  handleTrusted('export:abort', async (_event, id) => {
     const session = exportSessions.get(id);
     if (!session) return false;
     session.stream?.destroy();
@@ -3408,13 +3472,13 @@ app.whenReady().then(async () => {
     return true;
   });
 
-  ipcMain.handle('export:offline-begin', async (_event, options) => {
+  handleTrusted('export:offline-begin', async (_event, options) => {
     await verifyFfmpeg();
     const width = Math.max(320, Math.min(7680, Math.round(Number(options?.width) || 1920)));
     const height = Math.max(240, Math.min(4320, Math.round(Number(options?.height) || 1080)));
     const fps = [30, 60, 90, 120].includes(Number(options?.fps)) ? Number(options.fps) : 60;
     const frameCount = Math.max(1, Math.min(10000000, Math.round(Number(options?.frameCount) || fps)));
-    const audioPath = path.resolve(String(options?.audioPath || ''));
+    const audioPath = resolveLocalAbsolutePath(options?.audioPath);
     const audioStat = await fs.promises.stat(audioPath).catch(() => null);
     if (!audioStat?.isFile()) throw new Error('The selected local audio file could not be opened for offline export.');
     const suggested = String(options?.suggestedName || 'quartic-pulse').replace(/[<>:"/\\|?*]/g, '-').slice(0, 100);
@@ -3464,7 +3528,7 @@ app.whenReady().then(async () => {
     return { id, outputPath, format, pipeline: session.pipeline };
   });
 
-  ipcMain.handle('export:offline-frame', async (_event, id, bytes) => {
+  handleTrusted('export:offline-frame', async (_event, id, bytes) => {
     const session = exportSessions.get(id);
     if (!session || session.type !== 'offline') throw new Error('Offline export session was not found.');
     const frame = Buffer.from(bytes || []);
@@ -3476,7 +3540,7 @@ app.whenReady().then(async () => {
     return frameIndex;
   });
 
-  ipcMain.handle('export:offline-finish', async (event, id, options) => {
+  handleTrusted('export:offline-finish', async (event, id, options) => {
     const session = exportSessions.get(id);
     if (!session || session.type !== 'offline') throw new Error('Offline export session was not found.');
     session.finishing = true;
@@ -3527,7 +3591,7 @@ app.whenReady().then(async () => {
     }
   });
 
-  ipcMain.handle('export:offline-abort', async (_event, id) => {
+  handleTrusted('export:offline-abort', async (_event, id) => {
     const session = exportSessions.get(id);
     if (!session || session.type !== 'offline') return false;
     session.cancelled = true;
@@ -3542,13 +3606,17 @@ app.whenReady().then(async () => {
     return true;
   });
 
-  ipcMain.handle('export:reveal', async (_event, filePath) => {
-    shell.showItemInFolder(filePath);
-  });
-  ipcMain.handle('export:open', async (_event, filePath) => {
-    const resolved = path.resolve(String(filePath || ''));
+  handleTrusted('export:reveal', async (_event, filePath) => {
+    const resolved = resolveLocalAbsolutePath(filePath);
     const stat = await fs.promises.stat(resolved).catch(() => null);
-    if (!stat || (!stat.isFile() && !stat.isDirectory())) throw new Error('The exported file or sequence folder could not be found.');
+    if (!isAllowedExportTarget(resolved, stat)) throw new Error('Only completed Quartic Pulse media exports can be revealed.');
+    shell.showItemInFolder(resolved);
+    return true;
+  });
+  handleTrusted('export:open', async (_event, filePath) => {
+    const resolved = resolveLocalAbsolutePath(filePath);
+    const stat = await fs.promises.stat(resolved).catch(() => null);
+    if (!isAllowedExportTarget(resolved, stat)) throw new Error('Only completed Quartic Pulse media exports can be opened.');
     const error = await shell.openPath(resolved);
     if (error) throw new Error(error);
     return true;

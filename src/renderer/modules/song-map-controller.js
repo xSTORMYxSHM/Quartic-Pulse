@@ -268,7 +268,16 @@
         button.type = 'button';
         button.className = 'song-map-section';
         button.style.setProperty('--section-color', sectionColors[index % sectionColors.length]);
-        button.innerHTML = `<i></i><span><strong>${section.label}</strong><small>${formatTime(section.start)}-${formatTime(section.end)}</small></span><time>${formatTime(section.start)}</time>`;
+        const marker = documentRef.createElement('i');
+        const details = documentRef.createElement('span');
+        const label = documentRef.createElement('strong');
+        const range = documentRef.createElement('small');
+        const time = documentRef.createElement('time');
+        label.textContent = String(section.label || `Section ${index + 1}`);
+        range.textContent = `${formatTime(section.start)}-${formatTime(section.end)}`;
+        time.textContent = formatTime(section.start);
+        details.append(label, range);
+        button.append(marker, details, time);
         button.addEventListener('click', () => {
           if (state.audioMode !== 'deck' || !Number.isFinite(audio.duration)) return;
           audio.currentTime = Math.min(audio.duration, section.start);

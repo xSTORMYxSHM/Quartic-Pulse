@@ -1,14 +1,21 @@
 {
   "name": "quartic-pulse",
-  "version": "0.50.0",
+  "version": "1.0.0",
+  "releaseChannel": "stable",
   "description": "A Windows 11 audio-reactive fractal visualizer and music-to-video exporter.",
   "main": "src/main/main.js",
   "author": "Tempest Mainframe",
   "license": "GPL-3.0-or-later",
+  "packageManager": "pnpm@11.19.0",
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "scripts": {
+    "postinstall": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/ensure-electron-runtime.ps1",
     "start": "electron .",
     "dev": "electron . --dev",
     "test": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/release-gate.ps1 -Quick",
+    "test:unit": "node --test src/main/tests/visualizer-package-manager.test.js src/main/tests/security-policy.test.js tools/report-relay/tests/report-core.test.js tools/report-relay/tests/quartic-report.test.js",
     "test:release": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/release-gate.ps1",
     "test:controllers": "set ELECTRON_RUN_AS_NODE=1&& electron tools/controller-smoke.js",
     "sync:data-horizon": "node tools/sync-data-horizon-runtime.js",
@@ -18,8 +25,8 @@
     "dist": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/build-release.ps1"
   },
   "devDependencies": {
-    "electron": "^37.2.6",
-    "electron-builder": "^26.0.12"
+    "electron": "44.0.0",
+    "electron-builder": "26.15.3"
   },
   "build": {
     "appId": "com.tempestmainframe.quarticpulse",

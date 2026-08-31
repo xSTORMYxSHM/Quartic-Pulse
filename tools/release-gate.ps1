@@ -53,8 +53,9 @@ function Invoke-DesktopSmoke {
     if ($process.ExitCode -ne 0) { throw "$Label failed with exit code $($process.ExitCode)." }
     if (-not (Test-Path -LiteralPath $resultPath)) { throw "$Label did not produce a smoke result." }
     $result = Get-Content -LiteralPath $resultPath -Raw | ConvertFrom-Json
-    if (-not $result.ready -or -not $result.webgl2 -or -not $result.controllerModulesReady) {
-      throw "$Label returned an incomplete readiness result."
+    if ($result.smokePassed -ne $true) {
+      $failureDetail = if ($result.smokeError) { ": $($result.smokeError)" } else { '' }
+      throw "$Label returned a failed smoke result$failureDetail"
     }
   } finally {
     $env:ELECTRON_RUN_AS_NODE = $previous
@@ -63,8 +64,8 @@ function Invoke-DesktopSmoke {
 
 Invoke-NodeCheck -Arguments @('tools/release-validation.js') -Label 'Release metadata, assets, CSP, licenses, and FFmpeg'
 Invoke-NodeCheck -Arguments @('tools/controller-smoke.js') -Label 'Controller and engine unit smoke'
-Invoke-NodeCheck -Arguments @('--test', 'tools/report-relay/tests/report-core.test.js') -Label 'Report relay tests'
-Invoke-NodeCheck -Arguments @('--test', 'src/main/tests/visualizer-package-manager.test.js') -Label 'Visualizer package manager tests'
+Invoke-NodeCheck -Arguments @('--test', 'tools/report-relay/tests/report-core.test.js', 'tools/report-relay/tests/quartic-report.test.js') -Label 'Report relay tests'
+Invoke-NodeCheck -Arguments @('--test', 'src/main/tests/visualizer-package-manager.test.js', 'src/main/tests/security-policy.test.js') -Label 'Main-process security and visualizer package tests'
 
 Invoke-DesktopSmoke -Arguments @('--smoke-tab=music', '--smoke-style=0', '--smoke-synthetic-audio', '--smoke-adaptive-beat') -Label 'Basic music and fractal workflow'
 Invoke-DesktopSmoke -Arguments @('--smoke-tab=appearance', '--smoke-custom-visualizer', '--smoke-synthetic-audio', '--capture-preview', '--capture-temp') -Label 'Imported Data Horizon visualizer workflow'

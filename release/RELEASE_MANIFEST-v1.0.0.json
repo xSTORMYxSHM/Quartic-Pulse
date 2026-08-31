@@ -1,0 +1,27 @@
+{
+  "application": "Quartic Pulse",
+  "version": "1.0.0",
+  "channel": "stable",
+  "builtOn": "2026-08-30",
+  "platform": "Windows 11 x64",
+  "authenticode": {
+    "status": "valid",
+    "publisher": "CN=Garner Whitted, O=Garner Whitted, L=Seattle, S=wa, C=US",
+    "thumbprint": "ECE29EA7CFD324FD377BD9AD872998BF18E47BC1",
+    "timestamped": true
+  },
+  "artifacts": [
+    {
+      "file": "Quartic Pulse Setup 1.0.0.exe",
+      "type": "customizable-nsis-installer",
+      "bytes": 146219008,
+      "sha256": "4DEF78B2F3281F92372837918017C93FEE47544B43A8A825F5A6C04590F0061D"
+    },
+    {
+      "file": "Quartic Pulse 1.0.0.exe",
+      "type": "portable-executable",
+      "bytes": 145903416,
+      "sha256": "26D6D89E53D776A98F8973E5C0B4F21AB1A4CF962FC68BFC1AF1CC5324DC7763"
+    }
+  ]
+}

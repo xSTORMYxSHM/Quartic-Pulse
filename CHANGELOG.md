@@ -2,11 +2,7 @@
 
 All notable Quartic Pulse changes are documented here. Quartic Pulse follows semantic versioning where practical.
 
-## Unreleased
-
-_No unreleased changes._
-
-## 0.50.0 - 2026-08-25
+## 1.0.0 - 2026-08-30
 
 ### Added
 
@@ -16,11 +12,18 @@ _No unreleased changes._
 
 - Replaced the Supersampling switch with explicit Standard 1×, Balanced Clarity 2×, and Maximum Clarity 4× export modes. Performance estimates and preflight summaries now show the selected render multiplier.
 - Preserved Full Visual Settings profile compatibility: older profiles with Supersampling enabled restore as Maximum Clarity 4×, while new profiles retain the exact clarity mode.
+- Upgraded the desktop runtime to Electron 44 and moved the desktop app plus report relay onto one frozen pnpm workspace lockfile.
+- Made clean Windows installs locate their actual Node runtime before bootstrapping Electron, including pnpm environments where Node is not globally available.
+- Promoted the validated desktop application, installer, portable package, and public metadata to the first 1.0.0 stable release.
 
 ### Fixed
 
 - Restored the Advanced Export Live Iterations control so Match Live Mathematics no longer leaves the active iteration count locked behind a hidden slider.
 - Removed the shader's time-varying one-pixel grain from export frames so high-iteration fractal boundaries remain clearer and compress without crawling static; the live visual treatment is unchanged.
+- Rendered imported Song Map and Song Director labels as text, added strict map structure limits, blocked non-local window navigation, origin-bound media permissions, and authenticated privileged IPC senders.
+- Restricted export Open and Reveal actions to local Quartic Pulse media targets instead of arbitrary filesystem paths.
+- Replaced the imported-visualizer smoke test's fixed startup delay with bounded readiness polling so cold checkouts validate reliably.
+- Added mandatory timestamped Authenticode verification for the unpacked app, NSIS installer, and portable executable before release metadata is emitted.
 
 ## 0.45.0 - 2026-08-21
 

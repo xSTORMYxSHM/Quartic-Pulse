@@ -41,15 +41,29 @@
 
     function isValidMap(map) {
       const pointCount = map?.energy?.length;
+      const duration = Number(map?.duration);
+      const validSections = Array.isArray(map?.sections)
+        && map.sections.length <= 512
+        && map.sections.every((section) => section
+          && typeof section === 'object'
+          && Number.isFinite(section.start)
+          && Number.isFinite(section.end)
+          && section.start >= 0
+          && section.end > section.start
+          && section.end <= duration + Math.max(1, Number(map.interval) || 0)
+          && (section.label === undefined || (typeof section.label === 'string' && section.label.length <= 120))
+          && (section.kind === undefined || (typeof section.kind === 'string' && section.kind.length <= 40)));
       return Boolean(map
         && map.version === cacheVersion
         && typeof map.key === 'string'
-        && Number.isFinite(map.duration) && map.duration > 0
+        && Number.isFinite(duration) && duration > 0
         && Number.isFinite(map.interval) && map.interval > 0
-        && pointCount > 1
-        && ['bass', 'mids', 'highs'].every((key) => Array.isArray(map[key]) && map[key].length === pointCount)
-        && Array.isArray(map.beats)
-        && Array.isArray(map.sections));
+        && pointCount > 1 && pointCount <= 20000
+        && ['energy', 'bass', 'mids', 'highs'].every((key) => Array.isArray(map[key])
+          && map[key].length === pointCount
+          && map[key].every(Number.isFinite))
+        && Array.isArray(map.beats) && map.beats.length <= 200000 && map.beats.every(Number.isFinite)
+        && validSections);
     }
 
     function parseCache(serialized) {

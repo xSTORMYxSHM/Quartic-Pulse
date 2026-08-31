@@ -28,6 +28,9 @@ function walk(directory, visitor) {
 }
 
 check(packageData.version === metadata.version, `package.json (${packageData.version}) and app metadata (${metadata.version}) versions differ.`);
+check(packageData.releaseChannel === metadata.releaseChannel, `package.json (${packageData.releaseChannel}) and app metadata (${metadata.releaseChannel}) release channels differ.`);
+check(packageData.packageManager?.startsWith('pnpm@'), 'package.json must pin the pnpm package manager.');
+check(packageData.scripts?.postinstall?.includes('ensure-electron-runtime.ps1'), 'Electron runtime bootstrap must use the PATH-independent PowerShell wrapper.');
 check(packageData.license === 'GPL-3.0-or-later', 'package license must remain GPL-3.0-or-later.');
 check(packageData.build?.asarUnpack?.includes('assets/windows-audio/**/*'), 'Windows audio helper must be unpacked from ASAR.');
 
@@ -43,6 +46,11 @@ check(indexHtml.includes('modules/music-personality-controller.js') && indexHtml
 check(indexHtml.includes('modules/visual-preset-controller.js') && indexHtml.includes('id="experiencePresetGrid"'), 'Visual preset controller or preset grid is missing.');
 check(indexHtml.includes('id="savedPaletteGrid"') && indexHtml.includes('id="saveCurrentPaletteButton"') && indexHtml.includes('modules/palette-library-controller.js'), 'Saved color palette library is missing.');
 check(!/style-src[^;]*(?:'unsafe-inline'|\*)/.test(indexHtml), 'CSP must not allow unrestricted inline styles.');
+check(!read('src/renderer/modules/song-map-controller.js').includes('${section.label}'), 'Song Map labels must not be interpolated into HTML.');
+check(!read('src/renderer/modules/song-director-controller.js').includes('${cue.label}</strong>'), 'Song Director labels must not be interpolated into HTML.');
+const mainSource = read('src/main/main.js');
+check(mainSource.includes("setWindowOpenHandler(() => ({ action: 'deny' }))") && mainSource.includes("webContents.on('will-navigate'"), 'App-window navigation guards are missing.');
+check(mainSource.includes('requireTrustedRenderer(event)'), 'Privileged IPC sender validation is missing.');
 
 const requiredFiles = [
   'LICENSE',
@@ -63,6 +71,11 @@ const requiredFiles = [
   'assets/bin/FFmpeg-README.txt',
   'assets/bin/FFmpeg-SOURCE.txt',
   'src/main/visualizer-package-manager.js',
+  'src/main/security-policy.js',
+  'tools/ensure-electron-runtime.ps1',
+  'tools/ensure-electron-runtime.js',
+  'tools/electron-builder.signed.cjs',
+  'tools/read-authenticode-signature.ps1',
   'src/renderer/modules/data-horizon-runtime-vendor.js',
   'src/renderer/modules/data-horizon-runtime.js',
   'src/renderer/modules/visualizer-package-controller.js',

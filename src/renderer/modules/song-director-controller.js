@@ -131,7 +131,11 @@
         button.dataset.cueIndex = String(index);
         button.style.setProperty('--cue-color', sectionColors[index % sectionColors.length]);
         button.title = `${cue.label} · ${cue.motifLabel}`;
-        button.innerHTML = `<strong>${cue.label}</strong><small>${formatTime(cue.start)} · ${cue.kind.toUpperCase()} · ${cue.motifLabel}</small>`;
+        const label = documentRef.createElement('strong');
+        const details = documentRef.createElement('small');
+        label.textContent = String(cue.label || `Cue ${index + 1}`);
+        details.textContent = `${formatTime(cue.start)} · ${String(cue.kind || 'section').toUpperCase()} · ${String(cue.motifLabel || 'PHRASE')}`;
+        button.append(label, details);
         button.addEventListener('click', () => {
           selectedCueIndex = index;
           renderCueEditor();
