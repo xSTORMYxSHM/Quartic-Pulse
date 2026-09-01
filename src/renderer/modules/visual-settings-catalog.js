@@ -247,7 +247,7 @@
     exportMode: { defaultValue: 'offline', tip: 'Offline rendering completes and submits every exact frame before advancing the music timeline.' },
     exportDetail: { defaultValue: '1.6', tip: 'Multiplies the selected base detail. Offline export also applies a resolution-aware minimum so 1440p and 4K receive enough mathematical definition.' },
     obsResolution: { defaultValue: '1920x1080', tip: 'Sets the exact client size of the clean window selected by OBS Window Capture.' },
-    obsFps: { defaultValue: '60', tip: 'Sets how often the control window sends visual and music-analysis state to the OBS output.' }
+    obsFps: { defaultValue: '30', tip: 'Sets the OBS output render and state-sync rate. 30 FPS uses less CPU/GPU; 60 FPS is smoother.' }
     ,songDirectorBehavior: { defaultValue: 'auto', tip: 'Auto follows the Music Personality stored with the Song Map. An override changes directing behavior without changing analyzer bands or the visual preset.' }
     ,songDirectorTransition: { defaultValue: 'auto', tip: 'Controls how sections blend. Every option remains continuous: Gentle uses longer blends, while Theatrical concentrates the change without creating a hard cut.' }
     ,songDirectorCueEmphasis: { defaultValue: 'auto', tip: 'Focuses this section on one family of visual controls while retaining a smaller amount of the other automatically generated cues.' }

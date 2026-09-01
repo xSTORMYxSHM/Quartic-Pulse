@@ -55,6 +55,8 @@
   if (!visualPresetControllerFactory) throw new Error('Quartic visual preset controller failed to load.');
   const appStateFactory = window.QuarticAppState;
   if (!appStateFactory) throw new Error('Quartic application state factory failed to load.');
+  const backgroundRenderPolicy = window.QuarticBackgroundRenderPolicy;
+  if (!backgroundRenderPolicy) throw new Error('Quartic background render policy failed to load.');
   const visualRendererFactory = window.QuarticVisualRenderer;
   if (!visualRendererFactory) throw new Error('Quartic visual renderer failed to load.');
   const dataHorizonRuntimeFactory = window.QuarticDataHorizonRuntime;
@@ -280,9 +282,41 @@
     'nowPlayingEnabled', 'nowPlayingTitle', 'nowPlayingArtist', 'nowPlayingPosition', 'cameraMotionPreset'
     ,'songDirectorEnabled', 'songDirectorStyle', 'songDirectorBehavior', 'songDirectorTransition', 'songDirectorIntensity'
   ];
-  let obsSyncFps = Number(pageParameters.get('fps')) === 30 ? 30 : 60;
+  let obsSyncFps = backgroundRenderPolicy.normalizeObsFps(pageParameters.get('fps'));
   let obsLastStateSent = 0;
   let obsRemoteAudioActive = false;
+  let scheduledRenderDeadline = 0;
+
+  function controlWindowBackgrounded() {
+    return !isObsOutput && (document.hidden || !document.hasFocus() || (isSmokeTest && window.__quarticSimulateBackground === true));
+  }
+
+  function currentBackgroundRenderPolicy() {
+    const simulatedBackground = isSmokeTest && window.__quarticSimulateBackground === true;
+    return backgroundRenderPolicy.evaluate({
+      isObsOutput,
+      backgrounded: controlWindowBackgrounded(),
+      keepMainVisualActive: isSmokeTest && !simulatedBackground,
+      exporting: state.exporting,
+      offlineExporting: state.offlineExporting,
+      obsOutputOpen,
+      obsSyncFps
+    });
+  }
+
+  function scheduleNextRender(policy) {
+    const targetFps = Number(policy?.targetFps) || 0;
+    if (!targetFps) {
+      scheduledRenderDeadline = 0;
+      requestAnimationFrame(render);
+      return;
+    }
+    const interval = 1000 / targetFps;
+    const now = performance.now();
+    if (!scheduledRenderDeadline || scheduledRenderDeadline < now - interval) scheduledRenderDeadline = now;
+    scheduledRenderDeadline += interval;
+    window.setTimeout(() => render(performance.now()), Math.max(0, scheduledRenderDeadline - performance.now()));
+  }
 
   function createObsVisualSnapshot() {
     const snapshot = {};
@@ -1077,10 +1111,11 @@
   }
 
   function render(now) {
+    const renderPolicy = currentBackgroundRenderPolicy();
     const rawDelta = Math.max(0, (now - state.lastFrame) / 1000);
     if (state.offlineExporting && !pendingOfflineRender) {
       state.lastFrame = now;
-      requestAnimationFrame(render);
+      scheduleNextRender(renderPolicy);
       return;
     }
     const secondaryOfflineSample = state.offlineExporting && state.offlineSamplePass > 0;
@@ -1088,22 +1123,23 @@
       ? (secondaryOfflineSample ? 0 : 1 / state.offlineFps)
       : Math.min(.05, rawDelta);
     state.lastFrame = now;
-    if (!state.offlineExporting) operatorTools.collectPerformanceSample(rawDelta * 1000, now);
+    if (!state.offlineExporting && renderPolicy.collectPerformance) operatorTools.collectPerformanceSample(rawDelta * 1000, now);
     if (!isObsOutput && !state.offlineExporting) cameraController.updatePath(now);
-    if (rawDelta < .25) {
+    if (renderPolicy.collectPerformance && rawDelta < .25) {
       state.frameTime += (Math.min(50, rawDelta * 1000) - state.frameTime) * .045;
     }
-    if (!state.exporting && state.adaptiveQuality) {
-      if (state.frameTime > 23) state.performanceScale = Math.max(.62, state.performanceScale - delta * .16);
-      else if (state.frameTime < 18) state.performanceScale = Math.min(1, state.performanceScale + delta * .07);
-    } else if (!state.exporting) {
+    const targetFrameTime = 1000 / (renderPolicy.targetFps || 60);
+    if (renderPolicy.collectPerformance && !state.exporting && state.adaptiveQuality) {
+      if (state.frameTime > targetFrameTime * 1.38) state.performanceScale = Math.max(.62, state.performanceScale - delta * .16);
+      else if (state.frameTime < targetFrameTime * 1.08) state.performanceScale = Math.min(1, state.performanceScale + delta * .07);
+    } else if (renderPolicy.collectPerformance && !state.exporting) {
       state.performanceScale = Math.min(1, state.performanceScale + delta * .8);
     }
-    setCanvasSize();
+    if (renderPolicy.drawVisual) setCanvasSize();
     const customVisualizerActive = Boolean(visualizerPackageController?.isCustom(state.visualStyle));
-    const renderingTenBitExport = visualRenderer.beginFrame(
-      !customVisualizerActive && state.offlineExporting && state.offlineTenBitExport
-    );
+    const renderingTenBitExport = renderPolicy.drawVisual
+      ? visualRenderer.beginFrame(!customVisualizerActive && state.offlineExporting && state.offlineTenBitExport)
+      : false;
     if (!secondaryOfflineSample) advancePulseEvents(delta);
     if (!isObsOutput && !state.offlineExporting) updateAudioAnalysis(delta);
     if (!secondaryOfflineSample) {
@@ -1227,18 +1263,20 @@
         musicMotionBeat
       }
     };
-    if (customVisualizerActive) {
-      window.__quarticCustomVisualizerDiagnostics = visualizerPackageController.render({
-        timestampSeconds: state.visualTime,
-        deltaSeconds: delta,
-        bass: directBass,
-        mids: directMids,
-        highs: directHighs,
-        rms: directRms,
-        beat: state.beatPulse ? directBeat : 0,
-        spectrum: state.spectrumData
-      });
-    } else visualRenderer.drawFrame(rendererFrame);
+    if (renderPolicy.drawVisual) {
+      if (customVisualizerActive) {
+        window.__quarticCustomVisualizerDiagnostics = visualizerPackageController.render({
+          timestampSeconds: state.visualTime,
+          deltaSeconds: delta,
+          bass: directBass,
+          mids: directMids,
+          highs: directHighs,
+          rms: directRms,
+          beat: state.beatPulse ? directBeat : 0,
+          spectrum: state.spectrumData
+        });
+      } else visualRenderer.drawFrame(rendererFrame);
+    }
     if (pendingOfflineRender && state.offlineExporting) {
       if (customVisualizerActive) visualizerPackageController.finish();
       else visualRenderer.finish();
@@ -1246,14 +1284,21 @@
       pendingOfflineRender = null;
       resolveOfflineRender();
     }
-    operatorTools.resolvePendingScreenshot();
+    if (renderPolicy.drawVisual) operatorTools.resolvePendingScreenshot();
     window.__quarticReady = true;
+    window.__quarticBackgroundRenderDiagnostics = {
+      controlOnly: renderPolicy.controlOnly,
+      drawVisual: renderPolicy.drawVisual,
+      targetFps: renderPolicy.targetFps,
+      obsOutputOpen,
+      backgrounded: controlWindowBackgrounded()
+    };
 
-    if (!isObsOutput && (!state.exporting || now - state.lastUiUpdate >= 100)) {
+    if (renderPolicy.updateInterface && (!state.exporting || now - state.lastUiUpdate >= 100)) {
       updateUiMeters();
       state.lastUiUpdate = now;
     }
-    requestAnimationFrame(render);
+    scheduleNextRender(renderPolicy);
   }
 
   function updateUiMeters() {
@@ -1954,7 +1999,7 @@
     $('#obsLiveCard').classList.toggle('live', obsOutputOpen);
     $('#obsLiveTitle').textContent = obsOutputOpen ? 'OBS OUTPUT IS LIVE' : 'READY FOR OBS';
     $('#obsLiveDetail').textContent = obsOutputOpen
-      ? `${$('#obsResolution').selectedOptions[0].textContent} · ${$('#obsFps').value} FPS sync`
+      ? `${$('#obsResolution').selectedOptions[0].textContent} · ${$('#obsFps').value} FPS output`
       : 'Choose a size, then open the output window.';
     $('#obsOutputButton').classList.toggle('live', obsOutputOpen);
     $('#obsOutputButton').textContent = obsOutputOpen ? 'CLOSE OBS OUTPUT' : 'OPEN OBS OUTPUT';
@@ -1973,7 +2018,7 @@
   }
 
   async function applyObsWindowOptions() {
-    obsSyncFps = Number($('#obsFps').value) === 30 ? 30 : 60;
+    obsSyncFps = backgroundRenderPolicy.normalizeObsFps($('#obsFps').value);
     if (!obsOutputOpen) return updateObsOutputUi(false);
     await window.quarticDesktop.openObsOutput(getObsOutputOptions());
     updateObsOutputUi(true);

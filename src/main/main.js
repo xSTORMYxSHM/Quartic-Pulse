@@ -374,7 +374,10 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
-      backgroundThrottling: !smokeTest
+      // The main renderer owns audio analysis and the state stream consumed by
+      // the OBS output. Chromium must not freeze that source when Windows
+      // occludes, minimizes, or backgrounds the control window.
+      backgroundThrottling: false
     }
   });
   mainWindow = window;
@@ -1868,6 +1871,21 @@ function createWindow() {
               document.querySelector('#obsOutputButton')?.click();
             })()`);
             await new Promise((resolve) => setTimeout(resolve, 1600));
+            const backgroundStartTime = await window.webContents.executeJavaScript(`(() => {
+              window.__quarticSimulateBackground = true;
+              return Number(document.querySelector('#audio')?.currentTime || 0);
+            })()`);
+            await new Promise((resolve) => setTimeout(resolve, 350));
+            result.obsBackgroundEfficiency = await window.webContents.executeJavaScript(`(() => ({
+              ...(window.__quarticBackgroundRenderDiagnostics || {}),
+              audioTime: Number(document.querySelector('#audio')?.currentTime || 0)
+            }))()`);
+            result.obsBackgroundEfficiencyReady = Boolean(
+              result.obsBackgroundEfficiency?.controlOnly
+              && !result.obsBackgroundEfficiency?.drawVisual
+              && result.obsBackgroundEfficiency?.targetFps === 30
+              && result.obsBackgroundEfficiency.audioTime > backgroundStartTime + .15
+            );
             result.obsWindowMovable = Boolean(obsOutputWindow && !obsOutputWindow.isDestroyed() && obsOutputWindow.isMovable());
             result.obsDragStripReady = Boolean(obsOutputWindow && !obsOutputWindow.isDestroyed() && await obsOutputWindow.webContents.executeJavaScript(`(() => {
               const strip = document.querySelector('.obs-window-drag-strip');
@@ -1895,6 +1913,7 @@ function createWindow() {
               obsOutputWindow.close();
             } else result.obsChromaSafe = false;
           } else {
+            result.obsBackgroundEfficiencyReady = true;
             result.obsWindowMovable = true;
             result.obsDragStripReady = true;
             result.obsChromaSafe = true;
@@ -1923,6 +1942,7 @@ function createWindow() {
           if (!result.exportAdvisorEngineReady) process.exitCode = 1;
           if (!result.exportSettingsCoordinatorEngineReady) process.exitCode = 1;
           if (!result.exportRuntimeStateCoordinatorReady) process.exitCode = 1;
+          if (!result.obsBackgroundEfficiencyReady) process.exitCode = 1;
           if (!result.exportPreparationEngineReady) process.exitCode = 1;
           if (!result.exportLiveCaptureEngineReady) process.exitCode = 1;
           if (!result.exportQuickClipWorkflowEngineReady) process.exitCode = 1;

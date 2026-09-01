@@ -1346,10 +1346,10 @@
                   <option value="3840x2160">4K · 3840×2160</option>
                 </select>
               </label>
-              <label>SYNC RATE
+              <label>OUTPUT RATE
                 <select id="obsFps">
-                  <option value="30">30 FPS</option>
-                  <option value="60" selected>60 FPS</option>
+                  <option value="30" selected>30 FPS · LOWER LOAD</option>
+                  <option value="60">60 FPS · SMOOTHER</option>
                 </select>
               </label>
             </div>
@@ -1369,7 +1369,7 @@
             </div>
 
             <button class="obs-output-button" id="obsOutputButton" type="button">OPEN OBS OUTPUT</button>
-            <p class="obs-drag-note">Move the frameless OBS window by dragging its top edge. The drag strip is transparent and is not visible in the capture.</p>
+            <p class="obs-drag-note">30 FPS is the lower-load default. When Quartic Pulse is behind another app, its duplicate control-window preview sleeps while audio analysis and the OBS output continue. Move the frameless OBS window by dragging its top edge.</p>
 
             <div class="obs-websocket-card">
               <div class="section-heading"><span>OBS AUTOMATION</span><small id="obsWebSocketStatus">DISCONNECTED</small></div>
@@ -1722,6 +1722,7 @@
     <script src="modules/music-personality-controller.js"></script>
     <script src="modules/visual-preset-controller.js"></script>
     <script src="modules/app-state.js"></script>
+    <script src="modules/background-render-policy.js"></script>
     <script src="modules/shader-source.js"></script>
     <script src="modules/visual-renderer.js"></script>
     <script src="modules/data-horizon-runtime-vendor.js"></script>

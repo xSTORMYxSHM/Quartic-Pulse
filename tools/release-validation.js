@@ -41,6 +41,7 @@ check(indexHtml.includes('data-visual-style="6"') && indexHtml.includes('data-vi
 check(indexHtml.includes('id="importVisualizerPackageButton"') && indexHtml.includes('id="installedVisualizerPackage"') && indexHtml.includes('id="removeVisualizerPackageButton"'), 'Custom visualizer package controls are missing.');
 check(indexHtml.includes('PREVIEW PACKAGE') && indexHtml.includes('CUSTOM VISUALIZERS + PALETTES'), 'Data Horizon package preview or palette messaging is missing.');
 check(indexHtml.includes('modules/data-horizon-runtime-vendor.js') && indexHtml.includes('modules/data-horizon-runtime.js') && indexHtml.includes('modules/visualizer-package-controller.js'), 'Imported visualizer renderer modules are not loaded.');
+check(indexHtml.includes('modules/background-render-policy.js'), 'Background render policy is not loaded.');
 check(indexHtml.includes('modules/audio-modulation-engine.js') && indexHtml.includes('modules/audio-modulation-controller.js') && indexHtml.includes('id="modulationVisualSupport"'), 'Visual-aware audio modulation modules or capability messaging is missing.');
 check(indexHtml.includes('modules/music-personality-controller.js') && indexHtml.includes('id="musicPersonalityMount"'), 'Music Personality controller or mount is missing.');
 check(indexHtml.includes('modules/visual-preset-controller.js') && indexHtml.includes('id="experiencePresetGrid"'), 'Visual preset controller or preset grid is missing.');
@@ -51,6 +52,7 @@ check(!read('src/renderer/modules/song-director-controller.js').includes('${cue.
 const mainSource = read('src/main/main.js');
 check(mainSource.includes("setWindowOpenHandler(() => ({ action: 'deny' }))") && mainSource.includes("webContents.on('will-navigate'"), 'App-window navigation guards are missing.');
 check(mainSource.includes('requireTrustedRenderer(event)'), 'Privileged IPC sender validation is missing.');
+check(mainSource.includes('backgroundThrottling: false'), 'Main renderer background throttling must remain disabled for uninterrupted OBS state delivery.');
 
 const requiredFiles = [
   'LICENSE',
@@ -77,6 +79,7 @@ const requiredFiles = [
   'tools/electron-builder.signed.cjs',
   'tools/read-authenticode-signature.ps1',
   'src/renderer/modules/data-horizon-runtime-vendor.js',
+  'src/renderer/modules/background-render-policy.js',
   'src/renderer/modules/data-horizon-runtime.js',
   'src/renderer/modules/visualizer-package-controller.js',
   'src/renderer/modules/audio-modulation-engine.js',

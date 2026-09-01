@@ -2,6 +2,17 @@
 
 All notable Quartic Pulse changes are documented here. Quartic Pulse follows semantic versioning where practical.
 
+## Unreleased
+
+### Changed
+
+- Made 30 FPS the default OBS output rate and applied the selected 30/60 FPS rate to both output rendering and state synchronization.
+- Suspended the unfocused control window's duplicate WebGL preview, performance sampling, and interface updates while retaining low-rate audio/state processing; active exports continue rendering normally.
+
+### Fixed
+
+- Prevented Chromium background throttling from pausing the main audio-analysis and visual-state source used by OBS when Quartic Pulse is minimized, occluded, or behind another application.
+
 ## 1.0.0 - 2026-08-30
 
 ### Added
