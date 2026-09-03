@@ -9,8 +9,7 @@ $electronPath = Join-Path $projectRoot 'node_modules\electron\dist\electron.exe'
 $builderPath = Join-Path $projectRoot 'node_modules\electron-builder\cli.js'
 $releaseGate = Join-Path $PSScriptRoot 'release-gate.ps1'
 $prepareFfmpeg = Join-Path $PSScriptRoot 'prepare-ffmpeg.ps1'
-$authenticodeReader = Join-Path $PSScriptRoot 'read-authenticode-signature.ps1'
-$windowsPowerShellPath = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+$finalizeRelease = Join-Path $PSScriptRoot 'finalize-release.ps1'
 $nodeCandidates = @(
   (Get-Command node.exe -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source -First 1),
   (Join-Path $env:ProgramFiles 'nodejs\node.exe'),
@@ -21,8 +20,7 @@ $nodePath = $nodeCandidates | Select-Object -First 1
 
 if (-not (Test-Path -LiteralPath $electronPath)) { throw "Electron runtime not found: $electronPath" }
 if (-not (Test-Path -LiteralPath $builderPath)) { throw "electron-builder not found: $builderPath" }
-if (-not (Test-Path -LiteralPath $authenticodeReader)) { throw "Authenticode reader not found: $authenticodeReader" }
-if (-not (Test-Path -LiteralPath $windowsPowerShellPath)) { throw 'Windows PowerShell is required for Authenticode verification.' }
+if (-not (Test-Path -LiteralPath $finalizeRelease)) { throw "Release finalizer not found: $finalizeRelease" }
 if (-not $nodePath) { throw 'Node.js was not found. Install Node.js or build through the Codex workspace runtime.' }
 if (Get-Process -Name 'Quartic Pulse' -ErrorAction SilentlyContinue) {
   throw 'Close every running Quartic Pulse window before building a release.'
@@ -71,87 +69,23 @@ try {
     )
   }
   $builderExitCode = 1
-  for ($builderAttempt = 1; $builderAttempt -le 2; $builderAttempt++) {
+  for ($builderAttempt = 1; $builderAttempt -le 3; $builderAttempt++) {
     & $nodePath @builderArguments
     $builderExitCode = $LASTEXITCODE
     if ($builderExitCode -eq 0) { break }
-    if ($builderAttempt -lt 2) {
-      Write-Warning "electron-builder failed with exit code $builderExitCode; retrying once after transient file locks clear."
-      Start-Sleep -Seconds 2
+    if ($builderAttempt -lt 3) {
+      Write-Warning "electron-builder failed with exit code $builderExitCode; retrying after transient signing or file-lock failures clear."
+      Start-Sleep -Seconds (2 * $builderAttempt)
     }
   }
-  if ($builderExitCode -ne 0) { throw "electron-builder failed with exit code $builderExitCode after two attempts." }
+  if ($builderExitCode -ne 0) { throw "electron-builder failed with exit code $builderExitCode after three attempts." }
 
   $packagedExecutable = Join-Path $projectRoot 'release\win-unpacked\Quartic Pulse.exe'
   if (Test-Path -LiteralPath $packagedExecutable) {
     & $releaseGate -Quick -DesktopExecutablePath $packagedExecutable
   }
   if (-not $DirectoryOnly) {
-    $packageMetadata = Get-Content -Raw -LiteralPath (Join-Path $projectRoot 'package.json') | ConvertFrom-Json
-    $releaseDirectory = Join-Path $projectRoot 'release'
-    Get-ChildItem -LiteralPath $releaseDirectory -File | Where-Object {
-      $_.Name -match '^(?:SHA256SUMS|RELEASE_MANIFEST)-v.+\.(?:txt|json)$'
-    } | Remove-Item -Force
-    $installerName = "Quartic.Pulse.Setup.$($packageMetadata.version).exe"
-    $portableName = "Quartic.Pulse.Portable.$($packageMetadata.version).exe"
-    $blockmapName = "$installerName.blockmap"
-    $updateMetadataName = 'latest.yml'
-    $installerPath = Join-Path $releaseDirectory $installerName
-    $portablePath = Join-Path $releaseDirectory $portableName
-    $blockmapPath = Join-Path $releaseDirectory $blockmapName
-    $updateMetadataPath = Join-Path $releaseDirectory $updateMetadataName
-    $installer = Get-Item -LiteralPath $installerPath
-    $portable = Get-Item -LiteralPath $portablePath
-    $blockmap = Get-Item -LiteralPath $blockmapPath
-    $updateMetadata = Get-Item -LiteralPath $updateMetadataPath
-    $signaturePaths = @($packagedExecutable, $installerPath, $portablePath)
-    $signatures = foreach ($signaturePath in $signaturePaths) {
-      $signatureJson = & $windowsPowerShellPath -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $authenticodeReader -Target $signaturePath
-      if ($LASTEXITCODE -ne 0) { throw "Authenticode verification process failed for '$signaturePath'." }
-      $signature = $signatureJson | ConvertFrom-Json
-      if ($signature.status -ne 'Valid') {
-        throw "Authenticode verification failed for '$signaturePath': $($signature.status) $($signature.statusMessage)"
-      }
-      if (-not $signature.signerSubject -or -not $signature.signerThumbprint) { throw "No signer certificate was found for '$signaturePath'." }
-      if (-not $signature.timestampSubject) { throw "No timestamp certificate was found for '$signaturePath'." }
-      $signature
-    }
-    $signerSubjects = @($signatures | ForEach-Object { $_.signerSubject } | Sort-Object -Unique)
-    $signerThumbprints = @($signatures | ForEach-Object { $_.signerThumbprint } | Sort-Object -Unique)
-    if ($signerSubjects.Count -ne 1 -or $signerThumbprints.Count -ne 1) {
-      throw 'Quartic Pulse release artifacts were not signed by one consistent certificate.'
-    }
-    $installerHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $installerPath).Hash
-    $portableHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $portablePath).Hash
-    $blockmapHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $blockmapPath).Hash
-    $updateMetadataHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $updateMetadataPath).Hash
-    $checksumPath = Join-Path $releaseDirectory "SHA256SUMS-v$($packageMetadata.version).txt"
-    @(
-      "$installerHash  $installerName"
-      "$portableHash  $portableName"
-      "$blockmapHash  $blockmapName"
-      "$updateMetadataHash  $updateMetadataName"
-    ) | Set-Content -LiteralPath $checksumPath -Encoding utf8
-    $manifest = [ordered]@{
-      application = 'Quartic Pulse'
-      version = $packageMetadata.version
-      channel = $packageMetadata.releaseChannel
-      builtOn = (Get-Date).ToString('yyyy-MM-dd')
-      platform = 'Windows 11 x64'
-      authenticode = [ordered]@{
-        status = 'valid'
-        publisher = $signerSubjects[0]
-        thumbprint = $signerThumbprints[0]
-        timestamped = $true
-      }
-      artifacts = @(
-        [ordered]@{ file = $installerName; type = 'customizable-nsis-installer'; bytes = $installer.Length; sha256 = $installerHash }
-        [ordered]@{ file = $portableName; type = 'portable-executable'; bytes = $portable.Length; sha256 = $portableHash }
-        [ordered]@{ file = $blockmapName; type = 'update-blockmap'; bytes = $blockmap.Length; sha256 = $blockmapHash }
-        [ordered]@{ file = $updateMetadataName; type = 'update-metadata'; bytes = $updateMetadata.Length; sha256 = $updateMetadataHash }
-      )
-    }
-    $manifest | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $releaseDirectory "RELEASE_MANIFEST-v$($packageMetadata.version).json") -Encoding utf8
+    & $finalizeRelease -ProjectRoot $projectRoot
   }
 } finally {
   Pop-Location

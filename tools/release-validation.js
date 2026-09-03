@@ -86,6 +86,7 @@ const requiredFiles = [
   'tools/ensure-electron-runtime.ps1',
   'tools/ensure-electron-runtime.js',
   'tools/electron-builder.signed.cjs',
+  'tools/finalize-release.ps1',
   'tools/read-authenticode-signature.ps1',
   'src/renderer/modules/data-horizon-runtime-vendor.js',
   'src/renderer/modules/background-render-policy.js',

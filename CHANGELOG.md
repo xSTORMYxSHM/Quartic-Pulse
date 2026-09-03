@@ -4,6 +4,8 @@ All notable Quartic Pulse changes are documented here. Quartic Pulse follows sem
 
 ## Unreleased
 
+## 1.0.1 - 2026-09-03
+
 ### Added
 
 - Added installed-app update checks through public GitHub Releases, an About-page **Check for Updates** workflow, signed installer downloads with progress, and a confirmation step before restart and installation.
@@ -17,6 +19,7 @@ All notable Quartic Pulse changes are documented here. Quartic Pulse follows sem
 
 ### Fixed
 
+- Preserved prior tracked release manifests and checksum records when building a new version instead of deleting every historical record from the local release directory, and made signing plus Authenticode inspection resilient to bounded transient timestamp, file-lock, and Windows PowerShell module-loading failures.
 - Prevented Chromium background throttling from pausing the main audio-analysis and visual-state source used by OBS when Quartic Pulse is minimized, occluded, or behind another application.
 
 ## 1.0.0 - 2026-08-30
