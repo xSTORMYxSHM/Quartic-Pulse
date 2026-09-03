@@ -15,7 +15,7 @@
     "start": "electron .",
     "dev": "electron . --dev",
     "test": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/release-gate.ps1 -Quick",
-    "test:unit": "node --test src/main/tests/visualizer-package-manager.test.js src/main/tests/security-policy.test.js tools/report-relay/tests/report-core.test.js tools/report-relay/tests/quartic-report.test.js",
+    "test:unit": "node --test src/main/tests/visualizer-package-manager.test.js src/main/tests/security-policy.test.js src/main/tests/update-service.test.js tools/report-relay/tests/report-core.test.js tools/report-relay/tests/quartic-report.test.js",
     "test:release": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/release-gate.ps1",
     "test:controllers": "set ELECTRON_RUN_AS_NODE=1&& electron tools/controller-smoke.js",
     "sync:data-horizon": "node tools/sync-data-horizon-runtime.js",
@@ -52,7 +52,9 @@
       {
         "from": "assets/bin",
         "to": "bin",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       },
       {
         "from": "LICENSE",
@@ -73,21 +75,38 @@
     ],
     "win": {
       "icon": "assets/icon.png",
+      "verifyUpdateCodeSignature": true,
       "target": [
         "nsis",
         "portable"
       ]
     },
     "nsis": {
+      "artifactName": "Quartic.Pulse.Setup.${version}.${ext}",
       "oneClick": false,
       "perMachine": true,
+      "allowElevation": true,
       "allowToChangeInstallationDirectory": true,
+      "deleteAppDataOnUninstall": false,
       "installerHeader": "assets/installer/installer-header.bmp",
       "installerSidebar": "assets/installer/installer-sidebar.bmp",
       "uninstallerSidebar": "assets/installer/installer-sidebar.bmp",
       "include": "assets/installer/installer.nsh",
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true
-    }
+    },
+    "portable": {
+      "artifactName": "Quartic.Pulse.Portable.${version}.${ext}"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "xSTORMYxSHM",
+        "repo": "Quartic-Pulse"
+      }
+    ]
+  },
+  "dependencies": {
+    "electron-updater": "6.8.9"
   }
 }

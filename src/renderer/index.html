@@ -1606,6 +1606,20 @@
 
             <div class="about-equation">zₙ₊₁ = zₙ⁴ + μ(t)zₙ² + c</div>
 
+            <div class="about-card update-card" id="updateCard">
+              <div class="section-heading"><span>SOFTWARE UPDATE</span><small id="updateModeText">CHECKING MODE</small></div>
+              <strong id="updateTitle">Quartic Pulse updates</strong>
+              <p id="updateStatusText" role="status" aria-live="polite">Loading update status…</p>
+              <div class="update-progress" id="updateProgress" hidden aria-label="Update download progress"><i id="updateProgressFill"></i></div>
+              <div class="update-actions">
+                <button id="checkUpdateButton" type="button">CHECK FOR UPDATES</button>
+                <button id="downloadUpdateButton" class="primary" type="button" hidden>DOWNLOAD UPDATE</button>
+                <button id="installUpdateButton" class="primary" type="button" hidden>RESTART &amp; INSTALL</button>
+                <button id="openUpdateReleasesButton" type="button">MANUAL INSTALLER</button>
+              </div>
+              <small>Installed copies can download verified, signed updates. The latest signed installer always supports a manual in-place upgrade.</small>
+            </div>
+
             <div class="about-card about-purpose-card">
               <strong>MUSIC DRIVES THE MATH</strong>
               <p>Quartic Pulse does more than animate a shader. Live audio can reshape the equation, dimensional motion, folding, color, and movement that generate each frame.</p>

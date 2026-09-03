@@ -56,9 +56,11 @@ assemblies.
 ## Packaging tools
 
 Electron Builder and NSIS are used to create the Windows installer and portable
-package. They are build and packaging tools and retain their respective licenses.
+package. Electron Updater is included at runtime to retrieve and verify installed-app
+updates. They retain their respective licenses.
 
 - Electron Builder: https://github.com/electron-userland/electron-builder
+- Electron Updater: https://github.com/electron-userland/electron-builder/tree/master/packages/electron-updater
 - NSIS: https://nsis.sourceforge.io/License
 
 ## Project names and artwork

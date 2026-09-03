@@ -1449,6 +1449,67 @@
     toastTimer = setTimeout(() => toast.classList.remove('visible'), 4200);
   }
 
+  let announcedUpdateVersion = '';
+
+  function renderUpdateStatus(updateStatus = {}) {
+    const statusText = $('#updateStatusText');
+    if (!statusText) return;
+    const phase = String(updateStatus.phase || 'manual-only');
+    const supported = updateStatus.supported === true;
+    const modeLabels = {
+      installed: 'INSTALLED BUILD',
+      portable: 'PORTABLE BUILD',
+      development: 'DEVELOPMENT BUILD',
+      unsupported: 'MANUAL UPDATE'
+    };
+    $('#updateModeText').textContent = modeLabels[updateStatus.mode] || 'UPDATE STATUS';
+    $('#updateTitle').textContent = phase === 'available'
+      ? `Quartic Pulse ${updateStatus.availableVersion || 'update'} is available`
+      : phase === 'downloaded'
+        ? `Quartic Pulse ${updateStatus.availableVersion || 'update'} is ready`
+        : 'Quartic Pulse updates';
+    statusText.textContent = String(updateStatus.message || 'Open the release page for the latest signed installer.');
+
+    const checking = phase === 'checking';
+    const downloading = phase === 'downloading';
+    const checkButton = $('#checkUpdateButton');
+    checkButton.hidden = !supported;
+    checkButton.disabled = checking || downloading || phase === 'downloaded';
+    checkButton.textContent = checking ? 'CHECKING…' : 'CHECK FOR UPDATES';
+    $('#downloadUpdateButton').hidden = phase !== 'available';
+    $('#downloadUpdateButton').disabled = downloading;
+    $('#installUpdateButton').hidden = phase !== 'downloaded';
+    const progress = $('#updateProgress');
+    progress.hidden = !downloading;
+    $('#updateProgressFill').style.width = `${Math.max(0, Math.min(100, Number(updateStatus.progress) || 0))}%`;
+
+    const availableVersion = String(updateStatus.availableVersion || '');
+    if (phase === 'available' && availableVersion && announcedUpdateVersion !== availableVersion) {
+      announcedUpdateVersion = availableVersion;
+      showToast(`Quartic Pulse ${availableVersion} is available in System → About`);
+    }
+  }
+
+  function initializeUpdateCenter() {
+    if (!window.quarticDesktop?.getUpdateStatus) return;
+    window.quarticDesktop.onUpdateStatus(renderUpdateStatus);
+    window.quarticDesktop.getUpdateStatus().then(renderUpdateStatus).catch((error) => {
+      renderUpdateStatus({ mode: 'unsupported', message: error.message });
+    });
+    $('#checkUpdateButton').addEventListener('click', () => {
+      window.quarticDesktop.checkForUpdates().then(renderUpdateStatus).catch((error) => showToast(error.message, true));
+    });
+    $('#downloadUpdateButton').addEventListener('click', () => {
+      window.quarticDesktop.downloadUpdate().then(renderUpdateStatus).catch((error) => showToast(error.message, true));
+    });
+    $('#installUpdateButton').addEventListener('click', () => {
+      window.quarticDesktop.installUpdate().catch((error) => showToast(error.message, true));
+    });
+    $('#openUpdateReleasesButton').addEventListener('click', () => {
+      window.quarticDesktop.openUpdateReleases().catch((error) => showToast(error.message, true));
+    });
+  }
+
   function clamp(value, minimum, maximum) {
     return Math.max(minimum, Math.min(maximum, value));
   }
@@ -2824,6 +2885,7 @@
     operatorTools.initializeCreativeTools();
     operatorTools.initializePerformanceAssistant();
     operatorTools.initializeReportCenter();
+    initializeUpdateCenter();
     performancePackageController.initializeSession();
     audioSourceController.refreshInputs({ requestPermission: false, silent: true }).catch(() => {});
     audioSourceController.refreshWindowsOutputs({ silent: true }).catch(() => {});

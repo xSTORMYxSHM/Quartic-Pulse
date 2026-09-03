@@ -233,6 +233,10 @@ Production builds use Azure Trusted Signing. `pnpm run dist` requires an authent
 
 The normal Windows installer uses a branded Quartic Pulse assisted setup flow. It requests administrator approval for an all-users installation, displays the installation-folder page with a **Browse** button, and shows the selected path again before the user chooses **Install**. The portable executable remains available for users who do not want an installed copy.
 
+Installed builds check the public GitHub Releases feed after startup and also provide **System → About → Check for Updates**. Quartic Pulse asks before downloading and again before restarting into the signed NSIS installer. Running the latest signed installer manually performs the same in-place upgrade and preserves application data. Portable builds do not self-install; their About page opens the latest release so the user can choose the signed installer or a new portable copy.
+
+The existing 1.0.0 release predates this updater. Users of 1.0.0 must manually install the first updater-enabled release once; automatic checks work for installed releases after that bridge upgrade. Each updater-enabled GitHub release must publish the signed `Quartic.Pulse.Setup.<version>.exe`, its `.blockmap`, and `latest.yml` together.
+
 ## License and branding
 
 Quartic Pulse is free software licensed under the [GNU General Public License, version 3 or later](LICENSE). You may use, study, modify, and share it. If you distribute Quartic Pulse or a modified version, you must preserve the same freedoms, license the complete covered work under GPL-3.0-or-later, and provide the corresponding source as required by the license.

@@ -4,8 +4,14 @@ All notable Quartic Pulse changes are documented here. Quartic Pulse follows sem
 
 ## Unreleased
 
+### Added
+
+- Added installed-app update checks through public GitHub Releases, an About-page **Check for Updates** workflow, signed installer downloads with progress, and a confirmation step before restart and installation.
+- Added an explicit manual-installer path for portable copies and for users who prefer to perform an in-place upgrade themselves.
+
 ### Changed
 
+- Configured release packaging to emit stable updater artifact names, `latest.yml`, and the NSIS blockmap alongside signed installer and portable downloads.
 - Made 30 FPS the default OBS output rate and applied the selected 30/60 FPS rate to both output rendering and state synchronization.
 - Suspended the unfocused control window's duplicate WebGL preview, performance sampling, and interface updates while retaining low-rate audio/state processing; active exports continue rendering normally.
 

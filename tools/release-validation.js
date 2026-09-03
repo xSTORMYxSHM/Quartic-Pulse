@@ -33,9 +33,14 @@ check(packageData.packageManager?.startsWith('pnpm@'), 'package.json must pin th
 check(packageData.scripts?.postinstall?.includes('ensure-electron-runtime.ps1'), 'Electron runtime bootstrap must use the PATH-independent PowerShell wrapper.');
 check(packageData.license === 'GPL-3.0-or-later', 'package license must remain GPL-3.0-or-later.');
 check(packageData.build?.asarUnpack?.includes('assets/windows-audio/**/*'), 'Windows audio helper must be unpacked from ASAR.');
+check(packageData.dependencies?.['electron-updater'], 'electron-updater must be a production dependency.');
+check(packageData.build?.publish?.some((publisher) => publisher.provider === 'github' && publisher.owner === 'xSTORMYxSHM' && publisher.repo === 'Quartic-Pulse'), 'GitHub update publishing configuration is missing.');
+check(packageData.build?.win?.verifyUpdateCodeSignature === true, 'Windows update signature verification must remain enabled.');
+check(packageData.build?.nsis?.artifactName === 'Quartic.Pulse.Setup.${version}.${ext}', 'NSIS updater artifact naming is not stable.');
 
 const indexHtml = read('src/renderer/index.html');
 check(indexHtml.includes('id="appVersionText"'), 'About version element is missing.');
+check(indexHtml.includes('id="checkUpdateButton"') && indexHtml.includes('id="downloadUpdateButton"') && indexHtml.includes('id="installUpdateButton"'), 'About update controls are missing.');
 check(indexHtml.includes('../shared/app-metadata.js'), 'Renderer does not load centralized app metadata.');
 check(indexHtml.includes('data-visual-style="6"') && indexHtml.includes('data-visual-options="6"'), 'Data Horizon selector or options panel is missing.');
 check(indexHtml.includes('id="importVisualizerPackageButton"') && indexHtml.includes('id="installedVisualizerPackage"') && indexHtml.includes('id="removeVisualizerPackageButton"'), 'Custom visualizer package controls are missing.');
@@ -53,6 +58,9 @@ const mainSource = read('src/main/main.js');
 check(mainSource.includes("setWindowOpenHandler(() => ({ action: 'deny' }))") && mainSource.includes("webContents.on('will-navigate'"), 'App-window navigation guards are missing.');
 check(mainSource.includes('requireTrustedRenderer(event)'), 'Privileged IPC sender validation is missing.');
 check(mainSource.includes('backgroundThrottling: false'), 'Main renderer background throttling must remain disabled for uninterrupted OBS state delivery.');
+check(mainSource.includes("handleTrustedMain('update:check'") && mainSource.includes("handleTrustedMain('update:install'"), 'Main-window-only updater IPC handlers are missing.');
+const preloadSource = read('src/main/preload.js');
+check(preloadSource.includes('checkForUpdates') && preloadSource.includes('onUpdateStatus'), 'Updater preload bridge is missing.');
 
 const requiredFiles = [
   'LICENSE',
@@ -74,6 +82,7 @@ const requiredFiles = [
   'assets/bin/FFmpeg-SOURCE.txt',
   'src/main/visualizer-package-manager.js',
   'src/main/security-policy.js',
+  'src/main/update-service.js',
   'tools/ensure-electron-runtime.ps1',
   'tools/ensure-electron-runtime.js',
   'tools/electron-builder.signed.cjs',

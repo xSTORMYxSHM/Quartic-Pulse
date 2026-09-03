@@ -92,12 +92,18 @@ try {
     Get-ChildItem -LiteralPath $releaseDirectory -File | Where-Object {
       $_.Name -match '^(?:SHA256SUMS|RELEASE_MANIFEST)-v.+\.(?:txt|json)$'
     } | Remove-Item -Force
-    $installerName = "Quartic Pulse Setup $($packageMetadata.version).exe"
-    $portableName = "Quartic Pulse $($packageMetadata.version).exe"
+    $installerName = "Quartic.Pulse.Setup.$($packageMetadata.version).exe"
+    $portableName = "Quartic.Pulse.Portable.$($packageMetadata.version).exe"
+    $blockmapName = "$installerName.blockmap"
+    $updateMetadataName = 'latest.yml'
     $installerPath = Join-Path $releaseDirectory $installerName
     $portablePath = Join-Path $releaseDirectory $portableName
+    $blockmapPath = Join-Path $releaseDirectory $blockmapName
+    $updateMetadataPath = Join-Path $releaseDirectory $updateMetadataName
     $installer = Get-Item -LiteralPath $installerPath
     $portable = Get-Item -LiteralPath $portablePath
+    $blockmap = Get-Item -LiteralPath $blockmapPath
+    $updateMetadata = Get-Item -LiteralPath $updateMetadataPath
     $signaturePaths = @($packagedExecutable, $installerPath, $portablePath)
     $signatures = foreach ($signaturePath in $signaturePaths) {
       $signatureJson = & $windowsPowerShellPath -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $authenticodeReader -Target $signaturePath
@@ -117,10 +123,14 @@ try {
     }
     $installerHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $installerPath).Hash
     $portableHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $portablePath).Hash
+    $blockmapHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $blockmapPath).Hash
+    $updateMetadataHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $updateMetadataPath).Hash
     $checksumPath = Join-Path $releaseDirectory "SHA256SUMS-v$($packageMetadata.version).txt"
     @(
       "$installerHash  $installerName"
       "$portableHash  $portableName"
+      "$blockmapHash  $blockmapName"
+      "$updateMetadataHash  $updateMetadataName"
     ) | Set-Content -LiteralPath $checksumPath -Encoding utf8
     $manifest = [ordered]@{
       application = 'Quartic Pulse'
@@ -137,6 +147,8 @@ try {
       artifacts = @(
         [ordered]@{ file = $installerName; type = 'customizable-nsis-installer'; bytes = $installer.Length; sha256 = $installerHash }
         [ordered]@{ file = $portableName; type = 'portable-executable'; bytes = $portable.Length; sha256 = $portableHash }
+        [ordered]@{ file = $blockmapName; type = 'update-blockmap'; bytes = $blockmap.Length; sha256 = $blockmapHash }
+        [ordered]@{ file = $updateMetadataName; type = 'update-metadata'; bytes = $updateMetadata.Length; sha256 = $updateMetadataHash }
       )
     }
     $manifest | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $releaseDirectory "RELEASE_MANIFEST-v$($packageMetadata.version).json") -Encoding utf8

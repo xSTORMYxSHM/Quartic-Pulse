@@ -6,7 +6,9 @@ const { execFile, spawn } = require('child_process');
 const crypto = require('crypto');
 const dgram = require('dgram');
 const { pipeline } = require('stream/promises');
+const { autoUpdater } = require('electron-updater');
 const exportProfileCatalog = require('../shared/export-profiles');
+const { createUpdateService } = require('./update-service');
 const { VisualizerPackageManager, styleIdFor } = require('./visualizer-package-manager');
 const {
   isAllowedExportTarget,
@@ -38,6 +40,16 @@ let smokeCustomVisualizerStyleId = 0;
 const reportProjectUrl = 'https://github.com/xSTORMYxSHM/Quartic-Pulse';
 const reportIncidentLimit = 20;
 const rendererEntryPath = path.resolve(__dirname, '..', 'renderer', 'index.html');
+const updateService = createUpdateService({
+  updater: autoUpdater,
+  app,
+  dialog,
+  shell,
+  getWindow: () => mainWindow,
+  onStatus: (status) => {
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('update:status', status);
+  }
+});
 
 function trustedRendererOptions() {
   return { mainWindow, obsOutputWindow, rendererEntryPath };
@@ -45,6 +57,11 @@ function trustedRendererOptions() {
 
 function requireTrustedRenderer(event) {
   if (!isTrustedRendererEvent(event, trustedRendererOptions())) throw new Error('Untrusted renderer IPC request rejected.');
+}
+
+function requireTrustedMainRenderer(event) {
+  requireTrustedRenderer(event);
+  if (event.sender !== mainWindow?.webContents) throw new Error('This IPC request is available only to the main application window.');
 }
 
 function hardenAppWindow(window) {
@@ -1378,6 +1395,11 @@ function createWindow() {
             const aboutContentReady = activeSystemTab !== 'about' || Boolean(
               document.querySelector('.about-feature-grid')
               && document.querySelector('.about-release-card')
+              && document.querySelector('#updateCard')
+              && document.querySelector('#checkUpdateButton')
+              && document.querySelector('#openUpdateReleasesButton')
+              && typeof window.quarticDesktop?.getUpdateStatus === 'function'
+              && typeof window.quarticDesktop?.installUpdate === 'function'
               && window.QuarticAppMetadata?.version === ${JSON.stringify(app.getVersion())}
               && document.querySelector('#appVersionText')?.textContent.includes(${JSON.stringify(app.getVersion())})
             );
@@ -2958,6 +2980,15 @@ app.whenReady().then(async () => {
     requireTrustedRenderer(event);
     return handler(event, ...args);
   });
+  const handleTrustedMain = (channel, handler) => ipcMain.handle(channel, (event, ...args) => {
+    requireTrustedMainRenderer(event);
+    return handler(event, ...args);
+  });
+  handleTrustedMain('update:get-status', () => updateService.getStatus());
+  handleTrustedMain('update:check', () => updateService.check());
+  handleTrustedMain('update:download', () => updateService.download());
+  handleTrustedMain('update:install', () => updateService.install());
+  handleTrustedMain('update:open-releases', () => updateService.openReleases());
   const smokeCustomVisualizer = process.argv.includes('--smoke-custom-visualizer');
   const visualizerPackageRoot = smokeCustomVisualizer
     ? path.join(os.tmpdir(), `quartic-pulse-smoke-visualizers-${process.pid}`)
@@ -3643,6 +3674,7 @@ app.whenReady().then(async () => {
   });
 
   createWindow();
+  updateService.start();
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });

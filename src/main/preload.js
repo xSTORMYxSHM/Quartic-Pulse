@@ -21,6 +21,16 @@ contextBridge.exposeInMainWorld('quarticDesktop', {
   printReport: (text) => ipcRenderer.invoke('report:print', text),
   submitReport: (text) => ipcRenderer.invoke('report:submit', text),
   openReportIssues: () => ipcRenderer.invoke('report:open-issues'),
+  getUpdateStatus: () => ipcRenderer.invoke('update:get-status'),
+  checkForUpdates: () => ipcRenderer.invoke('update:check'),
+  downloadUpdate: () => ipcRenderer.invoke('update:download'),
+  installUpdate: () => ipcRenderer.invoke('update:install'),
+  openUpdateReleases: () => ipcRenderer.invoke('update:open-releases'),
+  onUpdateStatus: (callback) => {
+    const listener = (_event, status) => callback(status);
+    ipcRenderer.on('update:status', listener);
+    return () => ipcRenderer.removeListener('update:status', listener);
+  },
   reportRendererError: (error) => ipcRenderer.send('report:renderer-error', error),
   getExportPreflight: (options) => ipcRenderer.invoke('export:preflight', options),
   getExportEncoderCapabilities: () => ipcRenderer.invoke('export:encoder-capabilities'),

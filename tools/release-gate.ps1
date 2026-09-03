@@ -65,7 +65,7 @@ function Invoke-DesktopSmoke {
 Invoke-NodeCheck -Arguments @('tools/release-validation.js') -Label 'Release metadata, assets, CSP, licenses, and FFmpeg'
 Invoke-NodeCheck -Arguments @('tools/controller-smoke.js') -Label 'Controller and engine unit smoke'
 Invoke-NodeCheck -Arguments @('--test', 'tools/report-relay/tests/report-core.test.js', 'tools/report-relay/tests/quartic-report.test.js') -Label 'Report relay tests'
-Invoke-NodeCheck -Arguments @('--test', 'src/main/tests/visualizer-package-manager.test.js', 'src/main/tests/security-policy.test.js') -Label 'Main-process security and visualizer package tests'
+Invoke-NodeCheck -Arguments @('--test', 'src/main/tests/visualizer-package-manager.test.js', 'src/main/tests/security-policy.test.js', 'src/main/tests/update-service.test.js') -Label 'Main-process security, updater, and visualizer package tests'
 
 Invoke-DesktopSmoke -Arguments @('--smoke-tab=music', '--smoke-style=0', '--smoke-synthetic-audio', '--smoke-adaptive-beat') -Label 'Basic music and fractal workflow'
 Invoke-DesktopSmoke -Arguments @('--smoke-tab=appearance', '--smoke-custom-visualizer', '--smoke-synthetic-audio', '--capture-preview', '--capture-temp') -Label 'Imported Data Horizon visualizer workflow'
