@@ -14,11 +14,11 @@
 
 ## Release publication
 
-- [ ] Release branch is committed and pushed.
-- [ ] Annotated `v1.0.5` tag is pushed.
-- [ ] GitHub release is published with installer, portable executable, blockmap, update metadata, checksums, manifest, license, third-party notices, and source archive.
-- [ ] GitHub release is marked as the latest stable release.
-- [ ] Public release assets and `latest.yml` filenames match exactly.
+- [x] Release branch is committed and pushed.
+- [x] Annotated `v1.0.5` tag is pushed.
+- [x] GitHub release is published with installer, portable executable, blockmap, update metadata, checksums, manifest, license, third-party notices, and source archive.
+- [x] GitHub release is marked as the latest stable release.
+- [x] Public release assets and `latest.yml` filenames match exactly.
 
 ## Recommended real-machine follow-up
 
