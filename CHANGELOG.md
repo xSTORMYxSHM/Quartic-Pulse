@@ -4,6 +4,18 @@ All notable Quartic Pulse changes are documented here. Quartic Pulse follows sem
 
 ## Unreleased
 
+## 1.0.5 - 2026-09-04
+
+### Changed
+
+- Kept the main live visual rendering at an efficient 30 FPS while Quartic Pulse is unfocused and no dedicated OBS Output is open.
+- Continued suppressing the unfocused control window's duplicate WebGL render when OBS Output is active, preserving the low-resource streaming path.
+
+### Fixed
+
+- Corrected the Song Map lane positioning so bass, mids, and highs render inside their intended vertical regions instead of being pushed against or below the chart boundary.
+- Made release checksum generation independent of PowerShell's optional `Get-FileHash` command availability after signing-module initialization.
+
 ## 1.0.1 - 2026-09-03
 
 ### Added

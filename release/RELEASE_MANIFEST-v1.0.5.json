@@ -1,0 +1,39 @@
+﻿{
+    "application":  "Quartic Pulse",
+    "version":  "1.0.5",
+    "channel":  "stable",
+    "builtOn":  "2026-09-04",
+    "platform":  "Windows 11 x64",
+    "authenticode":  {
+                         "status":  "valid",
+                         "publisher":  "CN=Garner Whitted, O=Garner Whitted, L=Seattle, S=wa, C=US",
+                         "thumbprint":  "29EACD7E33B9CDCF6CB03067539D95AC22764E83",
+                         "timestamped":  true
+                     },
+    "artifacts":  [
+                      {
+                          "file":  "Quartic.Pulse.Setup.1.0.5.exe",
+                          "type":  "customizable-nsis-installer",
+                          "bytes":  146551600,
+                          "sha256":  "616B347C63688FFD7F850AF65E854C44DA0393577CBF99B2CD1C9FEE2A69A478"
+                      },
+                      {
+                          "file":  "Quartic.Pulse.Portable.1.0.5.exe",
+                          "type":  "portable-executable",
+                          "bytes":  146236016,
+                          "sha256":  "058D709ABA988A959CF632C20349348C1CF4B8883D73204D2011B4B017EC9278"
+                      },
+                      {
+                          "file":  "Quartic.Pulse.Setup.1.0.5.exe.blockmap",
+                          "type":  "update-blockmap",
+                          "bytes":  153029,
+                          "sha256":  "DEE4170454C2A604BF468E60524760259FEDB24580BB2FCA188D19DFDD888460"
+                      },
+                      {
+                          "file":  "latest.yml",
+                          "type":  "update-metadata",
+                          "bytes":  355,
+                          "sha256":  "67823CE43DB3A2B1AF45C381CBFE6DE8C82173FF4A3FF93E252B41D154A964B6"
+                      }
+                  ]
+}

@@ -4,7 +4,7 @@
   const metadata = Object.freeze({
     application: 'quartic-pulse',
     productName: 'Quartic Pulse',
-    version: '1.0.1',
+    version: '1.0.5',
     releaseChannel: 'stable'
   });
 

@@ -3,6 +3,23 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+
+function Get-Sha256Hex {
+  param([Parameter(Mandatory = $true)][string]$Path)
+
+  $stream = [System.IO.File]::Open($Path, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read, [System.IO.FileShare]::Read)
+  try {
+    $hasher = [System.Security.Cryptography.SHA256]::Create()
+    try {
+      return [System.BitConverter]::ToString($hasher.ComputeHash($stream)).Replace('-', '')
+    } finally {
+      $hasher.Dispose()
+    }
+  } finally {
+    $stream.Dispose()
+  }
+}
+
 $packageMetadata = Get-Content -Raw -LiteralPath (Join-Path $ProjectRoot 'package.json') | ConvertFrom-Json
 $releaseDirectory = Join-Path $ProjectRoot 'release'
 $reader = Join-Path $PSScriptRoot 'read-authenticode-signature.ps1'
@@ -72,10 +89,10 @@ if ($appUpdateText -notmatch '(?m)^publisherName:\s*$' -or $appUpdateText -notma
 ) | ForEach-Object {
   Remove-Item -LiteralPath (Join-Path $releaseDirectory $_) -Force -ErrorAction SilentlyContinue
 }
-$installerHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $installerPath).Hash
-$portableHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $portablePath).Hash
-$blockmapHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $blockmapPath).Hash
-$updateMetadataHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $updateMetadataPath).Hash
+$installerHash = Get-Sha256Hex -Path $installerPath
+$portableHash = Get-Sha256Hex -Path $portablePath
+$blockmapHash = Get-Sha256Hex -Path $blockmapPath
+$updateMetadataHash = Get-Sha256Hex -Path $updateMetadataPath
 $checksumPath = Join-Path $releaseDirectory "SHA256SUMS-v$($packageMetadata.version).txt"
 @(
   "$installerHash  $installerName"
