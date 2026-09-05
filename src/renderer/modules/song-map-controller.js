@@ -195,11 +195,11 @@
         context.lineTo(w, h * row / 4);
         context.stroke();
       }
-      const linePath = (values, color, amplitude, offset = 0) => {
+      const linePath = (values, color, amplitude, lift = 0) => {
         context.beginPath();
         values.forEach((value, index) => {
           const x = index / Math.max(1, values.length - 1) * w;
-          const y = h - 8 - (value / 255) * amplitude + offset;
+          const y = h - 8 - lift - (value / 255) * amplitude;
           if (!index) context.moveTo(x, y); else context.lineTo(x, y);
         });
         context.strokeStyle = color;

@@ -142,8 +142,8 @@ const hiddenObsPolicy = window.QuarticBackgroundRenderPolicy.evaluate({ backgrou
 assert(hiddenObsPolicy.controlOnly && !hiddenObsPolicy.drawVisual && !hiddenObsPolicy.updateInterface && hiddenObsPolicy.targetFps === 60,
   'A backgrounded control window must keep OBS state updates alive without duplicating the visual or interface render.');
 const hiddenIdlePolicy = window.QuarticBackgroundRenderPolicy.evaluate({ backgrounded: true, obsOutputOpen: false, obsSyncFps: 60 });
-assert(hiddenIdlePolicy.controlOnly && hiddenIdlePolicy.targetFps === 30,
-  'A backgrounded control window without OBS must retain low-rate audio/state updates.');
+assert(!hiddenIdlePolicy.controlOnly && hiddenIdlePolicy.drawVisual && !hiddenIdlePolicy.updateInterface && hiddenIdlePolicy.targetFps === 30,
+  'A backgrounded control window without OBS must keep the visual active at an efficient frame rate.');
 const exportPolicy = window.QuarticBackgroundRenderPolicy.evaluate({ backgrounded: true, exporting: true, obsOutputOpen: true, obsSyncFps: 30 });
 assert(exportPolicy.drawVisual && !exportPolicy.controlOnly,
   'A background export must never suspend the source canvas.');

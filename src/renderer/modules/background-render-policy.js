@@ -7,17 +7,21 @@
 
   function evaluate(options = {}) {
     const isObsOutput = Boolean(options.isObsOutput);
+    const backgrounded = !isObsOutput && Boolean(options.backgrounded);
+    const obsOutputOpen = Boolean(options.obsOutputOpen);
     const keepMainVisualActive = Boolean(options.keepMainVisualActive || options.exporting || options.offlineExporting);
-    const controlOnly = !isObsOutput && Boolean(options.backgrounded) && !keepMainVisualActive;
+    const controlOnly = backgrounded && obsOutputOpen && !keepMainVisualActive;
     const targetFps = isObsOutput
       ? normalizeObsFps(options.obsSyncFps)
-      : controlOnly ? (options.obsOutputOpen ? normalizeObsFps(options.obsSyncFps) : 30) : 0;
+      : backgrounded && !keepMainVisualActive
+        ? (obsOutputOpen ? normalizeObsFps(options.obsSyncFps) : 30)
+        : 0;
 
     return Object.freeze({
       controlOnly,
       drawVisual: !controlOnly,
       collectPerformance: !controlOnly,
-      updateInterface: !isObsOutput && !controlOnly,
+      updateInterface: !isObsOutput && (!backgrounded || keepMainVisualActive),
       targetFps
     });
   }
